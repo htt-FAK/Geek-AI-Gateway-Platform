@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  phone              String   @unique
+  passwordHash       String
+  mustChangePassword Boolean  @default(true)
+  disabled           Boolean  @default(false)
+  passwordVersion    Int      @default(0)
+  litellmUserId      String?
+  litellmKeyTokenEnc String?
+  litellmKeyId       String?
+  keyRevealedAt      DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  spendEvents        SpendEvent[]
+}
+
+model SpendEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  costCny   Float
+  model     String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

@@ -1,31 +1,135 @@
 model_list:
-  # ---------- DeepSeek 官网（LiteLLM 原生） ----------
-  - model_name: deepseek-chat
+  # ---------- DeepSeek ----------
+  - model_name: deepseek-v4-flash
     litellm_params:
-      model: deepseek/deepseek-chat
+      model: deepseek/deepseek-v4-flash
       api_key: os.environ/DEEPSEEK_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0.000001
+      output_cost_per_token: 0.000002
+      cache_read_input_token_cost: 0.00000002
+      input_cost_per_million_cny: 1.0
+      cache_hit_cost_per_million_cny: 0.02
+      output_cost_per_million_cny: 2.0
 
-  - model_name: deepseek-reasoner
+  - model_name: deepseek-v4-pro
     litellm_params:
-      model: deepseek/deepseek-reasoner
+      model: deepseek/deepseek-v4-pro
       api_key: os.environ/DEEPSEEK_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000006
+      cache_read_input_token_cost: 0.000000025
+      input_cost_per_million_cny: 3.0
+      cache_hit_cost_per_million_cny: 0.025
+      output_cost_per_million_cny: 6.0
 
-  # ---------- 小米 MiMo 官网（OpenAI 兼容） ----------
+  # ---------- MiMo text ----------
   - model_name: mimo-v2.5-pro
     litellm_params:
       model: openai/mimo-v2.5-pro
       api_base: https://api.xiaomimimo.com/v1
       api_key: os.environ/MIMO_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000006
+      cache_read_input_token_cost: 0.000000025
+      input_cost_per_million_cny: 3.0
+      cache_hit_cost_per_million_cny: 0.025
+      output_cost_per_million_cny: 6.0
 
-  - model_name: mimo-v2-flash
+  - model_name: mimo-v2.5-pro-ultraspeed
     litellm_params:
-      model: openai/mimo-v2-flash
+      model: openai/mimo-v2.5-pro-ultraspeed
       api_base: https://api.xiaomimimo.com/v1
       api_key: os.environ/MIMO_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0.000009
+      output_cost_per_token: 0.000018
+      cache_read_input_token_cost: 0.000000075
+      input_cost_per_million_cny: 9.0
+      cache_hit_cost_per_million_cny: 0.075
+      output_cost_per_million_cny: 18.0
+
+  # ---------- MiMo omni ----------
+  - model_name: mimo-v2.5
+    litellm_params:
+      model: openai/mimo-v2.5
+      api_base: https://api.xiaomimimo.com/v1
+      api_key: os.environ/MIMO_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0.000001
+      output_cost_per_token: 0.000002
+      cache_read_input_token_cost: 0.00000002
+      input_cost_per_million_cny: 1.0
+      cache_hit_cost_per_million_cny: 0.02
+      output_cost_per_million_cny: 2.0
+
+  # ---------- MiMo speech ----------
+  - model_name: mimo-v2.5-asr
+    litellm_params:
+      model: openai/mimo-v2.5-asr
+      api_base: https://api.xiaomimimo.com/v1
+      api_key: os.environ/MIMO_API_KEY
+    model_info:
+      currency: CNY
+      mode: audio_transcription
+      input_cost_per_second: 0.0001388889
+      input_cost_per_hour_cny: 0.5
+
+  - model_name: mimo-v2.5-tts
+    litellm_params:
+      model: openai/mimo-v2.5-tts
+      api_base: https://api.xiaomimimo.com/v1
+      api_key: os.environ/MIMO_API_KEY
+    model_info:
+      currency: CNY
+      mode: audio_speech
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      pricing_note: limited_time_free
+
+  - model_name: mimo-v2.5-tts-voiceclone
+    litellm_params:
+      model: openai/mimo-v2.5-tts-voiceclone
+      api_base: https://api.xiaomimimo.com/v1
+      api_key: os.environ/MIMO_API_KEY
+    model_info:
+      currency: CNY
+      mode: audio_speech
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      pricing_note: limited_time_free
+
+  - model_name: mimo-v2.5-tts-voicedesign
+    litellm_params:
+      model: openai/mimo-v2.5-tts-voicedesign
+      api_base: https://api.xiaomimimo.com/v1
+      api_key: os.environ/MIMO_API_KEY
+    model_info:
+      currency: CNY
+      mode: audio_speech
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      pricing_note: limited_time_free
 
 litellm_settings:
   drop_params: true
-  # set_verbose: true   # 排障时再开
+  include_cost_in_streaming_usage: true
+  callbacks:
+    - callbacks.deepseek_peak_pricing_logger
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+  store_model_in_db: true

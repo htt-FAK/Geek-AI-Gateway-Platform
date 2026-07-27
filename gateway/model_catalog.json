@@ -1,0 +1,106 @@
+{
+  "currency": "CNY",
+  "unit_notes": {
+    "chat": "prices are CNY per 1 million tokens",
+    "asr": "price is CNY per audio hour",
+    "tts": "limited-time free per official pricing page"
+  },
+  "sources": {
+    "deepseek": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+    "mimo": "https://platform.xiaomimimo.com/static/docs/price/pay-as-you-go.md",
+    "mimo_ultraspeed": "https://mimo.mi.com/models/en-US/mimo-v2.5-pro-ultraspeed"
+  },
+  "deepseek_peak_pricing": {
+    "timezone": "Asia/Shanghai",
+    "multiplier": 2.0,
+    "windows": [
+      { "start": "09:00", "end": "12:00" },
+      { "start": "14:00", "end": "18:00" }
+    ],
+    "note": "Applies to all DeepSeek billable items; base rates in models[] are off-peak CNY"
+  },
+  "models": [
+    {
+      "id": "deepseek-v4-flash",
+      "provider": "deepseek",
+      "modality": "text",
+      "pricing_cny": {
+        "cache_hit_per_million": 0.02,
+        "input_miss_per_million": 1.0,
+        "output_per_million": 2.0
+      }
+    },
+    {
+      "id": "deepseek-v4-pro",
+      "provider": "deepseek",
+      "modality": "text",
+      "pricing_cny": {
+        "cache_hit_per_million": 0.025,
+        "input_miss_per_million": 3.0,
+        "output_per_million": 6.0
+      }
+    },
+    {
+      "id": "mimo-v2.5-pro",
+      "provider": "mimo",
+      "modality": "text",
+      "pricing_cny": {
+        "cache_hit_per_million": 0.025,
+        "input_miss_per_million": 3.0,
+        "output_per_million": 6.0
+      }
+    },
+    {
+      "id": "mimo-v2.5-pro-ultraspeed",
+      "provider": "mimo",
+      "modality": "text",
+      "pricing_cny": {
+        "cache_hit_per_million": 0.075,
+        "input_miss_per_million": 9.0,
+        "output_per_million": 18.0
+      }
+    },
+    {
+      "id": "mimo-v2.5",
+      "provider": "mimo",
+      "modality": "omni",
+      "pricing_cny": {
+        "cache_hit_per_million": 0.02,
+        "input_miss_per_million": 1.0,
+        "output_per_million": 2.0
+      }
+    },
+    {
+      "id": "mimo-v2.5-asr",
+      "provider": "mimo",
+      "modality": "asr",
+      "pricing_cny": {
+        "per_hour": 0.5
+      }
+    },
+    {
+      "id": "mimo-v2.5-tts",
+      "provider": "mimo",
+      "modality": "tts",
+      "pricing_cny": {
+        "note": "limited_time_free"
+      }
+    },
+    {
+      "id": "mimo-v2.5-tts-voiceclone",
+      "provider": "mimo",
+      "modality": "tts",
+      "pricing_cny": {
+        "note": "limited_time_free"
+      }
+    },
+    {
+      "id": "mimo-v2.5-tts-voicedesign",
+      "provider": "mimo",
+      "modality": "tts",
+      "pricing_cny": {
+        "note": "limited_time_free"
+      }
+    }
+  ]
+}

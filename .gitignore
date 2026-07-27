@@ -2,8 +2,10 @@
 gateway/.env
 web/.env
 web/.env.local
+deploy/.env
 **/.env
 !**/.env.example
+!deploy/.env.example
 
 # deps / build
 node_modules/
@@ -15,6 +17,10 @@ build/
 venv/
 __pycache__/
 *.pyc
+web/dev.db
+web/dev.db-journal
+web/*.db
+web/tsconfig.tsbuildinfo
 
 # ide / os
 .idea/

@@ -1,0 +1,14 @@
+node_modules
+web/node_modules
+web/.next
+web/dev.db
+web/dev.db-journal
+.git
+**/.env
+!**/.env.example
+.venv
+**/__pycache__
+*.pyc
+.omo
+.codegraph
+agent-transcripts

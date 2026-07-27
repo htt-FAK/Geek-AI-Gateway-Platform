@@ -1,11 +1,39 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-litellm}
+      POSTGRES_DB: litellm
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - litellm_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   litellm:
     image: docker.litellm.ai/berriai/litellm:v1.83.14-stable
     ports:
       - "4000:4000"
     volumes:
       - ./config.yaml:/app/config.yaml
+      - ./callbacks.py:/app/callbacks.py
+      - ./deepseek_peak.py:/app/deepseek_peak.py
+      - ./model_catalog.json:/app/model_catalog.json
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://litellm:${POSTGRES_PASSWORD:-litellm}@postgres:5432/litellm
+    depends_on:
+      postgres:
+        condition: service_healthy
     command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
     restart: unless-stopped
+
+volumes:
+  litellm_pg:

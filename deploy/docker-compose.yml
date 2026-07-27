@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-litellm}
+      POSTGRES_DB: litellm
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - litellm_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  litellm:
+    image: docker.litellm.ai/berriai/litellm:v1.83.14-stable
+    ports:
+      - "4000:4000"
+    volumes:
+      - ../gateway/config.yaml:/app/config.yaml
+      - ../gateway/callbacks.py:/app/callbacks.py
+      - ../gateway/deepseek_peak.py:/app/deepseek_peak.py
+      - ../gateway/model_catalog.json:/app/model_catalog.json
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://litellm:${POSTGRES_PASSWORD:-litellm}@postgres:5432/litellm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness')\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      GATEWAY_BASE_URL: http://litellm:4000
+      DATABASE_URL: file:/data/dev.db
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      DEFAULT_USER_PASSWORD: ${DEFAULT_USER_PASSWORD}
+      AUTH_SECRET: ${AUTH_SECRET}
+      CREDENTIALS_ENCRYPTION_KEY: ${CREDENTIALS_ENCRYPTION_KEY}
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      DAILY_BUDGET_CNY: ${DAILY_BUDGET_CNY:-50}
+      WEEKLY_BUDGET_CNY: ${WEEKLY_BUDGET_CNY:-200}
+      ALLOW_TEST_HOOKS: ${ALLOW_TEST_HOOKS:-false}
+    volumes:
+      - web_data:/data
+    depends_on:
+      litellm:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  litellm_pg:
+  web_data:
