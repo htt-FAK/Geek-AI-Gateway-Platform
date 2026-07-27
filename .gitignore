@@ -1,0 +1,26 @@
+# secrets
+gateway/.env
+web/.env
+web/.env.local
+**/.env
+!**/.env.example
+
+# deps / build
+node_modules/
+.next/
+out/
+dist/
+build/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# ide / os
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+.omo/
+.codegraph/

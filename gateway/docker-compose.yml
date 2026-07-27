@@ -1,0 +1,11 @@
+services:
+  litellm:
+    image: docker.litellm.ai/berriai/litellm:v1.83.14-stable
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+    env_file:
+      - .env
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
+    restart: unless-stopped

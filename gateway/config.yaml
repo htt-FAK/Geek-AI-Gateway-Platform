@@ -1,0 +1,31 @@
+model_list:
+  # ---------- DeepSeek 官网（LiteLLM 原生） ----------
+  - model_name: deepseek-chat
+    litellm_params:
+      model: deepseek/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+
+  - model_name: deepseek-reasoner
+    litellm_params:
+      model: deepseek/deepseek-reasoner
+      api_key: os.environ/DEEPSEEK_API_KEY
+
+  # ---------- 小米 MiMo 官网（OpenAI 兼容） ----------
+  - model_name: mimo-v2.5-pro
+    litellm_params:
+      model: openai/mimo-v2.5-pro
+      api_base: https://api.xiaomimimo.com/v1
+      api_key: os.environ/MIMO_API_KEY
+
+  - model_name: mimo-v2-flash
+    litellm_params:
+      model: openai/mimo-v2-flash
+      api_base: https://api.xiaomimimo.com/v1
+      api_key: os.environ/MIMO_API_KEY
+
+litellm_settings:
+  drop_params: true
+  # set_verbose: true   # 排障时再开
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
