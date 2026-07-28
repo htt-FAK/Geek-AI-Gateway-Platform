@@ -1,0 +1,250 @@
+/* TRAE dark + TRAE Work light — IDE chrome (Doubao-depth)
+   Sources: TRAE/, TRAE Work/ colors_and_type + components.css
+*/
+
+html[data-skin="trae"][data-theme="dark"] {
+  --bg-base: #1a1b1d;
+  --bg-elevated: #222427;
+  --bg-surface: #2a2d31;
+  --bg-hover: #34383e;
+  --border-subtle: #3a3f46;
+  --border-active: #4a515a;
+  --border-focus: #32f08c;
+  --text-primary: #d1d3db;
+  --text-secondary: #9aa0a8;
+  --text-tertiary: #6b7280;
+  --text-inverse: #0c0c0d;
+  --accent-primary: #32f08c;
+  --accent-primary-hover: #0fdc78;
+  --accent-muted: rgba(50, 240, 140, 0.14);
+  --status-success: #33c192;
+  --status-error: #ff9392;
+  --overlay-scrim: rgba(0, 0, 0, 0.6);
+  --chart-1: #32f08c;
+  --chart-2: #7bb8ff;
+  --chart-3: #ec93ff;
+  --chart-4: #dcb364;
+  --chart-5: #04cbe5;
+  --radius-md: 6px;
+  --radius-sm: 4px;
+  --radius-lg: 10px;
+  --font-ui: var(--font-inter), "PingFang SC", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+  --font-display-ui: var(--font-inter), "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  --font-mono-ui: var(--font-jb), "JetBrains Mono", ui-monospace, monospace;
+  --sidebar-bg: #222427;
+  --topbar-bg: #1a1b1d;
+  --panel-shadow: 0 8px 24px rgba(0, 0, 0, 0.36);
+  --btn-radius: 4px;
+  --nav-radius: 4px;
+  --nav-active-bg: rgba(50, 240, 140, 0.12);
+  --nav-active-fg: #32f08c;
+  --nav-gap: 2px;
+  --pack-ring: #32f08c;
+  --pack-muted: #2a2d31;
+  --pack-sidebar-border: #3a3f46;
+}
+
+html[data-skin="trae"][data-theme="light"] {
+  --bg-base: #ffffff;
+  --bg-elevated: #f5f5f5;
+  --bg-surface: #e5e5e5;
+  --bg-hover: #d4d4d4;
+  --border-subtle: #e5e5e5;
+  --border-active: #d4d4d4;
+  --border-focus: #4b3fe3;
+  --text-primary: #171717;
+  --text-secondary: #525252;
+  --text-tertiary: #737373;
+  --text-inverse: #ffffff;
+  --accent-primary: #4b3fe3;
+  --accent-primary-hover: #6a6fff;
+  --accent-muted: rgba(75, 63, 227, 0.12);
+  --overlay-scrim: rgba(23, 23, 23, 0.4);
+  --chart-1: #4b3fe3;
+  --chart-2: #6a6fff;
+  --chart-3: #32f08c;
+  --chart-4: #171717;
+  --chart-5: #a3a3a3;
+  --radius-md: 6px;
+  --radius-sm: 4px;
+  --radius-lg: 10px;
+  --font-ui: var(--font-inter), "PingFang SC", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+  --font-display-ui: var(--font-inter), "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  --font-mono-ui: var(--font-jb), "JetBrains Mono", ui-monospace, monospace;
+  --sidebar-bg: #f5f5f5;
+  --topbar-bg: #ffffff;
+  --panel-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --btn-radius: 4px;
+  --nav-radius: 4px;
+  --nav-active-bg: rgba(75, 63, 227, 0.12);
+  --nav-active-fg: #4b3fe3;
+  --nav-gap: 2px;
+  --pack-ring: #4b3fe3;
+  --pack-muted: #e5e5e5;
+  --pack-sidebar-border: #e5e5e5;
+}
+
+html[data-skin="trae"] body {
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+html[data-skin="trae"] .app-shell {
+  background: var(--bg-base);
+}
+
+html[data-skin="trae"] .app-sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--pack-sidebar-border);
+}
+
+html[data-skin="trae"] .app-sidebar-brand {
+  border-bottom: 1px solid var(--pack-sidebar-border);
+  font-weight: 600;
+}
+
+html[data-skin="trae"] .app-sidebar-collapse {
+  border-radius: 4px;
+}
+
+html[data-skin="trae"] .app-sidebar-nav {
+  gap: 2px;
+  padding: 6px 8px;
+}
+
+html[data-skin="trae"] .app-nav-item {
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+
+html[data-skin="trae"] .app-nav-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+}
+
+html[data-skin="trae"] .app-nav-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+html[data-skin="trae"] .app-nav-item:hover {
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  color: var(--text-primary);
+}
+
+html[data-skin="trae"] .app-nav-item.is-active {
+  background: var(--nav-active-bg);
+  color: var(--nav-active-fg);
+  font-weight: 500;
+  border-color: color-mix(in srgb, var(--accent-primary) 40%, transparent);
+}
+
+html[data-skin="trae"] .app-nav-item.is-active .app-nav-icon {
+  color: var(--accent-primary);
+}
+
+html[data-skin="trae"] .app-sidebar-foot {
+  border-top: 1px solid var(--pack-sidebar-border);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+html[data-skin="trae"] .app-topbar {
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--pack-sidebar-border);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+html[data-skin="trae"] .btn {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 4px;
+  font: 500 12px/1 var(--font-ui);
+  box-shadow: none !important;
+}
+
+html[data-skin="trae"] .btn:not(.btn-ghost):not(.btn-secondary) {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 50%, transparent);
+}
+
+html[data-skin="trae"][data-theme="dark"] .btn:not(.btn-ghost):not(.btn-secondary) {
+  color: #0c0c0d;
+}
+
+html[data-skin="trae"] .btn-ghost,
+html[data-skin="trae"] .btn-secondary {
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+html[data-skin="trae"] .btn-ghost:hover:not(:disabled),
+html[data-skin="trae"] .btn-secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-primary) 14%, transparent);
+}
+
+html[data-skin="trae"] .panel {
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  box-shadow: var(--panel-shadow);
+}
+
+html[data-skin="trae"] .field {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  font-size: 13px;
+}
+
+html[data-skin="trae"] .field:focus {
+  border-color: var(--pack-ring);
+  box-shadow: 0 0 0 1px var(--pack-ring);
+}
+
+html[data-skin="trae"] .playground-composer {
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 22%, var(--border-subtle));
+  background: var(--bg-elevated);
+  box-shadow: var(--panel-shadow);
+  padding: 10px 12px 8px;
+}
+
+html[data-skin="trae"] .playground-composer:focus-within {
+  border-color: var(--pack-ring);
+  box-shadow: 0 0 0 1px var(--pack-ring), var(--panel-shadow);
+}
+
+html[data-skin="trae"] .playground-composer-input {
+  font: 13px/1.5 var(--font-ui);
+  min-height: 40px;
+}
+
+html[data-skin="trae"] .playground-composer-bar {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+html[data-skin="trae"] .playground-composer .btn:not(.btn-ghost):not(.btn-secondary) {
+  height: 28px;
+  border-radius: 4px;
+}
+
+html[data-skin="trae"] .font-display,
+html[data-skin="trae"] h1 {
+  font-family: var(--font-display-ui);
+  font-weight: 600;
+}

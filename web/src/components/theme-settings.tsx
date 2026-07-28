@@ -1,18 +1,16 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  AppearanceDensity,
-  AppearanceFont,
-  AppearanceLayout,
-  AppearancePreset,
-  AppearanceRadius,
   AppearanceSettings,
-  AppearanceSidebar,
+  AppearanceSkin,
   AppearanceTheme,
-  applyAppearance,
   DEFAULT_APPEARANCE,
+  SKIN_OPTIONS,
+  applyAppearance,
+  coerceAppearance,
+  getSkinThemePolicy,
   loadAppearance,
   saveAppearance,
 } from "@/lib/appearance";
@@ -47,16 +45,11 @@ function OptionCard({ selected, onClick, label, children, className = "" }: Opti
   );
 }
 
-const PRESETS: Array<{ id: AppearancePreset; label: string; swatch: string }> = [
-  { id: "default", label: "默认", swatch: "linear-gradient(135deg,#fafafa,#71717a)" },
-  { id: "night", label: "暗夜", swatch: "linear-gradient(135deg,#111827,#374151)" },
-  { id: "rose", label: "玫瑰花园", swatch: "linear-gradient(135deg,#fb7185,#9f1239)" },
-  { id: "lake", label: "湖光", swatch: "linear-gradient(135deg,#38bdf8,#0ea5e9)" },
-  { id: "sunset", label: "日落霞光", swatch: "linear-gradient(135deg,#fb923c,#ea580c)" },
-  { id: "forest", label: "森林低语", swatch: "linear-gradient(135deg,#4ade80,#166534)" },
-  { id: "sea", label: "海风", swatch: "linear-gradient(135deg,#2dd4bf,#0f766e)" },
-  { id: "lavender", label: "薰衣草梦", swatch: "linear-gradient(135deg,#c084fc,#7e22ce)" },
-];
+const THEME_LABELS: Record<AppearanceTheme, string> = {
+  system: "系统",
+  light: "浅色",
+  dark: "深色",
+};
 
 export function ThemeSettingsButton() {
   const [open, setOpen] = useState(false);
@@ -68,13 +61,24 @@ export function ThemeSettingsButton() {
     applyAppearance(loaded);
   }, []);
 
-  function update<K extends keyof AppearanceSettings>(key: K, value: AppearanceSettings[K]) {
-    setSettings((prev) => {
-      const next = { ...prev, [key]: value };
-      saveAppearance(next);
-      applyAppearance(next);
-      return next;
-    });
+  const themeModes = useMemo(
+    () => getSkinThemePolicy(settings.skin).modes,
+    [settings.skin],
+  );
+
+  function commit(next: AppearanceSettings) {
+    const coerced = coerceAppearance(next);
+    saveAppearance(coerced);
+    applyAppearance(coerced);
+    setSettings(coerced);
+  }
+
+  function updateSkin(skin: AppearanceSkin) {
+    commit({ ...settings, skin });
+  }
+
+  function updateTheme(theme: AppearanceTheme) {
+    commit({ ...settings, theme });
   }
 
   return (
@@ -87,24 +91,17 @@ export function ThemeSettingsButton() {
         onClick={() => setOpen(true)}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+          {/* 调色板：主题/皮肤设置 */}
           <path
-            d="M12 3c-1.8 3.2-2.7 5.6-2.7 7.2a2.7 2.7 0 1 0 5.4 0C14.7 8.6 13.8 6.2 12 3Z"
+            d="M12 3.5c-4.7 0-8.5 3.6-8.5 8.1 0 3.3 2.1 6.1 5.1 7.3.4.2.8-.1.8-.5v-.7c0-1.4 1.1-2.5 2.5-2.5h2.1c2.8 0 5.1-2.2 5.1-4.9C19.1 6.5 15.9 3.5 12 3.5Z"
             stroke="currentColor"
-            strokeWidth="1.6"
+            strokeWidth="1.5"
             strokeLinejoin="round"
           />
-          <path
-            d="M7.2 13.8c-1.1.4-2.2 1.3-3.2 2.7 1.9.2 3.3.7 4.3 1.5.7-1.6 1.2-3 1.4-4.1-.8 0-1.7-.1-2.5-.1Z"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M16.8 13.8c.8 0 1.7.1 2.5.1.2 1.1.7 2.5 1.4 4.1 1-.8 2.4-1.3 4.3-1.5-1-1.4-2.1-2.3-3.2-2.7Z"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinejoin="round"
-          />
+          <circle cx="8.2" cy="10.2" r="1.15" fill="currentColor" />
+          <circle cx="12" cy="8.4" r="1.15" fill="currentColor" />
+          <circle cx="15.8" cy="10.2" r="1.15" fill="currentColor" />
+          <circle cx="14.2" cy="13.6" r="1.15" fill="currentColor" />
         </svg>
       </button>
 
@@ -116,7 +113,7 @@ export function ThemeSettingsButton() {
               <div>
                 <Dialog.Title className="text-[16px] font-medium text-[var(--text-primary)]">主题设置</Dialog.Title>
                 <Dialog.Description className="mt-1 text-[13px] text-[var(--text-secondary)]">
-                  调整外观和布局以适应您的偏好。
+                  整套前端气质切换（按钮、侧栏、面板、字体）；布局结构不变。
                 </Dialog.Description>
               </div>
               <Dialog.Close asChild>
@@ -132,137 +129,37 @@ export function ThemeSettingsButton() {
 
             <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-5 py-5">
               <section className="space-y-3">
-                <h3 className="text-[13px] font-medium text-[var(--text-primary)]">主题</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {(
-                    [
-                      ["system", "系统"],
-                      ["light", "浅色"],
-                      ["dark", "深色"],
-                    ] as Array<[AppearanceTheme, string]>
-                  ).map(([id, label]) => (
-                    <OptionCard key={id} label={label} selected={settings.theme === id} onClick={() => update("theme", id)}>
-                      <span className="h-8 w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)]" />
-                    </OptionCard>
-                  ))}
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[13px] font-medium text-[var(--text-primary)]">颜色预设</h3>
-                <div className="grid grid-cols-4 gap-2">
-                  {PRESETS.map((p) => (
+                <h3 className="text-[13px] font-medium text-[var(--text-primary)]">皮肤</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {SKIN_OPTIONS.map((p) => (
                     <OptionCard
                       key={p.id}
                       label={p.label}
-                      selected={settings.preset === p.id}
-                      onClick={() => update("preset", p.id)}
+                      selected={settings.skin === p.id}
+                      onClick={() => updateSkin(p.id)}
+                      className="items-stretch text-left"
                     >
-                      <span className="h-8 w-full rounded-md" style={{ background: p.swatch }} />
+                      <span className="h-10 w-full rounded-md" style={{ background: p.swatch }} />
+                      <span className="w-full text-[11px] text-[var(--text-tertiary)]">{p.blurb}</span>
                     </OptionCard>
                   ))}
                 </div>
               </section>
 
               <section className="space-y-3">
-                <h3 className="text-[13px] font-medium text-[var(--text-primary)]">字体</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {(
-                    [
-                      ["auto", "Auto", "Aa"],
-                      ["sans", "Sans", "Aa"],
-                      ["serif", "Serif", "Aa"],
-                    ] as Array<[AppearanceFont, string, string]>
-                  ).map(([id, label, sample]) => (
-                    <OptionCard key={id} label={label} selected={settings.font === id} onClick={() => update("font", id)}>
-                      <span className={`text-xl ${id === "serif" ? "font-display" : ""}`}>{sample}</span>
-                    </OptionCard>
-                  ))}
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[13px] font-medium text-[var(--text-primary)]">圆角</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {(
-                    [
-                      ["auto", "Auto"],
-                      ["0", "0"],
-                      ["0.3", "0.3"],
-                      ["0.5", "0.5"],
-                      ["0.75", "0.75"],
-                      ["1", "1.0"],
-                    ] as Array<[AppearanceRadius, string]>
-                  ).map(([id, label]) => (
-                    <OptionCard key={id} label={label} selected={settings.radius === id} onClick={() => update("radius", id)}>
-                      <span
-                        className="h-7 w-10 border border-[var(--border-active)] bg-[var(--bg-surface)]"
-                        style={{ borderRadius: id === "auto" ? "0.75rem" : `${id}rem` }}
-                      />
-                    </OptionCard>
-                  ))}
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[13px] font-medium text-[var(--text-primary)]">密度</h3>
-                <div className="grid grid-cols-4 gap-2">
-                  {(
-                    [
-                      ["compact", "紧凑"],
-                      ["default", "默认"],
-                      ["loose", "宽松"],
-                      ["xl", "超大"],
-                    ] as Array<[AppearanceDensity, string]>
-                  ).map(([id, label]) => (
-                    <OptionCard key={id} label={label} selected={settings.density === id} onClick={() => update("density", id)}>
-                      <span className="flex h-7 w-8 flex-col justify-center gap-0.5">
-                        <span className="h-0.5 rounded-full bg-current" />
-                        <span className="h-0.5 rounded-full bg-current opacity-70" />
-                        <span className="h-0.5 rounded-full bg-current opacity-40" />
-                      </span>
-                    </OptionCard>
-                  ))}
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[13px] font-medium text-[var(--text-primary)]">侧边栏</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {(
-                    [
-                      ["embedded", "内嵌"],
-                      ["floating", "浮动"],
-                      ["inset", "侧边栏"],
-                    ] as Array<[AppearanceSidebar, string]>
-                  ).map(([id, label]) => (
+                <h3 className="text-[13px] font-medium text-[var(--text-primary)]">明暗</h3>
+                {themeModes.length === 1 ? (
+                  <p className="text-[12px] text-[var(--text-tertiary)]">此皮肤仅支持浅色模式。</p>
+                ) : null}
+                <div className={`grid gap-2 ${themeModes.length === 1 ? "grid-cols-1" : "grid-cols-3"}`}>
+                  {themeModes.map((id) => (
                     <OptionCard
                       key={id}
-                      label={label}
-                      selected={settings.sidebar === id}
-                      onClick={() => update("sidebar", id)}
+                      label={THEME_LABELS[id]}
+                      selected={settings.theme === id}
+                      onClick={() => updateTheme(id)}
                     >
-                      <span className="flex h-8 w-12 overflow-hidden rounded border border-[var(--border-subtle)]">
-                        <span className={`bg-[var(--text-tertiary)] ${id === "floating" ? "m-0.5 w-2 rounded-sm" : "w-2.5"}`} />
-                        <span className="flex-1 bg-[var(--bg-surface)]" />
-                      </span>
-                    </OptionCard>
-                  ))}
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[13px] font-medium text-[var(--text-primary)]">布局</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {(
-                    [
-                      ["default", "默认"],
-                      ["compact", "紧凑"],
-                      ["full", "全屏布局"],
-                    ] as Array<[AppearanceLayout, string]>
-                  ).map(([id, label]) => (
-                    <OptionCard key={id} label={label} selected={settings.layout === id} onClick={() => update("layout", id)}>
-                      <span className="h-8 w-12 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface)]" />
+                      <span className="h-8 w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)]" />
                     </OptionCard>
                   ))}
                 </div>

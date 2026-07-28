@@ -75,7 +75,7 @@ export function DashboardFilterDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 shadow-[var(--panel-shadow,0_8px_24px_rgba(0,0,0,0.35))]">
           <div className="flex items-start justify-between gap-3">
             <div>
               <Dialog.Title className="text-lg font-medium">筛选仪表板</Dialog.Title>
@@ -123,7 +123,7 @@ export function DashboardFilterDialog({
                 setLocalQuick(null);
                 setLocalFrom(e.target.value);
               }}
-              className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              className="mt-1.5 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             />
           </label>
           <label className="mt-3 block text-xs text-[var(--text-tertiary)]">
@@ -135,7 +135,7 @@ export function DashboardFilterDialog({
                 setLocalQuick(null);
                 setLocalTo(e.target.value);
               }}
-              className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              className="mt-1.5 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             />
           </label>
 
@@ -150,7 +150,7 @@ export function DashboardFilterDialog({
             <select
               value={localGranularity}
               onChange={(e) => setLocalGranularity(e.target.value as Granularity)}
-              className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              className="mt-1.5 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             >
               <option value="hour">小时</option>
               <option value="day">天</option>

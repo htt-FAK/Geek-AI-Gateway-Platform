@@ -148,7 +148,7 @@ export default function AdminUsersPage() {
           </button>
         </div>
         {result ? (
-          <pre className="mono text-xs overflow-auto p-3 rounded-lg border border-[var(--border)] bg-[var(--input)]">
+          <pre className="mono text-xs overflow-auto p-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--input)]">
             {result}
           </pre>
         ) : null}

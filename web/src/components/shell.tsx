@@ -6,13 +6,66 @@ import { ReactNode, useEffect, useState } from "react";
 import { ThemeSettingsButton } from "@/components/theme-settings";
 import { UserMenu } from "@/components/user-menu";
 import { EntryAmbient } from "@/components/entry-ambient";
+import { StyleOnboarding } from "@/components/style-onboarding";
 
 const NAV = [
-  { href: "/playground", label: "调试台", icon: "/icons/nav-playground.png" },
-  { href: "/dashboard", label: "看板", icon: "/icons/nav-dashboard.png" },
-  { href: "/models", label: "模型", icon: "/icons/nav-models.png" },
-  { href: "/keys", label: "密钥", icon: "/icons/nav-keys.png" },
+  { href: "/playground", label: "调试台", icon: "playground" },
+  { href: "/dashboard", label: "看板", icon: "dashboard" },
+  { href: "/models", label: "模型", icon: "models" },
+  { href: "/keys", label: "密钥", icon: "keys" },
 ] as const;
+
+type NavIconId = (typeof NAV)[number]["icon"];
+
+function NavIcon({ id, size = 20 }: { id: NavIconId; size?: number }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.7,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+  switch (id) {
+    case "playground":
+      return (
+        <svg {...common}>
+          <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+          <path d="M7.5 9.5h4M7.5 13h9M7.5 16.5h6" />
+          <path d="M15.5 8.5 17 10l2.5-3" />
+        </svg>
+      );
+    case "dashboard":
+      return (
+        <svg {...common}>
+          <path d="M4 19V5" />
+          <path d="M4 19h16" />
+          <path d="M8 15v4" />
+          <path d="M12 10v9" />
+          <path d="M16 7v12" />
+        </svg>
+      );
+    case "models":
+      return (
+        <svg {...common}>
+          <path d="M12 3 4.5 7.5v9L12 21l7.5-4.5v-9L12 3Z" />
+          <path d="M12 12 4.5 7.5M12 12l7.5-4.5M12 12v9" />
+        </svg>
+      );
+    case "keys":
+      return (
+        <svg {...common}>
+          <circle cx="8" cy="9" r="2.5" />
+          <path d="M10.2 10.2 15 15" />
+          <path d="M15 15h4.5v2.5H15z" />
+          <path d="M15 17.5v2" />
+        </svg>
+      );
+  }
+}
 
 const GITHUB_REPO = "https://github.com/htt-FAK/Geek-AI-Gateway-Platform";
 const SIDEBAR_KEY = "aigw.sidebar.collapsed";
@@ -55,7 +108,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const docs = process.env.NEXT_PUBLIC_DOCS_BASE_URL;
 
   return (
-    <div className="entry-shell relative min-h-screen overflow-hidden bg-[var(--bg-base)]">
+    <div className="entry-shell relative min-h-screen overflow-hidden bg-[var(--bg-base)]" data-shell="entry">
       <EntryAmbient />
 
       <header className="relative z-10 flex h-[4.75rem] items-center justify-between px-8 md:px-16 lg:px-20">
@@ -127,14 +180,15 @@ export function AppShell({
   }
 
   return (
-    <div className="app-shell flex min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]" data-collapsed={collapsed ? "1" : "0"}>
+    <div className="app-shell flex min-h-screen text-[var(--text-primary)]" data-collapsed={collapsed ? "1" : "0"} data-shell="app">
+      <StyleOnboarding />
       <aside
-        className={`app-sidebar fixed inset-y-0 left-0 z-20 flex flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-elevated)] transition-[width,margin,border-radius,top,bottom,left] duration-200 ease-out ${
+        className={`app-sidebar fixed inset-y-0 left-0 z-20 flex flex-col transition-[width,margin,border-radius,top,bottom,left] duration-200 ease-out ${
           collapsed ? "w-16" : "w-60"
         }`}
       >
-        <div className="flex h-[52px] items-center gap-2 overflow-hidden border-b border-[var(--border-subtle)] px-2">
-          <div className={`flex min-w-0 flex-1 items-center gap-2.5 ${collapsed ? "justify-center" : "px-1"}`}>
+        <div className={`app-sidebar-brand flex items-center overflow-hidden border-b border-[var(--border-subtle)] px-2 ${collapsed ? "h-[52px] justify-center" : "h-[64px]"}`}>
+          <div className={`flex min-w-0 ${collapsed ? "items-center justify-center" : "flex-1 flex-col items-start justify-center gap-0.5 px-1"}`}>
             {collapsed ? (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
                 <path
@@ -146,29 +200,14 @@ export function AppShell({
             ) : (
               <>
                 <GeekWordmark height={18} />
-                <span className="truncate text-[12px] font-medium tracking-tight text-[var(--text-secondary)]">
+                <span className="truncate text-[11px] font-medium leading-none tracking-tight text-[var(--text-secondary)]">
                   高科极客
                 </span>
               </>
             )}
           </div>
-          <button
-            type="button"
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
-            onClick={toggleCollapsed}
-            aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"}
-            title={collapsed ? "展开" : "收起"}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-              {collapsed ? (
-                <path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              ) : (
-                <path d="M10 3.5 5.5 8 10 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              )}
-            </svg>
-          </button>
         </div>
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
+        <nav className="app-sidebar-nav flex flex-1 flex-col overflow-y-auto p-2">
           {NAV.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
@@ -176,34 +215,43 @@ export function AppShell({
                 key={item.href}
                 href={item.href}
                 title={item.label}
-                className={`relative flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm transition-colors ${
+                className={`app-nav-item relative flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
                   collapsed ? "justify-center px-0" : ""
-                } ${
-                  active
-                    ? "bg-[var(--bg-hover)] text-[var(--text-primary)]"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
-                }`}
+                } ${active ? "is-active" : ""}`}
               >
-                <span
-                  className={`relative flex h-5 w-5 shrink-0 overflow-hidden rounded-sm ${
-                    active ? "opacity-100" : "opacity-60"
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={item.icon} alt="" width={20} height={20} className="object-cover" />
+                <span className="app-nav-icon relative flex h-5 w-5 shrink-0 items-center justify-center">
+                  <NavIcon id={item.icon} size={20} />
                 </span>
                 {!collapsed ? <span>{item.label}</span> : null}
               </Link>
             );
           })}
+          <button
+            type="button"
+            className={`app-sidebar-collapse mt-1 inline-flex h-9 shrink-0 items-center rounded-[var(--radius-md)] text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)] ${
+              collapsed ? "w-full justify-center" : "gap-3 px-3"
+            }`}
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"}
+            title={collapsed ? "展开" : "收起"}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0">
+              {collapsed ? (
+                <path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              ) : (
+                <path d="M10 3.5 5.5 8 10 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              )}
+            </svg>
+            {!collapsed ? <span className="text-sm">收起</span> : null}
+          </button>
         </nav>
-        <div className="border-t border-[var(--border-subtle)] p-3 text-[13px] text-[var(--text-tertiary)]">
+        <div className="app-sidebar-foot border-t border-[var(--border-subtle)] p-3 text-[13px] text-[var(--text-tertiary)]">
           {collapsed ? <div className="text-center">v0</div> : <div>v0.1.0</div>}
         </div>
       </aside>
 
       <div className={`app-main flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ease-out ${collapsed ? "ml-16" : "ml-60"}`}>
-        <header className="sticky top-0 z-10 flex h-[52px] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-base)] px-5 md:px-6">
+        <header className="app-topbar sticky top-0 z-10 flex h-[52px] shrink-0 items-center justify-between px-5 md:px-6">
           <div className="text-[13px] font-medium tracking-tight text-[var(--text-secondary)]">
             高科极客 AI 网关平台
           </div>

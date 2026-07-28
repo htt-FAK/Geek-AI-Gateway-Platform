@@ -18,12 +18,12 @@ export function KeyRevealDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 shadow-[var(--panel-shadow,0_8px_24px_rgba(0,0,0,0.35))]">
           <Dialog.Title className="text-lg font-medium">{title}</Dialog.Title>
           <Dialog.Description className="mt-2 text-sm text-[var(--status-warning)]">
             请立即复制并妥善保存。关闭后列表默认仍以星号隐藏中间；可用「显示 / 复制」再次取用。
           </Dialog.Description>
-          <pre className="mono mt-4 break-all rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 text-sm">
+          <pre className="mono mt-4 break-all rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 text-sm">
             {apiKey}
           </pre>
           <div className="mt-5 flex justify-end gap-2">

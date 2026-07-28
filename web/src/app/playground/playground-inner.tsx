@@ -306,8 +306,8 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-5">
           {messages.length === 0 ? (
             <div className="py-20 text-center">
-              <p className="text-[15px] text-[var(--text-secondary)]">还没有回合</p>
-              <p className="mt-2 text-[13px] text-[var(--text-tertiary)]">在下方随便问一句；需要人设时打开「高级」。</p>
+              <p className="text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">有什么可以帮忙的？</p>
+              <p className="mt-2 text-[13px] text-[var(--text-tertiary)]">在下方输入问题开始对话；需要人设时打开「高级」。</p>
             </div>
           ) : (
             messages.map((m, i) => (
@@ -351,7 +351,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
               className="playground-composer-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="随便问…"
+              placeholder="发消息或输入问题…"
               rows={3}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {

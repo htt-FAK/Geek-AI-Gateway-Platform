@@ -85,7 +85,7 @@ function hasAnyValue(series: SeriesPoint[]): boolean {
 
 function ChartEmpty() {
   return (
-    <div className="relative flex flex-1 items-center justify-center rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--bg-base)] min-h-[220px]">
+    <div className="relative flex flex-1 items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-base)] min-h-[220px]">
       <div
         className="pointer-events-none absolute inset-4 opacity-40"
         style={{
@@ -121,7 +121,7 @@ function PanelChrome({
           <h3 className="text-sm font-medium text-[var(--text-primary)]">{title}</h3>
           <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{totalLabel}</p>
         </div>
-        <div className="flex flex-wrap gap-1 rounded-lg border border-[var(--border-subtle)] p-0.5">
+        <div className="flex flex-wrap gap-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-0.5">
           {toggles.map((t) => (
             <button
               key={t}

@@ -1,0 +1,232 @@
+/* Golden Time — editorial warm paper (Doubao-depth)
+   Source: Golden Time/colors_and_type.css + ui_kits/dashboard
+*/
+
+html[data-skin="golden"][data-theme="light"] {
+  --bg-base: hsl(40 16% 98%);
+  --bg-elevated: #ffffff;
+  --bg-surface: hsl(44 26% 89%);
+  --bg-hover: hsl(40 24% 80%);
+  --border-subtle: hsl(43 23% 85%);
+  --border-active: hsl(40 24% 73%);
+  --border-focus: hsl(40 28% 55%);
+  --text-primary: hsl(37.5 16% 20%);
+  --text-secondary: hsl(36 20% 49%);
+  --text-tertiary: hsl(36 16% 55%);
+  --text-inverse: hsl(40 16% 98%);
+  --accent-primary: hsl(40 28% 55%);
+  --accent-primary-hover: hsl(40 32% 48%);
+  --accent-muted: hsl(40 24% 73% / 0.35);
+  --status-error: hsl(0 84% 60%);
+  --overlay-scrim: hsl(30 40% 10% / 0.4);
+  --chart-1: hsl(40 28% 55%);
+  --chart-2: hsl(37.5 16% 20%);
+  --chart-3: hsl(55 24% 49%);
+  --chart-4: hsl(43 23% 85%);
+  --chart-5: hsl(36 20% 49%);
+  --radius-md: 1.25rem;
+  --radius-sm: 0.85rem;
+  --radius-lg: 2rem;
+  --font-ui: var(--font-inter), "PingFang SC", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+  --font-display-ui: var(--font-fraunces), "Songti SC", Georgia, serif;
+  --font-mono-ui: var(--font-jb), ui-monospace, monospace;
+  --sidebar-bg: hsl(44 26% 92%);
+  --topbar-bg: hsl(40 16% 98%);
+  --panel-shadow: none;
+  --btn-radius: 999px;
+  --nav-radius: 999px;
+  --nav-active-bg: hsl(40 24% 73% / 0.45);
+  --nav-active-fg: hsl(37.5 16% 20%);
+  --nav-gap: 4px;
+  --pack-ring: hsl(40 28% 55%);
+  --pack-muted: hsl(44 26% 89%);
+  --pack-sidebar-border: hsl(43 23% 85%);
+}
+
+html[data-skin="golden"][data-theme="dark"] {
+  --bg-base: hsl(12 71% 1.4%);
+  --bg-elevated: hsl(12 40% 6%);
+  --bg-surface: hsl(35 15% 14%);
+  --bg-hover: hsl(35 15% 20%);
+  --border-subtle: hsl(43 8% 16%);
+  --border-active: hsl(35 15% 28%);
+  --border-focus: hsl(35 30% 71%);
+  --text-primary: hsl(41.5 19% 86%);
+  --text-secondary: hsl(35 15% 60%);
+  --text-tertiary: hsl(35 12% 45%);
+  --text-inverse: hsl(12 71% 8%);
+  --accent-primary: hsl(40 28% 58%);
+  --accent-primary-hover: hsl(41.5 19% 86%);
+  --accent-muted: hsl(35 25% 40% / 0.4);
+  --status-error: hsl(0 84% 60%);
+  --overlay-scrim: rgba(0, 0, 0, 0.65);
+  --chart-1: hsl(40 28% 58%);
+  --chart-2: hsl(41.5 19% 86%);
+  --chart-3: hsl(35 25% 40%);
+  --chart-4: hsl(35 15% 60%);
+  --chart-5: hsl(55 20% 80%);
+  --radius-md: 1.25rem;
+  --radius-sm: 0.85rem;
+  --radius-lg: 2rem;
+  --font-ui: var(--font-inter), "PingFang SC", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+  --font-display-ui: var(--font-fraunces), "Songti SC", Georgia, serif;
+  --font-mono-ui: var(--font-jb), ui-monospace, monospace;
+  --sidebar-bg: hsl(12 40% 6%);
+  --topbar-bg: hsl(12 50% 4%);
+  --panel-shadow: none;
+  --btn-radius: 999px;
+  --nav-radius: 999px;
+  --nav-active-bg: hsl(40 28% 58% / 0.2);
+  --nav-active-fg: hsl(41.5 19% 90%);
+  --nav-gap: 4px;
+  --pack-ring: hsl(40 28% 58%);
+  --pack-muted: hsl(35 15% 14%);
+  --pack-sidebar-border: hsl(43 8% 16%);
+}
+
+html[data-skin="golden"] body {
+  font-family: var(--font-ui);
+  letter-spacing: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  font-feature-settings: "ss01" on;
+}
+
+html[data-skin="golden"] .app-shell {
+  background:
+    radial-gradient(900px 420px at 12% 0%, color-mix(in srgb, var(--accent-primary) 14%, transparent), transparent 55%),
+    var(--bg-base);
+}
+
+html[data-skin="golden"] .app-sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid color-mix(in srgb, var(--accent-primary) 28%, var(--pack-sidebar-border));
+}
+
+html[data-skin="golden"] .app-sidebar-brand {
+  border-bottom: none;
+}
+
+html[data-skin="golden"] .app-sidebar-brand .truncate {
+  font-family: var(--font-display-ui);
+  font-weight: 560;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+html[data-skin="golden"] .app-sidebar-collapse {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+}
+
+html[data-skin="golden"] .app-sidebar-nav {
+  gap: 4px;
+  padding: 8px 12px;
+}
+
+html[data-skin="golden"] .app-nav-item {
+  gap: 12px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+html[data-skin="golden"] .app-nav-icon {
+  color: color-mix(in srgb, var(--text-primary) 70%, var(--accent-primary));
+}
+
+html[data-skin="golden"] .app-nav-item.is-active {
+  background: var(--nav-active-bg);
+  color: var(--nav-active-fg);
+  font-weight: 600;
+}
+
+html[data-skin="golden"] .app-nav-item.is-active .app-nav-icon {
+  color: var(--accent-primary);
+}
+
+html[data-skin="golden"] .app-sidebar-foot {
+  border-top: 1px solid var(--pack-sidebar-border);
+  font-size: 12px;
+}
+
+html[data-skin="golden"] .app-topbar {
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--pack-sidebar-border);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+html[data-skin="golden"] .btn {
+  height: 36px;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  font: 600 13px/1 var(--font-ui);
+  letter-spacing: 0;
+  box-shadow: none !important;
+}
+
+html[data-skin="golden"] .btn:not(.btn-ghost):not(.btn-secondary) {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+}
+
+html[data-skin="golden"] .btn-ghost,
+html[data-skin="golden"] .btn-secondary {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 45%, var(--border-subtle));
+  background: transparent;
+  color: var(--text-primary);
+}
+
+html[data-skin="golden"] .panel {
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, var(--border-subtle));
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--accent-primary));
+  box-shadow: none !important;
+}
+
+html[data-skin="golden"] .field {
+  height: 44px;
+  border-radius: 0.9rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+}
+
+html[data-skin="golden"] .field:focus {
+  border-color: var(--pack-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+}
+
+html[data-skin="golden"] .playground-composer {
+  border-radius: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 28%, var(--border-subtle));
+  background: var(--bg-elevated);
+  padding: 16px 18px 12px;
+}
+
+html[data-skin="golden"] .playground-composer:focus-within {
+  border-color: var(--pack-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 18%, transparent);
+}
+
+html[data-skin="golden"] .playground-composer-input {
+  font: 15px/1.55 var(--font-ui);
+  min-height: 48px;
+}
+
+html[data-skin="golden"] .playground-composer .btn:not(.btn-ghost):not(.btn-secondary) {
+  height: 34px;
+  border-radius: 999px;
+}
+
+html[data-skin="golden"] .font-display,
+html[data-skin="golden"] h1,
+html[data-skin="golden"] h2,
+html[data-skin="golden"] .playground-empty h2 {
+  font-family: var(--font-display-ui);
+  font-weight: 560;
+  letter-spacing: -0.02em;
+}

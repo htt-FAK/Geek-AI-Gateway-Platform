@@ -1,0 +1,238 @@
+/* Claude — conversational paper (Doubao-depth)
+   Source: Claude/colors_and_type.css + ui_kits/dashboard
+*/
+
+html[data-skin="claude"][data-theme="light"] {
+  --bg-base: #faf9f5;
+  --bg-elevated: #ffffff;
+  --bg-surface: #f0eee6;
+  --bg-hover: #e8e6dc;
+  --border-subtle: #e8e6dc;
+  --border-active: #d1cfc5;
+  --border-focus: #c96442;
+  --text-primary: #141413;
+  --text-secondary: #b0aea5;
+  --text-tertiary: #b0aea5;
+  --text-inverse: #faf9f5;
+  --accent-primary: #c96442;
+  --accent-primary-hover: #d97757;
+  --accent-muted: rgba(201, 100, 66, 0.12);
+  --status-error: #141413;
+  --overlay-scrim: rgba(20, 20, 19, 0.4);
+  --chart-1: #c96442;
+  --chart-2: #d97757;
+  --chart-3: #141413;
+  --chart-4: #b0aea5;
+  --chart-5: #87867f;
+  --radius-md: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1rem;
+  --font-ui: var(--font-inter), "PingFang SC", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+  --font-display-ui: var(--font-newsreader), "Songti SC", Georgia, serif;
+  --font-mono-ui: var(--font-jb), ui-monospace, monospace;
+  --sidebar-bg: #f5f4ee;
+  --topbar-bg: #faf9f5;
+  --panel-shadow: 0 4px 24px rgba(20, 20, 19, 0.06);
+  --btn-radius: 0.75rem;
+  --nav-radius: 0.75rem;
+  --nav-active-bg: #ffffff;
+  --nav-active-fg: #141413;
+  --nav-gap: 4px;
+  --pack-ring: #c96442;
+  --pack-muted: #f0eee6;
+  --pack-sidebar-border: #e8e6dc;
+}
+
+html[data-skin="claude"][data-theme="dark"] {
+  --bg-base: #141413;
+  --bg-elevated: #1f1e1d;
+  --bg-surface: #30302e;
+  --bg-hover: #3d3d3a;
+  --border-subtle: #30302e;
+  --border-active: #3d3d3a;
+  --border-focus: #d97757;
+  --text-primary: #faf9f5;
+  --text-secondary: #b0aea5;
+  --text-tertiary: #87867f;
+  --text-inverse: #141413;
+  --accent-primary: #d97757;
+  --accent-primary-hover: #c96442;
+  --accent-muted: rgba(217, 119, 87, 0.16);
+  --status-error: #faf9f5;
+  --overlay-scrim: rgba(0, 0, 0, 0.6);
+  --chart-1: #d97757;
+  --chart-2: #c96442;
+  --chart-3: #faf9f5;
+  --chart-4: #b0aea5;
+  --chart-5: #87867f;
+  --radius-md: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1rem;
+  --font-ui: var(--font-inter), "PingFang SC", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+  --font-display-ui: var(--font-newsreader), "Songti SC", Georgia, serif;
+  --font-mono-ui: var(--font-jb), ui-monospace, monospace;
+  --sidebar-bg: #1f1e1d;
+  --topbar-bg: #141413;
+  --panel-shadow: none;
+  --btn-radius: 0.75rem;
+  --nav-radius: 0.75rem;
+  --nav-active-bg: #30302e;
+  --nav-active-fg: #faf9f5;
+  --nav-gap: 4px;
+  --pack-ring: #d97757;
+  --pack-muted: #30302e;
+  --pack-sidebar-border: #30302e;
+}
+
+html[data-skin="claude"] body {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+html[data-skin="claude"] .app-shell {
+  background: var(--bg-base);
+}
+
+html[data-skin="claude"] .app-sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--pack-sidebar-border);
+}
+
+html[data-skin="claude"] .app-sidebar-brand {
+  border-bottom: none;
+}
+
+html[data-skin="claude"] .app-sidebar-brand .truncate {
+  font-family: var(--font-display-ui);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+}
+
+html[data-skin="claude"] .app-sidebar-collapse {
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--bg-base) 80%, var(--sidebar-bg));
+}
+
+html[data-skin="claude"] .app-sidebar-nav {
+  gap: 4px;
+  padding: 6px 10px 12px;
+}
+
+html[data-skin="claude"] .app-nav-item {
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 0.75rem;
+  font-size: 13.5px;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+html[data-skin="claude"] .app-nav-icon {
+  color: var(--text-secondary);
+}
+
+html[data-skin="claude"] .app-nav-item.is-active {
+  background: var(--nav-active-bg);
+  color: var(--nav-active-fg);
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(20, 20, 19, 0.06);
+}
+
+html[data-skin="claude"][data-theme="dark"] .app-nav-item.is-active {
+  box-shadow: none;
+}
+
+html[data-skin="claude"] .app-nav-item.is-active .app-nav-icon {
+  color: var(--accent-primary);
+}
+
+html[data-skin="claude"] .app-sidebar-foot {
+  border-top: 1px solid var(--pack-sidebar-border);
+  font-size: 12px;
+}
+
+html[data-skin="claude"] .app-topbar {
+  background: transparent;
+  border-bottom: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+html[data-skin="claude"] .btn {
+  height: 36px;
+  padding: 0 0.95rem;
+  border-radius: 0.75rem;
+  font: 500 13px/1 var(--font-ui);
+  box-shadow: none !important;
+}
+
+html[data-skin="claude"] .btn:not(.btn-ghost):not(.btn-secondary) {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+}
+
+html[data-skin="claude"] .btn-ghost,
+html[data-skin="claude"] .btn-secondary {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: 0.75rem;
+}
+
+html[data-skin="claude"] .panel {
+  border-radius: 1rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  box-shadow: var(--panel-shadow);
+}
+
+html[data-skin="claude"] .field {
+  height: 42px;
+  border-radius: 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+html[data-skin="claude"] .field:focus {
+  border-color: var(--pack-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 16%, transparent);
+}
+
+html[data-skin="claude"] .playground-composer {
+  border-radius: 1rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  box-shadow: var(--panel-shadow);
+  padding: 14px 16px 10px;
+}
+
+html[data-skin="claude"] .playground-composer:focus-within {
+  border-color: color-mix(in srgb, var(--accent-primary) 50%, var(--border-subtle));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 12%, transparent), var(--panel-shadow);
+}
+
+html[data-skin="claude"] .playground-composer-input {
+  font: 15px/1.55 var(--font-ui);
+  min-height: 48px;
+}
+
+html[data-skin="claude"] .playground-composer .btn:not(.btn-ghost):not(.btn-secondary) {
+  height: 36px;
+  border-radius: 0.75rem;
+}
+
+html[data-skin="claude"] .font-display,
+html[data-skin="claude"] h1 {
+  font-family: var(--font-display-ui);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+html[data-skin="claude"] .playground-empty h2 {
+  font-family: var(--font-display-ui);
+  font-weight: 500;
+}

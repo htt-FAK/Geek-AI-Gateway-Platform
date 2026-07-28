@@ -1,0 +1,59 @@
+/* Theme pack skins — component language ports from design pack folders.
+   Each skin file maps tokens + components.css patterns onto shared console classes.
+*/
+
+@import "./skins/minimal.css";
+@import "./skins/doubao.css";
+@import "./skins/trae.css";
+@import "./skins/golden.css";
+@import "./skins/google.css";
+@import "./skins/claude.css";
+@import "./skins/apple.css";
+@import "./skins/21th.css";
+@import "./skins/entry.css";
+
+/* Shell geometry locked to Minimal defaults — skins must not change rail size */
+html[data-skin] .app-shell:not([data-collapsed="1"]) .app-sidebar {
+  width: 15rem !important; /* w-60 */
+}
+html[data-skin] .app-shell:not([data-collapsed="1"]) .app-main {
+  margin-left: 15rem !important;
+}
+html[data-skin] .app-shell[data-collapsed="1"] .app-sidebar {
+  width: 4rem !important; /* w-16 */
+}
+html[data-skin] .app-shell[data-collapsed="1"] .app-main {
+  margin-left: 4rem !important;
+}
+html[data-skin] .app-shell:not([data-collapsed="1"]) .app-sidebar-brand {
+  height: 64px !important;
+  min-height: 64px !important;
+  max-height: 64px !important;
+  box-sizing: border-box;
+}
+html[data-skin] .app-shell[data-collapsed="1"] .app-sidebar-brand {
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+  box-sizing: border-box;
+}
+html[data-skin] .app-topbar {
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+  box-sizing: border-box;
+}
+
+/* Shared: keep console chrome readable in CJK — display fonts only on titles */
+html[data-skin] .btn,
+html[data-skin] .app-nav-item,
+html[data-skin] .field,
+html[data-skin] .playground-composer-input {
+  font-family: var(--font-ui);
+}
+
+html[data-skin] h1,
+html[data-skin] h2,
+html[data-skin] .font-display {
+  font-family: var(--font-display-ui);
+}

@@ -1,0 +1,228 @@
+/* Google — analytical Material-ish (Doubao-depth)
+   Source: Google/colors_and_type.css + ui_kits/dashboard
+*/
+
+html[data-skin="google"][data-theme="light"] {
+  --bg-base: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-surface: #eff1f4;
+  --bg-hover: #dbeafe;
+  --border-subtle: #ebebeb;
+  --border-active: #e2e3e4;
+  --border-focus: #4285f4;
+  --text-primary: #0e1115;
+  --text-secondary: #7f8d9f;
+  --text-tertiary: #7f8d9f;
+  --text-inverse: #ffffff;
+  --accent-primary: #4285f4;
+  --accent-primary-hover: #1a73e8;
+  --accent-muted: #dbeafe;
+  --status-error: #ef4444;
+  --overlay-scrim: rgba(14, 17, 21, 0.4);
+  --chart-1: #4285f4;
+  --chart-2: #ea4335;
+  --chart-3: #fbbc05;
+  --chart-4: #0043ad;
+  --chart-5: #34a853;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.25rem;
+  --radius-lg: 0.75rem;
+  --font-ui: var(--font-dm), "PingFang SC", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+  --font-display-ui: var(--font-dm), "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  --font-mono-ui: var(--font-jb), ui-monospace, monospace;
+  --sidebar-bg: #f0f6ff;
+  --topbar-bg: #ffffff;
+  --panel-shadow: 0 1px 2px rgba(60, 64, 67, 0.1), 0 2px 8px rgba(60, 64, 67, 0.08);
+  --btn-radius: 999px;
+  --nav-radius: 999px;
+  --nav-active-bg: #dbeafe;
+  --nav-active-fg: #003e8f;
+  --nav-gap: 2px;
+  --pack-ring: #4285f4;
+  --pack-muted: #eff1f4;
+  --pack-sidebar-border: #e7eaef;
+}
+
+html[data-skin="google"][data-theme="dark"] {
+  --bg-base: #161616;
+  --bg-elevated: #1d1d1c;
+  --bg-surface: #383838;
+  --bg-hover: #4a2026;
+  --border-subtle: #2e2e2e;
+  --border-active: #383838;
+  --border-focus: #fc2c50;
+  --text-primary: #eff1f4;
+  --text-secondary: #949494;
+  --text-tertiary: #949494;
+  --text-inverse: #ffffff;
+  --accent-primary: #fc2c50;
+  --accent-primary-hover: #ff4d6d;
+  --accent-muted: #4a2026;
+  --status-error: #ef4444;
+  --overlay-scrim: rgba(0, 0, 0, 0.6);
+  --chart-1: #fc2c50;
+  --chart-2: #4285f4;
+  --chart-3: #fbbc05;
+  --chart-4: #34a853;
+  --chart-5: #eff1f4;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.25rem;
+  --radius-lg: 0.75rem;
+  --font-ui: var(--font-dm), "PingFang SC", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+  --font-display-ui: var(--font-dm), "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  --font-mono-ui: var(--font-jb), ui-monospace, monospace;
+  --sidebar-bg: #171717;
+  --topbar-bg: #161616;
+  --panel-shadow: none;
+  --btn-radius: 999px;
+  --nav-radius: 999px;
+  --nav-active-bg: #4a2026;
+  --nav-active-fg: #fc2c50;
+  --nav-gap: 2px;
+  --pack-ring: #fc2c50;
+  --pack-muted: #383838;
+  --pack-sidebar-border: #2e2e2e;
+}
+
+html[data-skin="google"] body {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+html[data-skin="google"] .app-shell {
+  background: var(--bg-base);
+}
+
+html[data-skin="google"] .app-sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--pack-sidebar-border);
+  box-shadow: inset -1px 0 0 var(--pack-sidebar-border);
+}
+
+html[data-skin="google"] .app-sidebar-brand {
+  border-bottom: none;
+}
+
+html[data-skin="google"] .app-sidebar-collapse {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-base) 70%, var(--sidebar-bg));
+}
+
+html[data-skin="google"] .app-sidebar-nav {
+  gap: 2px;
+  padding: 4px 10px 12px;
+}
+
+html[data-skin="google"] .app-nav-item {
+  gap: 11px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+html[data-skin="google"] .app-nav-icon {
+  color: var(--text-secondary);
+}
+
+html[data-skin="google"] .app-nav-item.is-active {
+  background: var(--nav-active-bg);
+  color: var(--nav-active-fg);
+  font-weight: 600;
+}
+
+html[data-skin="google"] .app-nav-item.is-active .app-nav-icon {
+  color: var(--accent-primary);
+}
+
+html[data-skin="google"] .app-sidebar-foot {
+  border-top: 1px solid var(--pack-sidebar-border);
+}
+
+html[data-skin="google"] .app-topbar {
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--border-subtle);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+html[data-skin="google"] .btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font: 600 13px/1 var(--font-ui);
+  box-shadow: none !important;
+}
+
+html[data-skin="google"] .btn:not(.btn-ghost):not(.btn-secondary) {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+html[data-skin="google"] .btn-ghost {
+  background: var(--pack-muted);
+  border-color: transparent;
+  color: var(--text-primary);
+}
+
+html[data-skin="google"] .btn-secondary {
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+html[data-skin="google"] .panel {
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: var(--bg-elevated);
+  box-shadow: var(--panel-shadow);
+}
+
+html[data-skin="google"][data-theme="dark"] .panel {
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+
+html[data-skin="google"] .field {
+  height: 40px;
+  border-radius: 8px;
+  background: var(--pack-muted);
+  border: 1px solid transparent;
+}
+
+html[data-skin="google"] .field:focus {
+  background: var(--bg-elevated);
+  border-color: var(--pack-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pack-ring) 18%, transparent);
+}
+
+html[data-skin="google"] .playground-composer {
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  box-shadow: none;
+  padding: 14px 16px 10px;
+}
+
+html[data-skin="google"] .playground-composer:focus-within {
+  border-color: var(--pack-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pack-ring) 18%, transparent);
+}
+
+html[data-skin="google"] .playground-composer-input {
+  font: 15px/1.5 var(--font-ui);
+  min-height: 48px;
+}
+
+html[data-skin="google"] .playground-composer .btn:not(.btn-ghost):not(.btn-secondary) {
+  height: 36px;
+  border-radius: 999px;
+}
+
+html[data-skin="google"] .font-display,
+html[data-skin="google"] h1 {
+  font-family: var(--font-display-ui);
+  letter-spacing: -0.02em;
+}

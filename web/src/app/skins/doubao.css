@@ -1,0 +1,406 @@
+/* Doubao design pack → console chrome (v2, kit-faithful)
+   Source of truth: Doubao/ui_kits/dashboard + components.css sidebar-nav / chat-composer / button
+   Feel: cool gray rail, white floating active, pill CTA, border-led (no shadow), compact AI workspace
+   Font: Stack Sans Text → Inter (--font-inter)
+*/
+
+/* —— Tokens: light (canonical Doubao) —— */
+html[data-skin="doubao"][data-theme="light"] {
+  --bg-base: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-surface: #eff1f4;
+  --bg-hover: #e5e9ff;
+  --border-subtle: #e7eaef;
+  --border-active: #d4daff;
+  --border-focus: #557fff;
+  --text-primary: #0e1115;
+  --text-secondary: #7f8d9f;
+  --text-tertiary: #7f8d9f;
+  --text-inverse: #ffffff;
+  --accent-primary: #0065fd;
+  --accent-primary-hover: color-mix(in srgb, #0065fd 90%, #0e1115);
+  --accent-muted: #e5e9ff;
+  --status-error: #ef4444;
+  --overlay-scrim: rgba(14, 17, 21, 0.4);
+  --chart-1: #557fff;
+  --chart-2: #0065fd;
+  --chart-3: #0057da;
+  --chart-4: #0043ad;
+  --chart-5: #002e7d;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 1.2rem;
+  --font-ui: var(--font-inter), "PingFang SC", "Microsoft YaHei UI", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-display-ui: var(--font-inter), "PingFang SC", "Microsoft YaHei UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono-ui: var(--font-jb), "JetBrains Mono", ui-monospace, monospace;
+  --sidebar-bg: #eff1f4;
+  --topbar-bg: #ffffff;
+  --panel-shadow: none;
+  --chrome-blur: 0px;
+  --btn-radius: 999px;
+  --nav-radius: 10px;
+  --nav-active-bg: #ffffff;
+  --nav-active-fg: #0e1115;
+  --nav-gap: 2px;
+  --pack-ring: #557fff;
+  --pack-muted: #eff1f4;
+  --pack-sidebar-border: #e7eaef;
+  --pack-accent-soft: #e5e9ff;
+  --scrollbar-thumb: color-mix(in srgb, #7f8d9f 28%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, #7f8d9f 45%, transparent);
+}
+
+/* dark kept for completeness (UI locks to light) */
+html[data-skin="doubao"][data-theme="dark"] {
+  --bg-base: #0e1115;
+  --bg-elevated: #0e1115;
+  --bg-surface: #161a20;
+  --bg-hover: #00266b;
+  --border-subtle: #333942;
+  --border-active: #404040;
+  --border-focus: #00266b;
+  --text-primary: #eff1f4;
+  --text-secondary: #afbbcb;
+  --text-tertiary: #afbbcb;
+  --text-inverse: #ffffff;
+  --accent-primary: #0065fd;
+  --accent-primary-hover: color-mix(in srgb, #0065fd 90%, #eff1f4);
+  --accent-muted: #00266b;
+  --status-error: #ef4444;
+  --overlay-scrim: rgba(0, 0, 0, 0.6);
+  --chart-1: #60a5fa;
+  --chart-2: #3b82f6;
+  --chart-3: #2563eb;
+  --chart-4: #1d4ed8;
+  --chart-5: #1e40af;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 1.2rem;
+  --font-ui: var(--font-inter), "PingFang SC", ui-sans-serif, system-ui, sans-serif;
+  --font-display-ui: var(--font-inter), "PingFang SC", ui-sans-serif, system-ui, sans-serif;
+  --font-mono-ui: var(--font-jb), "JetBrains Mono", ui-monospace, monospace;
+  --sidebar-bg: #171717;
+  --topbar-bg: #0e1115;
+  --panel-shadow: none;
+  --btn-radius: 999px;
+  --nav-radius: 10px;
+  --nav-active-bg: #0e1115;
+  --nav-active-fg: #eff1f4;
+  --nav-gap: 2px;
+  --pack-ring: #00266b;
+  --pack-muted: #161a20;
+  --pack-sidebar-border: #404040;
+  --pack-accent-soft: #00266b;
+}
+
+/* —— Shell chrome (geometry locked in skins.css) —— */
+html[data-skin="doubao"] body {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html[data-skin="doubao"] .app-shell {
+  background: var(--bg-base);
+}
+
+html[data-skin="doubao"] .app-sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--pack-sidebar-border);
+  box-shadow: none;
+}
+
+/* Brand strip → soft kit header (no admin chrome bar) */
+html[data-skin="doubao"] .app-sidebar-brand {
+  border-bottom: none;
+  color: var(--text-primary);
+}
+
+html[data-skin="doubao"] .app-sidebar-brand .truncate {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+html[data-skin="doubao"] .app-sidebar-collapse {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--bg-base) 70%, var(--sidebar-bg));
+  color: var(--text-secondary);
+}
+
+html[data-skin="doubao"] .app-sidebar-collapse:hover {
+  background: var(--bg-base);
+  border-color: var(--pack-ring);
+  color: var(--text-primary);
+}
+
+html[data-skin="doubao"] .app-sidebar-nav {
+  gap: 2px;
+  padding: 4px 10px 12px;
+}
+
+html[data-skin="doubao"] .app-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 0 !important;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  font-weight: 400;
+  color: #0e1115;
+  background: transparent;
+  box-shadow: none !important;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+html[data-skin="doubao"] .app-nav-icon {
+  width: 18px;
+  height: 18px;
+  color: color-mix(in srgb, #0e1115 72%, #7f8d9f);
+  opacity: 1;
+  background: transparent !important;
+  border-radius: 0;
+  overflow: visible;
+}
+
+html[data-skin="doubao"] .app-nav-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+html[data-skin="doubao"] .app-nav-item:hover {
+  background: color-mix(in srgb, #ffffff 64%, #eff1f4);
+  color: #0e1115;
+}
+
+html[data-skin="doubao"] .app-nav-item:hover .app-nav-icon {
+  color: #0e1115;
+}
+
+/* Kit: white floating active + primary icon */
+html[data-skin="doubao"] .app-nav-item.is-active {
+  background: #ffffff !important;
+  color: #0e1115 !important;
+  font-weight: 600;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding-left: 11px;
+}
+
+html[data-skin="doubao"] .app-nav-item.is-active .app-nav-icon {
+  color: #0065fd !important;
+  opacity: 1;
+  filter: none;
+}
+
+html[data-skin="doubao"] .app-sidebar-foot {
+  margin-top: auto;
+  border-top: 1px solid var(--pack-sidebar-border);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+/* Topbar → almost invisible kit chrome (white canvas) */
+html[data-skin="doubao"] .app-topbar {
+  background: #ffffff;
+  border-bottom: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+html[data-skin="doubao"] .app-content {
+  background: #ffffff;
+}
+
+html[data-skin="doubao"] .app-content > div {
+  padding-top: 1.25rem;
+}
+
+/* —— Buttons (full pill, no elevation) —— */
+html[data-skin="doubao"] .btn {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: 500 13px/1 var(--font-ui);
+  box-shadow: none !important;
+  gap: 7px;
+  letter-spacing: 0;
+}
+
+html[data-skin="doubao"] .btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+html[data-skin="doubao"] .btn:focus-visible {
+  outline: 2px solid var(--pack-ring);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+html[data-skin="doubao"] .btn:not(.btn-ghost):not(.btn-secondary) {
+  background: #0065fd;
+  color: #ffffff;
+  border-color: transparent;
+}
+
+html[data-skin="doubao"] .btn:not(.btn-ghost):not(.btn-secondary):hover:not(:disabled) {
+  background: color-mix(in srgb, #0065fd 90%, #0e1115);
+}
+
+html[data-skin="doubao"] .btn-ghost {
+  background: #eff1f4;
+  color: #0e1115;
+  border-color: transparent;
+}
+
+html[data-skin="doubao"] .btn-ghost:hover:not(:disabled) {
+  background: color-mix(in srgb, #eff1f4 82%, #0e1115 14%);
+}
+
+html[data-skin="doubao"] .btn-secondary {
+  background: #ffffff;
+  color: #0e1115;
+  border: 1px solid #e7eaef;
+}
+
+html[data-skin="doubao"] .btn-secondary:hover:not(:disabled) {
+  background: #eff1f4;
+}
+
+/* —— Panels / fields —— */
+html[data-skin="doubao"] .panel {
+  border: 1px solid #e7eaef;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: none !important;
+}
+
+html[data-skin="doubao"] .field {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #eff1f4;
+  box-shadow: none;
+  font-size: 14px;
+  color: #0e1115;
+}
+
+html[data-skin="doubao"] .field:focus {
+  background: #ffffff;
+  border-color: #557fff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #557fff 18%, transparent);
+}
+
+html[data-skin="doubao"] .field::placeholder {
+  color: #7f8d9f;
+}
+
+/* —— Chat composer (kit signature) —— */
+html[data-skin="doubao"] .playground-composer {
+  border: 1px solid #e7eaef;
+  border-radius: 22px;
+  background: #ffffff;
+  padding: 14px 16px 10px;
+  box-shadow: none !important;
+  transition: border-color 0.16s, box-shadow 0.16s;
+}
+
+html[data-skin="doubao"] .playground-composer:focus-within {
+  border-color: #557fff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #557fff 18%, transparent) !important;
+}
+
+html[data-skin="doubao"] .playground-composer-input {
+  font: 15px/1.5 var(--font-ui);
+  min-height: 48px;
+  color: #0e1115;
+}
+
+html[data-skin="doubao"] .playground-composer-input::placeholder {
+  color: #7f8d9f;
+}
+
+html[data-skin="doubao"] .playground-composer-bar {
+  margin-top: 10px;
+  padding-top: 0;
+  border-top: 0;
+  gap: 6px;
+}
+
+html[data-skin="doubao"] .playground-composer .btn-ghost {
+  height: 34px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 13px;
+  color: color-mix(in srgb, #0e1115 78%, #7f8d9f);
+}
+
+html[data-skin="doubao"] .playground-composer .btn-ghost:hover:not(:disabled) {
+  background: #eff1f4;
+  color: #0e1115;
+}
+
+/* Send → round primary chip like kit .send */
+html[data-skin="doubao"] .playground-composer .btn:not(.btn-ghost):not(.btn-secondary) {
+  min-width: 36px;
+  width: auto;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #0065fd;
+  font-weight: 500;
+}
+
+html[data-skin="doubao"] .thinking-depth-label {
+  font: 600 11px/1 var(--font-mono-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7f8d9f;
+}
+
+html[data-skin="doubao"] .font-display,
+html[data-skin="doubao"] h1,
+html[data-skin="doubao"] h2 {
+  font-family: var(--font-display-ui);
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+
+html[data-skin="doubao"] th,
+html[data-skin="doubao"] .tabular-label {
+  font: 600 11px/1 var(--font-mono-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7f8d9f;
+}
+
+/* Playground empty / role labels → softer kit tone */
+html[data-skin="doubao"] .app-content .text-\[12px\].font-medium.uppercase {
+  font: 600 11px/1 var(--font-mono-ui);
+  letter-spacing: 0.08em;
+  color: #7f8d9f;
+}
+
+html[data-skin="doubao"] .app-content .border-b.border-\[var\(--border-subtle\)\] {
+  border-color: #e7eaef;
+}
+
+/* Dialogs inherit soft cards */
+html[data-skin="doubao"] [role="dialog"] {
+  border-radius: 14px;
+  box-shadow: none;
+  border: 1px solid #e7eaef;
+}

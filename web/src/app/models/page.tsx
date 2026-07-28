@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { ConsolePage, useMe } from "@/components/console";
+import { ModelDocsDialog } from "@/components/model-docs-dialog";
+import { envPublicGateway } from "@/lib/public-env";
 
 function providerOf(model: string): "deepseek" | "mimo" | "other" {
   if (model.toLowerCase().includes("deepseek")) return "deepseek";
@@ -22,6 +25,8 @@ function hint(model: string): string {
 export default function ModelsPage() {
   const { me } = useMe();
   const models = me?.models ?? [];
+  const [docsModel, setDocsModel] = useState<string | null>(null);
+  const gatewayUrl = me?.gatewayUrl ?? envPublicGateway();
 
   return (
     <ConsolePage phone={me?.phone}>
@@ -56,6 +61,13 @@ export default function ModelsPage() {
               </div>
               <div className="flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100">
                 <span className="text-xs text-[var(--status-success)]">正常</span>
+                <button
+                  type="button"
+                  className="text-xs text-[var(--accent-primary)] hover:underline"
+                  onClick={() => setDocsModel(model)}
+                >
+                  文档
+                </button>
                 <Link
                   href={`/playground?model=${encodeURIComponent(model)}`}
                   className="text-xs text-[var(--accent-primary)] hover:underline"
@@ -67,6 +79,15 @@ export default function ModelsPage() {
           );
         })}
       </ul>
+
+      <ModelDocsDialog
+        model={docsModel}
+        gatewayUrl={gatewayUrl}
+        open={Boolean(docsModel)}
+        onOpenChange={(open) => {
+          if (!open) setDocsModel(null);
+        }}
+      />
     </ConsolePage>
   );
 }

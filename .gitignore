@@ -22,7 +22,7 @@ web/dev.db-journal
 web/*.db
 web/tsconfig.tsbuildinfo
 
-# ide / os
+# ide / os / agents
 .idea/
 .vscode/
 .DS_Store
@@ -30,3 +30,21 @@ Thumbs.db
 *.log
 .omo/
 .codegraph/
+.codex/
+.cursor/
+.pytest_cache/
+
+# design packs & scratch (not product source)
+*.zip
+/TRAE/
+/TRAE Work/
+/Doubao/
+/Google/
+/Claude/
+/Apple/
+/21th/
+/Golden Time/
+/Minimalist Copy/
+/ui_kits/
+/TikTok/
+web/.tmp-skin-shots/

@@ -1,0 +1,231 @@
+/* Apple — soft system glass (Doubao-depth)
+   Source: Apple/colors_and_type.css + ui_kits
+*/
+
+html[data-skin="apple"][data-theme="light"] {
+  --bg-base: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-surface: #f2f2f7;
+  --bg-hover: #e5e5ea;
+  --border-subtle: rgba(60, 60, 67, 0.12);
+  --border-active: rgba(60, 60, 67, 0.29);
+  --border-focus: #007aff;
+  --text-primary: #000000;
+  --text-secondary: rgba(60, 60, 67, 0.6);
+  --text-tertiary: rgba(60, 60, 67, 0.3);
+  --text-inverse: #ffffff;
+  --accent-primary: #007aff;
+  --accent-primary-hover: #0066d6;
+  --accent-muted: rgba(0, 122, 255, 0.12);
+  --status-error: #ff3b30;
+  --overlay-scrim: rgba(0, 0, 0, 0.4);
+  --chart-1: #007aff;
+  --chart-2: #34c759;
+  --chart-3: #ff9500;
+  --chart-4: #af52de;
+  --chart-5: #ff3b30;
+  --radius-md: 1rem;
+  --radius-sm: 0.75rem;
+  --radius-lg: 1.2rem;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei UI", var(--font-inter), sans-serif;
+  --font-display-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", var(--font-inter), sans-serif;
+  --font-mono-ui: "SF Mono", var(--font-jb), ui-monospace, monospace;
+  --sidebar-bg: rgba(242, 242, 247, 0.82);
+  --topbar-bg: rgba(255, 255, 255, 0.72);
+  --panel-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  --chrome-blur: 20px;
+  --btn-radius: 980px;
+  --nav-radius: 980px;
+  --nav-active-bg: #007aff;
+  --nav-active-fg: #ffffff;
+  --nav-gap: 2px;
+  --pack-ring: #007aff;
+  --pack-muted: #f2f2f7;
+  --pack-sidebar-border: rgba(60, 60, 67, 0.08);
+}
+
+html[data-skin="apple"][data-theme="dark"] {
+  --bg-base: #000000;
+  --bg-elevated: #1c1c1e;
+  --bg-surface: #2c2c2e;
+  --bg-hover: #3a3a3c;
+  --border-subtle: rgba(84, 84, 88, 0.65);
+  --border-active: rgba(99, 99, 102, 0.8);
+  --border-focus: #0a84ff;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(235, 235, 245, 0.6);
+  --text-tertiary: rgba(235, 235, 245, 0.3);
+  --text-inverse: #ffffff;
+  --accent-primary: #0a84ff;
+  --accent-primary-hover: #409cff;
+  --accent-muted: rgba(10, 132, 255, 0.2);
+  --status-error: #ff453a;
+  --overlay-scrim: rgba(0, 0, 0, 0.6);
+  --chart-1: #0a84ff;
+  --chart-2: #30d158;
+  --chart-3: #ff9f0a;
+  --chart-4: #bf5af2;
+  --chart-5: #ff453a;
+  --radius-md: 1rem;
+  --radius-sm: 0.75rem;
+  --radius-lg: 1.2rem;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei UI", var(--font-inter), sans-serif;
+  --font-display-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", var(--font-inter), sans-serif;
+  --font-mono-ui: "SF Mono", var(--font-jb), ui-monospace, monospace;
+  --sidebar-bg: rgba(28, 28, 30, 0.85);
+  --topbar-bg: rgba(0, 0, 0, 0.65);
+  --panel-shadow: none;
+  --chrome-blur: 20px;
+  --btn-radius: 980px;
+  --nav-radius: 980px;
+  --nav-active-bg: #0a84ff;
+  --nav-active-fg: #ffffff;
+  --nav-gap: 2px;
+  --pack-ring: #0a84ff;
+  --pack-muted: #2c2c2e;
+  --pack-sidebar-border: rgba(84, 84, 88, 0.4);
+}
+
+html[data-skin="apple"] body {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+html[data-skin="apple"] .app-shell {
+  background: var(--bg-base);
+}
+
+html[data-skin="apple"] .app-sidebar {
+  background: var(--sidebar-bg);
+  backdrop-filter: saturate(180%) blur(var(--chrome-blur));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--chrome-blur));
+  border-right: 1px solid var(--pack-sidebar-border);
+}
+
+html[data-skin="apple"] .app-sidebar-brand {
+  border-bottom: none;
+}
+
+html[data-skin="apple"] .app-sidebar-collapse {
+  border-radius: 980px;
+  background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
+}
+
+html[data-skin="apple"] .app-sidebar-nav {
+  gap: 2px;
+  padding: 6px 10px;
+}
+
+html[data-skin="apple"] .app-nav-item {
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 980px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+html[data-skin="apple"] .app-nav-icon {
+  color: var(--text-secondary);
+}
+
+html[data-skin="apple"] .app-nav-item.is-active {
+  background: var(--nav-active-bg);
+  color: var(--nav-active-fg);
+  font-weight: 600;
+}
+
+html[data-skin="apple"] .app-nav-item.is-active .app-nav-icon {
+  color: var(--nav-active-fg);
+}
+
+html[data-skin="apple"] .app-sidebar-foot {
+  border-top: 1px solid var(--pack-sidebar-border);
+}
+
+html[data-skin="apple"] .app-topbar {
+  background: var(--topbar-bg);
+  backdrop-filter: saturate(180%) blur(var(--chrome-blur));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--chrome-blur));
+  border-bottom: 1px solid var(--pack-sidebar-border);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+html[data-skin="apple"] .btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 980px;
+  font: 600 14px/1 var(--font-ui);
+  box-shadow: none !important;
+}
+
+html[data-skin="apple"] .btn:not(.btn-ghost):not(.btn-secondary) {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+html[data-skin="apple"] .btn-ghost,
+html[data-skin="apple"] .btn-secondary {
+  background: var(--bg-surface);
+  border: none;
+  color: var(--accent-primary);
+  border-radius: 980px;
+}
+
+html[data-skin="apple"] .panel {
+  border-radius: 1.2rem;
+  border: none;
+  background: var(--bg-elevated);
+  box-shadow: var(--panel-shadow);
+}
+
+html[data-skin="apple"][data-theme="dark"] .panel {
+  background: var(--bg-elevated);
+  box-shadow: none;
+  border: 1px solid var(--border-subtle);
+}
+
+html[data-skin="apple"] .field {
+  height: 40px;
+  border-radius: 0.85rem;
+  background: var(--bg-surface);
+  border: none;
+}
+
+html[data-skin="apple"] .field:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 28%, transparent);
+  outline: none;
+}
+
+html[data-skin="apple"] .playground-composer {
+  border-radius: 1.2rem;
+  border: none;
+  background: var(--bg-surface);
+  box-shadow: none;
+  padding: 14px 16px 10px;
+}
+
+html[data-skin="apple"] .playground-composer:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+  background: var(--bg-elevated);
+}
+
+html[data-skin="apple"] .playground-composer-input {
+  font: 15px/1.45 var(--font-ui);
+  min-height: 44px;
+}
+
+html[data-skin="apple"] .playground-composer .btn:not(.btn-ghost):not(.btn-secondary) {
+  height: 34px;
+  border-radius: 980px;
+}
+
+html[data-skin="apple"] .font-display,
+html[data-skin="apple"] h1 {
+  font-family: var(--font-display-ui);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
