@@ -1,83 +1,140 @@
-# 高科极客 AI 网关平台
+<p align="center">
+  <img src="docs/images/hero-banner.png" alt="高科极客 AI 网关平台" width="920" />
+</p>
+
+<h1 align="center">高科极客 AI 网关平台</h1>
 
 <p align="center">
-  <strong>有趣的人，在这里调用世界</strong>
+  <b>有趣的人，在这里调用世界</b>
 </p>
 
 <p align="center">
-  自研 Web 控制台 + LiteLLM Proxy 的业务仓<br/>
-  手机号登录 · Virtual Key · 用量看板 · 调试台 · 多皮肤主题
+  OpenAI 兼容的团队 AI 网关 · Next.js 控制台 · LiteLLM Proxy<br/>
+  统一接入 DeepSeek / 小米 MiMo · Virtual Key · 用量观测 · 调试台 · 多皮肤
 </p>
 
 <p align="center">
-  <a href="#功能亮点">功能</a> ·
-  <a href="#仓库结构">结构</a> ·
-  <a href="#快速开始">快速开始</a> ·
-  <a href="#上游模型">模型</a> ·
-  <a href="#部署">部署</a> ·
-  <a href="#文档">文档</a>
+  <a href="https://github.com/htt-FAK/Geek-AI-Gateway-Platform"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-htt--FAK%2FGeek--AI--Gateway--Platform-181717?logo=github" /></a>
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-15-black?logo=nextdotjs" />
+  <img alt="LiteLLM" src="https://img.shields.io/badge/LiteLLM-v1.83.14--stable-0EA5E9" />
+  <img alt="License" src="https://img.shields.io/badge/license-Internal-lightgrey" />
+</p>
+
+<p align="center">
+  <a href="#why">为什么做</a> ·
+  <a href="#gallery">界面一览</a> ·
+  <a href="#features">功能</a> ·
+  <a href="#quickstart">快速开始</a> ·
+  <a href="#models">模型</a> ·
+  <a href="#architecture">架构</a> ·
+  <a href="#docs">文档</a>
 </p>
 
 ---
 
-面向团队内部的 **OpenAI 兼容 AI 网关**：统一接入 DeepSeek / 小米 MiMo，配齐登录、密钥、预算、用量与 Playground。  
-本仓库是精简业务仓，**不包含** LiteLLM monorepo 源码；网关运行镜像锁定 `v1.83.14-stable`。
+<p align="center">
+  <img src="docs/images/01-login.png" alt="进入页 / 登录" width="920" />
+</p>
 
-| 入口 | 说明 |
+## Why
+
+团队里每个人、每个脚本都去申请上游 Key，最后账单散落、配额失控、排障困难。
+
+**高科极客 AI 网关** 把「接入 → 鉴权 → 计费 → 观测 → 试用」收成一条链路：
+
+| 以前 | 现在 |
 |------|------|
-| Web 控制台 | `http://<host>:3000` — 登录、看板、模型、密钥、调试台、管理 |
-| Gateway API | `http://<host>:4000/v1` — OpenAI 兼容，Bearer Virtual Key |
+| 每人一把上游 Key | 统一 Virtual Key，可轮换、可禁用 |
+| 不知道谁在烧钱 | 日 / 月预算 + Token 用量看板 |
+| curl 试模型靠猜 | 调试台流式对话 + 模型文档弹层 |
+| 控制台长得像后台模板 | 8 套皮肤，进入页品牌钉死 |
+
+本仓库是**精简业务仓**（`gateway/` + `web/` + `deploy/`），**不包含** LiteLLM monorepo 源码。
 
 ---
 
-## 功能亮点
+## Gallery
 
-- **统一网关** — DeepSeek / MiMo 多模型别名，Virtual Key + Spend / 预算
-- **控制台** — 手机号登录、日周月预算、用量曲线、密钥一键复制与轮换
-- **调试台** — 流式对话、思考深度档位（按模型）、调用示例一键复制
-- **模型文档** — `/models` 每行可查看官方说明与本网关 curl / Python 示例
-- **主题皮肤** — Minimal / TRAE / Golden / Google / Doubao / Claude / Apple / 21th；进入页品牌钉死
-- **一键运维** — `deploy/` Compose + `scripts/deploy.sh` / `test.sh`
+### 用量看板
+
+Token 调用一眼看完：限额进度、消耗分布、调用趋势。
+
+<p align="center">
+  <img src="docs/images/02-dashboard.png" alt="用量看板" width="920" />
+</p>
+
+### 调试台
+
+流式对话、思考深度档位（按模型）、上传上下文、「查看代码」一键复制网关调用示例。
+
+<p align="center">
+  <img src="docs/images/03-playground.png" alt="调试台" width="920" />
+</p>
+
+### 模型目录
+
+每个模型可打开 **文档**：官方说明 + 经本网关的 cURL / Python 示例。
+
+<p align="center">
+  <img src="docs/images/04-models.png" alt="模型页" width="920" />
+</p>
+
+### 密钥中心
+
+Virtual Key 星号展示、复制、轮换；Base URL 与模型清单一目了然。
+
+<p align="center">
+  <img src="docs/images/05-keys.png" alt="密钥页" width="920" />
+</p>
+
+### 主题皮肤
+
+Minimal · TRAE · Golden Time · Google · Doubao · Claude · Apple · 21th  
+进入页（`/`、`/login`）**不随皮肤漂移**。
+
+<p align="center">
+  <img src="docs/images/06-themes.png" alt="主题设置" width="920" />
+</p>
 
 ---
 
-## 仓库结构
+## Features
 
-```text
-ai-gateway-platform/
-├── deploy/          # Docker Compose、Web 镜像、entrypoint
-├── gateway/         # LiteLLM config、峰谷价、model_catalog
-├── web/             # Next.js 控制台 + BFF（Prisma）
-├── scripts/         # env-init / deploy / test
-├── docs/            # 交接与说明
-└── openspec/        # 变更规格（可选）
-```
+- **统一网关** — OpenAI 兼容 `/v1`；DeepSeek / MiMo 多别名；峰时计费策略可配
+- **控制台** — 手机号登录、会话、日周月预算、用量曲线、管理端用户导入 / 重置
+- **调试台** — 流式输出、思考深度、附件上下文、调用示例
+- **模型文档** — 站内说明 + 官方外链 + 可复制示例
+- **多皮肤** — 侧栏 / 按钮 / Composer / 字体整套气质切换；几何尺寸统一
+- **一键运维** — Docker Compose + `scripts/deploy.sh` / `test.sh`
 
-| 目录 | 职责 |
+| 入口 | 地址 |
 |------|------|
-| [`gateway/`](gateway/) | Proxy 配置、上游 Key、峰时倍率、价目 JSON |
-| [`web/`](web/) | 登录会话、API、看板、Playground、主题皮肤 |
-| [`deploy/`](deploy/) | 生产 Compose：Postgres + LiteLLM + Web |
-| [`scripts/`](scripts/) | 初始化密钥、部署、端到端验收 |
+| Web 控制台 | `http://<host>:3000` |
+| Gateway API | `http://<host>:4000/v1`（`Authorization: Bearer <Virtual Key>`） |
 
 ---
 
-## 快速开始
+## Quickstart
 
 ### 本机开发（Windows）
 
-**1. 网关**
+<details>
+<summary><b>1. 启动网关</b></summary>
 
 ```powershell
 cd gateway
 copy .env.example .env   # 填入 DEEPSEEK_API_KEY / MIMO_API_KEY
 # 有 Docker：docker compose up -d
-# 无 Docker：pip install "litellm[proxy]==1.83.14"
-# $env:PYTHONPATH = (Get-Location).Path
-# litellm --config ./config.yaml --port 4000 --host 0.0.0.0
+# 无 Docker：
+#   pip install "litellm[proxy]==1.83.14"
+#   $env:PYTHONPATH = (Get-Location).Path
+#   litellm --config ./config.yaml --port 4000 --host 0.0.0.0
 ```
 
-**2. Web**
+</details>
+
+<details>
+<summary><b>2. 启动 Web</b></summary>
 
 ```powershell
 cd web
@@ -89,9 +146,12 @@ npx prisma migrate deploy
 npm run dev
 ```
 
-浏览器打开 [http://localhost:3000/login](http://localhost:3000/login)。
+打开 [http://localhost:3000/login](http://localhost:3000/login)。
 
-**3. 验收（可选）**
+</details>
+
+<details>
+<summary><b>3. 验收（可选）</b></summary>
 
 ```powershell
 cd web
@@ -99,33 +159,26 @@ $env:REQUIRE_VIRTUAL_KEY = "true"   # 有 Postgres + VK 时；否则 "false"
 npm run test:server
 ```
 
-### 服务器一键部署（Linux + Docker）
+</details>
 
-要求：Docker Compose v2；宿主机 Node 18+（仅 `test.sh` 需要）。
+### 服务器一键部署（Linux + Docker）
 
 ```bash
 chmod +x scripts/*.sh deploy/web-entrypoint.sh
 ./scripts/env-init.sh
-# 编辑 deploy/.env：填入真实 DEEPSEEK_API_KEY / MIMO_API_KEY
+# 编辑 deploy/.env：填入真实上游 Key
 ./scripts/deploy.sh
-./scripts/test.sh          # 期望 SERVER_E2E_OK（REQUIRE_VIRTUAL_KEY=true）
+./scripts/test.sh          # 期望 SERVER_E2E_OK
 ```
-
-部署后：
-
-| 服务 | 地址 |
-|------|------|
-| Web | `http://<服务器>:3000/login` |
-| Gateway | `http://<服务器>:4000` |
 
 > `test.sh` 会临时打开 `ALLOW_TEST_HOOKS`，结束后自动恢复。
 
 ---
 
-## 上游模型
+## Models
 
-| Provider | 模型 ID | 说明 |
-|----------|---------|------|
+| Provider | Model ID | 说明 |
+|----------|----------|------|
 | DeepSeek | `deepseek-v4-flash` | 更快更省 |
 | DeepSeek | `deepseek-v4-pro` | 旗舰 · 思考档 |
 | MiMo | `mimo-v2.5-pro` | 文本旗舰 |
@@ -133,74 +186,82 @@ chmod +x scripts/*.sh deploy/web-entrypoint.sh
 | MiMo | `mimo-v2.5` | 全模态 |
 | MiMo | `mimo-v2.5-asr` / `*-tts*` | 语音识别 / 合成 |
 
-调用时：
-
 ```bash
 curl "$GATEWAY/v1/chat/completions" \
   -H "Authorization: Bearer $AI_GATEWAY_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"Hello"}]}'
+  -d '{
+    "model": "deepseek-v4-flash",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
 ```
 
-控制台 **模型** 页可对每个模型打开「文档」，查看官方说明与完整示例。
+控制台 **模型 → 文档** 可查看每个模型的完整示例与官方说明。
 
 ---
 
-## 架构一览
+## Architecture
 
 ```text
-┌─────────────┐     session      ┌──────────────┐
-│  Browser    │ ───────────────► │  Next.js Web │
-│  控制台     │                  │  BFF + UI    │
-└─────────────┘                  └──────┬───────┘
-                                        │ Master / VK
-                                        ▼
-                                 ┌──────────────┐
-                                 │ LiteLLM      │
-                                 │ Proxy :4000  │
-                                 └──────┬───────┘
-                          ┌─────────────┴─────────────┐
-                          ▼                           ▼
-                     DeepSeek API                 MiMo API
+┌──────────────┐   cookie session   ┌─────────────────┐
+│   Browser    │ ─────────────────► │  Next.js Web    │
+│   控制台 UI  │                    │  BFF + Prisma   │
+└──────────────┘                    └────────┬────────┘
+                                             │ Master Key / proxy
+                                             ▼
+                                    ┌─────────────────┐
+                                    │  LiteLLM Proxy  │
+                                    │  :4000  /v1     │
+                                    └────────┬────────┘
+                         ┌───────────────────┴───────────────────┐
+                         ▼                                       ▼
+                   DeepSeek API                             MiMo API
 ```
 
-- 用户持有 **Virtual Key**，经网关计费与限流  
-- Web 用 Master Key 做管理面（建用户、重发 Key、Spend 查询）  
-- 用量看板读业务库 + 网关 Spend 汇总
+```text
+ai-gateway-platform/
+├── deploy/       # Compose · Web 镜像 · entrypoint
+├── gateway/      # LiteLLM 配置 · 峰谷价 · model_catalog
+├── web/          # 控制台 + BFF
+├── scripts/      # env-init · deploy · test
+├── docs/         # 交接文档 · README 截图
+└── openspec/     # 变更规格
+```
+
+- 用户持 **Virtual Key**，经网关限流与计费  
+- Web 用 Master Key 做管理面（建用户、重发 Key、Spend）  
+- 看板聚合业务库事件 + 网关 Spend
 
 ---
 
-## 主题皮肤
-
-控制台支持多套皮肤（侧栏 / 按钮 / 字体 / Composer 气质不同），在主题设置中切换：
-
-`Minimal` · `TRAE` · `Golden Time` · `Google` · `Doubao` · `Claude` · `Apple` · `21th`
-
-进入页（`/`、`/login`）保持品牌钉死，不随皮肤漂移。
-
----
-
-## 文档
+## Docs
 
 | 文档 | 路径 |
 |------|------|
 | 实现交接 | [`docs/实现交接-手机号登录与网关.md`](docs/实现交接-手机号登录与网关.md) |
-| 开发文档 | 仓库根目录 `AI网关平台-开发文档.md` |
-| 前端设计规范 | 仓库根目录 `AI网关平台-前端设计规范.md` |
-| Web 说明 | [`web/README.md`](web/README.md) |
+| 开发文档 | [`AI网关平台-开发文档.md`](AI网关平台-开发文档.md) |
+| 前端设计规范 | [`AI网关平台-前端设计规范.md`](AI网关平台-前端设计规范.md) |
+| Web | [`web/README.md`](web/README.md) |
+| 截图资源 | [`docs/images/`](docs/images/) |
 
-环境变量模板：[`gateway/.env.example`](gateway/.env.example) · [`web/.env.example`](web/.env.example) · [`deploy/.env.example`](deploy/.env.example)
+环境模板：[`gateway/.env.example`](gateway/.env.example) · [`web/.env.example`](web/.env.example) · [`deploy/.env.example`](deploy/.env.example)
 
 ---
 
-## 安全提示
+## Security
 
-- **不要**把真实 API Key、Master Key、用户 Virtual Key 提交进 Git  
-- 仅提交 `*.env.example`；本地与服务器使用 `deploy/.env` / `web/.env`  
-- 公开仓库请轮换已暴露过的密钥
+- 切勿把真实上游 Key、Master Key、用户 Virtual Key 提交进 Git  
+- 只提交 `*.env.example`；生产使用 `deploy/.env` / `web/.env`  
+- 若仓库曾公开过密钥，请立即轮换
 
 ---
 
 ## License
 
 内部业务项目。未声明开源协议前，请勿擅自公开发布或二次分发敏感配置。
+
+---
+
+<p align="center">
+  <sub>Geek · 高科极客工作室 · Interesting people. Calling the world from here.</sub>
+</p>
