@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useState } from "react";
+import { EntryAmbient } from "@/components/entry-ambient";
 
 const NAV = [
   { href: "/playground", label: "调试台", icon: "/icons/nav-playground.png" },
@@ -49,23 +50,10 @@ function GeekWordmark({ height = 28 }: { height?: number }) {
 
 export function AuthShell({ children }: { children: ReactNode }) {
   const docs = process.env.NEXT_PUBLIC_DOCS_BASE_URL;
-  const lineA = Array.from({ length: 6 }, () => "Geek").join("            ");
-  const lineB = Array.from({ length: 4 }, () => "Geek").join("                 ");
 
   return (
     <div className="entry-shell relative min-h-screen overflow-hidden bg-[var(--bg-base)]">
-      <div className="entry-marquee" aria-hidden>
-        <div className="entry-marquee-glow" />
-        <div className="entry-marquee-track entry-marquee-track--lg">
-          <span className="entry-marquee-text">{lineA}</span>
-          <span className="entry-marquee-text">{lineA}</span>
-        </div>
-        <div className="entry-marquee-track entry-marquee-track--sm entry-marquee-track--rev">
-          <span className="entry-marquee-text">{lineB}</span>
-          <span className="entry-marquee-text">{lineB}</span>
-        </div>
-        <div className="entry-marquee-scan" />
-      </div>
+      <EntryAmbient />
 
       <header className="relative z-10 flex h-[4.75rem] items-center justify-between px-8 md:px-16 lg:px-20">
         <div className="flex items-center gap-4">
