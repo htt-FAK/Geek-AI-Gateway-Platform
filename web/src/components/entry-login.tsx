@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthShell } from "@/components/shell";
-import { EntryPet } from "@/components/entry-pet";
 
 const REMEMBER_KEY = "aigw.login.remember";
 
@@ -84,18 +83,18 @@ export function EntryLogin() {
     <AuthShell>
       <div className="entry-stage relative mx-auto flex min-h-[calc(100vh-4.75rem)] max-w-[1280px] flex-col lg:flex-row lg:items-center">
         <section className="entry-manifest flex flex-1 flex-col justify-center px-8 pb-8 pt-16 md:px-16 lg:max-w-[58%] lg:px-20 lg:pb-28 lg:pt-8">
-          <h1 className="entry-headline moonshot-line font-display text-[clamp(2.5rem,5.8vw,4.5rem)] font-semibold leading-[1.15] tracking-[-0.03em] text-[#FAFAFC]">
+          <h1 className="entry-headline moonshot-line font-display text-[clamp(2.6rem,5.5vw,4.25rem)] font-normal leading-[1.18] tracking-[-0.02em] text-[var(--text-primary)]">
             有趣的人，
             <br />
             <span className="whitespace-nowrap">在这里调用世界</span>
           </h1>
-          <p className="entry-sub mt-10 max-w-[24rem] text-[15px] font-medium leading-[1.7] tracking-tight text-[#C4C4D0]">
+          <p className="entry-sub mt-10 max-w-[24rem] text-[15px] font-medium leading-[1.7] tracking-tight text-[var(--text-secondary)]">
             高科极客 AI 网关平台
           </p>
         </section>
 
         <section className="entry-panel flex flex-1 items-center justify-start px-8 pb-24 pt-4 md:px-16 lg:justify-end lg:px-20 lg:pb-28 lg:pt-8">
-          <form onSubmit={onSubmit} className="entry-form-sharp w-full max-w-[320px] space-y-7">
+          <form onSubmit={onSubmit} className="entry-card space-y-6">
             <p className="entry-form-title">进入</p>
             <label className="block space-y-2">
               <span className="entry-label">手机号</span>
@@ -120,7 +119,7 @@ export function EntryLogin() {
               />
             </label>
 
-            <div className="flex items-center justify-between gap-3 pt-0.5">
+            <div className="flex items-center justify-between gap-3">
               <label className="entry-check">
                 <input
                   type="checkbox"
@@ -135,7 +134,7 @@ export function EntryLogin() {
             </div>
 
             {error ? <p className="text-sm text-[var(--status-error)]">{error}</p> : null}
-            {hint ? <p className="text-[12px] leading-relaxed text-[#9A9AAC]">{hint}</p> : null}
+            {hint ? <p className="text-[12px] leading-relaxed text-[var(--text-secondary)]">{hint}</p> : null}
 
             <button className="btn entry-enter w-full" type="submit" disabled={loading}>
               {loading ? "进入中…" : "进入"}
@@ -145,7 +144,7 @@ export function EntryLogin() {
                 href={docs}
                 target="_blank"
                 rel="noreferrer"
-                className="block text-center text-[12px] font-medium text-[#7A7A8A] transition-colors hover:text-[#C0C0CE]"
+                className="block text-center text-[12px] font-medium text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-secondary)]"
               >
                 文档
               </a>
@@ -154,13 +153,14 @@ export function EntryLogin() {
         </section>
 
         <footer className="entry-foot px-8 pb-10 md:px-16 lg:absolute lg:bottom-12 lg:left-20 lg:px-0 lg:pb-0">
-          <p className="text-[12px] font-medium leading-relaxed text-[#7A7A8A]">Geek · 高科极客工作室</p>
-          <p className="mt-1 text-[12px] tracking-[0.01em] text-[#7A7A8A]">
+          <p className="text-[12px] font-medium leading-relaxed text-[var(--text-tertiary)]">
+            Geek · 高科极客工作室
+          </p>
+          <p className="mt-1 text-[12px] tracking-[0.01em] text-[var(--text-tertiary)]">
             Interesting people. Calling the world from here.
           </p>
         </footer>
       </div>
-      <EntryPet />
     </AuthShell>
   );
 }

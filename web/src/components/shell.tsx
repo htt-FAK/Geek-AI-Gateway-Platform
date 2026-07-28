@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useState } from "react";
 
 const NAV = [
   { href: "/playground", label: "调试台", icon: "/icons/nav-playground.png" },
@@ -11,10 +11,15 @@ const NAV = [
   { href: "/keys", label: "密钥", icon: "/icons/nav-keys.png" },
 ] as const;
 
-const ENTRY_BACKGROUNDS = [
-  "/brand/entry-bg-anime.jpg",
-  "/brand/entry-bg.jpg",
-] as const;
+const GITHUB_REPO = "https://github.com/htt-FAK/Geek-AI-Gateway-Platform";
+
+function GitHubIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12 2C6.477 2 2 6.586 2 12.253c0 4.537 2.865 8.387 6.839 9.748.5.094.683-.222.683-.492 0-.243-.01-1.052-.014-1.91-2.782.618-3.369-1.208-3.369-1.208-.454-1.181-1.11-1.496-1.11-1.496-.908-.636.069-.623.069-.623 1.004.072 1.532 1.056 1.532 1.056.892 1.566 2.341 1.114 2.91.852.091-.662.35-1.114.636-1.37-2.22-.259-4.555-1.139-4.555-5.07 0-1.12.39-2.036 1.029-2.754-.103-.26-.447-1.302.098-2.714 0 0 .84-.275 2.75 1.05A9.35 9.35 0 0 1 12 7.12a9.35 9.35 0 0 1 2.504.345c1.909-1.325 2.748-1.05 2.748-1.05.547 1.412.203 2.454.1 2.714.64.718 1.028 1.634 1.028 2.754 0 3.94-2.339 4.808-4.566 5.063.359.317.679.942.679 1.9 0 1.372-.012 2.478-.012 2.815 0 .273.18.592.688.491C19.138 20.637 22 16.787 22 12.253 22 6.586 17.523 2 12 2Z" />
+    </svg>
+  );
+}
 
 function GeekWordmark({ height = 28 }: { height?: number }) {
   const width = Math.round(height * 3.55);
@@ -27,64 +32,72 @@ function GeekWordmark({ height = 28 }: { height?: number }) {
       aria-hidden
       className="shrink-0"
     >
-      {/* G */}
       <path
         d="M28.5 8.2C25.1 5.1 20.4 3.4 15.2 3.4 7.2 3.4 1 9.7 1 17.8c0 8.1 6.2 14.4 14.2 14.4 5.4 0 10.1-2.4 12.9-6.2l-4.1-3.1c-1.8 2.3-4.8 3.8-8.2 3.8-5.1 0-8.9-3.9-8.9-8.9s3.8-8.9 8.9-8.9c2.9 0 5.5 1.2 7.1 3.1v3.4h-7.4v5.2H33V16c0-3.1-1.6-5.9-4.5-7.8Z"
-        fill="#F3F3F8"
+        fill="#FAFAFA"
       />
-      {/* E */}
-      <path d="M40 5.2h18.6v4.8H45.2v5.1h11.8v4.7H45.2v5.4h13.8v4.8H40V5.2Z" fill="#F3F3F8" />
-      {/* E */}
-      <path d="M66 5.2h18.6v4.8H71.2v5.1h11.8v4.7H71.2v5.4h13.8v4.8H66V5.2Z" fill="#F3F3F8" />
-      {/* K */}
+      <path d="M40 5.2h18.6v4.8H45.2v5.1h11.8v4.7H45.2v5.4h13.8v4.8H40V5.2Z" fill="#FAFAFA" />
+      <path d="M66 5.2h18.6v4.8H71.2v5.1h11.8v4.7H71.2v5.4h13.8v4.8H66V5.2Z" fill="#FAFAFA" />
       <path
         d="M92 5.2h5.4v12.1l12.8-12.1h6.6L103.2 17.6 117.2 30h-6.7L97.4 18.7V30H92V5.2Z"
-        fill="#F3F3F8"
+        fill="#FAFAFA"
       />
-      {/* Accent bar under EE */}
-      <rect x="40" y="34.2" width="44.6" height="1.8" rx="0.4" fill="#9EB4D8" opacity="0.85" />
+      <rect x="40" y="34.2" width="44.6" height="1.8" rx="0.4" fill="#71717A" />
     </svg>
   );
 }
 
 export function AuthShell({ children }: { children: ReactNode }) {
   const docs = process.env.NEXT_PUBLIC_DOCS_BASE_URL;
-  const [bgSrc, setBgSrc] = useState<string>(ENTRY_BACKGROUNDS[0]);
-
-  useEffect(() => {
-    const i = Math.floor(Math.random() * ENTRY_BACKGROUNDS.length);
-    setBgSrc(ENTRY_BACKGROUNDS[i]);
-  }, []);
+  const lineA = Array.from({ length: 6 }, () => "Geek").join("            ");
+  const lineB = Array.from({ length: 4 }, () => "Geek").join("                 ");
 
   return (
-    <div className="entry-shell relative min-h-screen overflow-hidden bg-[#080814]">
-      <div
-        className="entry-bg pointer-events-none absolute inset-0 bg-cover bg-[center_30%] bg-no-repeat opacity-[0.88]"
-        style={{ backgroundImage: `url(${bgSrc})` }}
-      />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(8,8,20,0.48)_0%,rgba(8,8,20,0.22)_48%,rgba(8,8,20,0.52)_100%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,20,0.28)_0%,rgba(8,8,20,0.08)_36%,rgba(8,8,20,0.22)_72%,rgba(8,8,20,0.58)_100%)]" />
-      <div className="entry-stars pointer-events-none absolute inset-0" aria-hidden />
+    <div className="entry-shell relative min-h-screen overflow-hidden bg-[var(--bg-base)]">
+      <div className="entry-marquee" aria-hidden>
+        <div className="entry-marquee-glow" />
+        <div className="entry-marquee-track entry-marquee-track--lg">
+          <span className="entry-marquee-text">{lineA}</span>
+          <span className="entry-marquee-text">{lineA}</span>
+        </div>
+        <div className="entry-marquee-track entry-marquee-track--sm entry-marquee-track--rev">
+          <span className="entry-marquee-text">{lineB}</span>
+          <span className="entry-marquee-text">{lineB}</span>
+        </div>
+        <div className="entry-marquee-scan" />
+      </div>
 
       <header className="relative z-10 flex h-[4.75rem] items-center justify-between px-8 md:px-16 lg:px-20">
         <div className="flex items-center gap-4">
-          <GeekWordmark height={32} />
-          <span className="hidden text-[13px] font-medium tracking-[0.08em] text-[#A8B0C4] sm:inline">
+          <GeekWordmark height={30} />
+          <span className="hidden text-[13px] font-medium tracking-[0.06em] text-[var(--text-secondary)] sm:inline">
             高科极客
           </span>
         </div>
-        {docs ? (
+        <div className="flex items-center gap-4">
+          {docs ? (
+            <a
+              href={docs}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            >
+              文档
+            </a>
+          ) : (
+            <span className="text-[13px] text-[var(--text-secondary)]">文档</span>
+          )}
           <a
-            href={docs}
+            href={GITHUB_REPO}
             target="_blank"
             rel="noreferrer"
-            className="text-[13px] text-[#A8A8B8] transition-colors hover:text-[#E8E8EC]"
+            aria-label="GitHub 仓库"
+            title="GitHub"
+            className="inline-flex text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           >
-            文档
+            <GitHubIcon size={22} />
           </a>
-        ) : (
-          <span className="text-[13px] text-[#A8A8B8]">文档</span>
-        )}
+        </div>
       </header>
       <div className="relative z-10">{children}</div>
     </div>
@@ -111,7 +124,7 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
       <aside
-        className={`sticky top-0 flex h-screen shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-base)] transition-[width] duration-200 ease-out ${
+        className={`sticky top-0 flex h-screen shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-elevated)] transition-[width] duration-200 ease-out ${
           expanded ? "w-60" : "w-16"
         }`}
         onMouseEnter={() => setExpanded(true)}
@@ -124,7 +137,7 @@ export function AppShell({
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
               <path
                 d="M19.2 6.2C17 4.2 14.1 3 10.8 3 5.4 3 1 7.4 1 12.8S5.4 22.6 10.8 22.6c3.5 0 6.6-1.6 8.5-4.1l-2.9-2.1c-1.2 1.5-3.2 2.5-5.4 2.5-3.5 0-6.1-2.7-6.1-6.1S7.3 6.7 10.8 6.7c1.9 0 3.6.8 4.7 2v2.2H10.4v3.4h9.8v-4.2c0-2-1-3.9-3-5.1Z"
-                fill="#E8E8EC"
+                fill="#FAFAFA"
               />
             </svg>
           )}
@@ -141,15 +154,12 @@ export function AppShell({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                className={`relative flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm transition-colors ${
                   active
-                    ? "text-[var(--text-primary)]"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                    ? "bg-[var(--bg-hover)] text-[var(--text-primary)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
                 }`}
               >
-                {active ? (
-                  <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[var(--accent-primary)] opacity-60" />
-                ) : null}
                 <span
                   className={`relative flex h-5 w-5 shrink-0 overflow-hidden rounded-sm ${
                     active ? "opacity-100" : "opacity-60"
@@ -179,6 +189,16 @@ export function AppShell({
                 文档
               </a>
             ) : null}
+            <a
+              href={GITHUB_REPO}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="GitHub 仓库"
+              title="GitHub"
+              className="inline-flex hover:text-[var(--text-primary)]"
+            >
+              <GitHubIcon size={20} />
+            </a>
             {phone ? <span className="mono text-xs">{phone}</span> : null}
             <button type="button" className="btn btn-ghost py-1.5 text-xs" onClick={() => void logout()}>
               退出

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
+import { DM_Serif_Display, IBM_Plex_Mono } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 
-const display = Instrument_Sans({
+const display = DM_Serif_Display({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["400"],
   display: "swap",
   adjustFontFallback: true,
 });
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" className="dark">
       <body
         className={`${GeistSans.variable} ${display.variable} ${mono.variable}`}
         style={{ WebkitFontSmoothing: "antialiased" }}

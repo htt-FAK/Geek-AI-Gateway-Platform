@@ -27,11 +27,19 @@ Below or near the studio mark, the entry MAY show a tertiary English line exactl
 - **THEN** its type size/weight is clearly subordinate to the Chinese headline
 
 ### Requirement: Hermes–Moonshot visual gate
-Desktop entry MUST keep left declaration / right login, Marketing-scale negative space, a quiet login panel, near-flat dark base without noise/glow as primary atmosphere, and steel-cyan primarily on the enter control.
+Desktop entry MUST keep left declaration / right login with Marketing-scale negative space. The login side MUST present as a quiet Minimal dark bordered card (soft radius, structural border, high-contrast primary enter control). The page base MUST be a flat Minimal dark surface without photographic/anime backdrop, starfield, glow blobs, or mascot as primary atmosphere. Steel-cyan MUST NOT be required on the enter control. A low-contrast ambient “Geek” text marquee MAY appear behind content.
 
 #### Scenario: Declaration dominates
 - **WHEN** viewed at typical laptop width
 - **THEN** the headline area carries primary optical weight versus the login panel
+
+#### Scenario: Minimal login card
+- **WHEN** the entry page renders on desktop
+- **THEN** the login controls sit in a bordered Minimal card on a flat dark base without background-image atmosphere layers
+
+#### Scenario: No atmosphere chrome
+- **WHEN** the entry page renders
+- **THEN** no desktop pet and no rotating brand background images are shown
 
 ### Requirement: Readable Chinese without remote Noto fetch
 Entry MUST NOT depend on `next/font` Google Noto SC downloads for successful render.
