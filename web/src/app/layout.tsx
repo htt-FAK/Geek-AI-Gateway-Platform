@@ -30,8 +30,13 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const appearanceBoot = `(function(){try{var k='aigw.appearance.v1';var raw=localStorage.getItem(k);var s=raw?Object.assign({theme:'dark',preset:'default',font:'auto',radius:'auto',density:'default',sidebar:'embedded',layout:'default'},JSON.parse(raw)):{theme:'dark',preset:'default',font:'auto',radius:'auto',density:'default',sidebar:'embedded',layout:'default'};var theme=s.theme==='system'?(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):s.theme;var r=document.documentElement;r.dataset.theme=theme;r.dataset.preset=s.preset;r.dataset.font=s.font;r.dataset.radius=s.radius;r.dataset.density=s.density;r.dataset.sidebar=s.sidebar;r.dataset.layout=s.layout;r.classList.toggle('dark',theme==='dark');r.classList.toggle('light',theme==='light');}catch(e){}})();`;
+
   return (
-    <html lang="zh-CN" className="dark">
+    <html lang="zh-CN" className="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: appearanceBoot }} />
+      </head>
       <body
         className={`${GeistSans.variable} ${display.variable} ${mono.variable}`}
         style={{ WebkitFontSmoothing: "antialiased" }}

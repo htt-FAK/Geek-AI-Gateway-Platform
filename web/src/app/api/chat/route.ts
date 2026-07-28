@@ -18,6 +18,12 @@ const bodySchema = z.object({
   stream: z.boolean().optional().default(true),
   max_tokens: z.number().int().positive().optional(),
   temperature: z.number().min(0).max(2).optional(),
+  thinking: z
+    .object({
+      type: z.enum(["enabled", "disabled"]),
+    })
+    .optional(),
+  reasoning_effort: z.enum(["high", "max"]).optional(),
 });
 
 function extractCostFromText(text: string): number {
@@ -32,6 +38,41 @@ function extractCostFromText(text: string): number {
     for (const m of matches) {
       const n = Number(m[1]);
       if (!Number.isNaN(n) && n > best) best = n;
+    }
+  }
+  return best;
+}
+
+type TokenUsage = {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+};
+
+function tokensFromUsage(usage: unknown): TokenUsage {
+  if (!usage || typeof usage !== "object") {
+    return { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+  }
+  const u = usage as Record<string, unknown>;
+  const promptTokens = Number(u.prompt_tokens ?? u.promptTokens ?? 0) || 0;
+  const completionTokens = Number(u.completion_tokens ?? u.completionTokens ?? 0) || 0;
+  const totalTokens =
+    Number(u.total_tokens ?? u.totalTokens ?? 0) || promptTokens + completionTokens;
+  return { promptTokens, completionTokens, totalTokens };
+}
+
+function extractUsageFromText(text: string): TokenUsage {
+  let best: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+  const re = /"usage"\s*:\s*\{([^}]*)\}/g;
+  for (const m of text.matchAll(re)) {
+    const block = m[1] ?? "";
+    const prompt = Number(block.match(/"prompt_tokens"\s*:\s*([0-9]+)/)?.[1] ?? 0) || 0;
+    const completion =
+      Number(block.match(/"completion_tokens"\s*:\s*([0-9]+)/)?.[1] ?? 0) || 0;
+    const total =
+      Number(block.match(/"total_tokens"\s*:\s*([0-9]+)/)?.[1] ?? 0) || prompt + completion;
+    if (total >= best.totalTokens) {
+      best = { promptTokens: prompt, completionTokens: completion, totalTokens: total };
     }
   }
   return best;
@@ -67,19 +108,42 @@ export async function POST(req: Request) {
       throw e;
     }
 
-    const upstream = await chatCompletions({
-      apiKey,
-      appEnforcedUserId: user.litellmUserId ?? undefined,
-      body: {
-        model: parsed.data.model,
-        messages: parsed.data.messages,
-        stream: parsed.data.stream,
-        max_tokens: parsed.data.max_tokens ?? 1024,
-        ...(parsed.data.temperature !== undefined
-          ? { temperature: parsed.data.temperature }
-          : {}),
-      },
-    });
+    let upstream: Response;
+    try {
+      upstream = await chatCompletions({
+        apiKey,
+        appEnforcedUserId: user.litellmUserId ?? undefined,
+        body: {
+          model: parsed.data.model,
+          messages: parsed.data.messages,
+          stream: parsed.data.stream,
+          max_tokens: parsed.data.max_tokens ?? 1024,
+          ...(parsed.data.temperature !== undefined
+            ? { temperature: parsed.data.temperature }
+            : {}),
+          ...(parsed.data.thinking ? { thinking: parsed.data.thinking } : {}),
+          ...(parsed.data.reasoning_effort
+            ? { reasoning_effort: parsed.data.reasoning_effort }
+            : {}),
+        },
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "unknown";
+      const cause = e instanceof Error && "cause" in e ? String((e as { cause?: unknown }).cause) : "";
+      const offline =
+        msg.includes("fetch failed") ||
+        cause.includes("ECONNREFUSED") ||
+        cause.includes("ENOTFOUND");
+      return NextResponse.json(
+        {
+          error: offline
+            ? "网关未启动或无法连接，请先启动 LiteLLM（GATEWAY_BASE_URL）"
+            : "网关请求失败",
+          detail: cause || msg,
+        },
+        { status: 502 },
+      );
+    }
 
     if (!upstream.ok) {
       const text = await upstream.text();
@@ -93,15 +157,26 @@ export async function POST(req: Request) {
 
     if (!parsed.data.stream) {
       const payload = await upstream.json();
+      const payloadText = JSON.stringify(payload);
       const cost =
         (!Number.isNaN(headerCost) && headerCost > 0
           ? headerCost
-          : extractCostFromText(JSON.stringify(payload))) || 0;
-      if (cost > 0) {
-        await prisma.spendEvent.create({
-          data: { userId: user.id, costCny: cost, model: parsed.data.model },
-        });
-      }
+          : extractCostFromText(payloadText)) || 0;
+      const usage = tokensFromUsage(
+        payload && typeof payload === "object"
+          ? (payload as { usage?: unknown }).usage
+          : undefined,
+      );
+      await prisma.spendEvent.create({
+        data: {
+          userId: user.id,
+          costCny: cost,
+          model: parsed.data.model,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          totalTokens: usage.totalTokens,
+        },
+      });
       return NextResponse.json(payload);
     }
 
@@ -126,11 +201,17 @@ export async function POST(req: Request) {
             (!Number.isNaN(headerCost) && headerCost > 0
               ? headerCost
               : extractCostFromText(buffered)) || 0;
-          if (cost > 0) {
-            await prisma.spendEvent.create({
-              data: { userId: user.id, costCny: cost, model: parsed.data.model },
-            });
-          }
+          const usage = extractUsageFromText(buffered);
+          await prisma.spendEvent.create({
+            data: {
+              userId: user.id,
+              costCny: cost,
+              model: parsed.data.model,
+              promptTokens: usage.promptTokens,
+              completionTokens: usage.completionTokens,
+              totalTokens: usage.totalTokens,
+            },
+          });
           controller.close();
         }
       },

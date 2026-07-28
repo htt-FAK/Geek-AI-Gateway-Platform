@@ -1,33 +1,4 @@
-## Purpose
-
-Defines the personal `/dashboard` usage view with budget progress, live KPIs, dual analytics charts, filter/preference controls, and a ¥400 monthly spend gate.
-
-## Requirements
-
-### Requirement: Personal dashboard page
-Authenticated users SHALL access `/dashboard` (and `/usage` SHALL redirect to `/dashboard`) showing: title/subtitle, daily/weekly/monthly budget progress, a KPI row, and two chart panels (consumption distribution and model invocation analysis). The page MUST NOT embed the API key credential card (keys live on `/keys`).
-
-#### Scenario: Layout sections
-- **WHEN** the user opens `/dashboard`
-- **THEN** budget, KPI, and dual chart sections are visible in that vertical order
-
-### Requirement: Monthly budget of 400 CNY
-The system SHALL enforce a monthly spend limit of ¥400 CNY (configurable via `MONTHLY_BUDGET_CNY`, default 400) using application spend aggregation for the current calendar month (Asia/Shanghai). Chat requests that would proceed when monthly usage already meets or exceeds the limit MUST be rejected with a clear error.
-
-#### Scenario: Under monthly limit
-- **WHEN** the user’s spend in the current calendar month is below ¥400
-- **THEN** chat requests are not blocked solely by the monthly gate
-
-#### Scenario: Over monthly limit
-- **WHEN** the user’s spend in the current calendar month is at or above ¥400
-- **THEN** new chat requests are rejected and `/dashboard` shows the monthly progress as exhausted
-
-### Requirement: Budget progress display
-The dashboard SHALL show daily, weekly, and monthly used/limit amounts with progress indication (not「未设置」for monthly when the limit is active).
-
-#### Scenario: Three limit columns
-- **WHEN** budget usage is loaded
-- **THEN** daily, weekly, and monthly columns each show used and limit values consistent with the budget module
+## MODIFIED Requirements
 
 ### Requirement: Dual charts empty skeleton
 Consumption distribution and model invocation analysis panels SHALL support chart chrome (titles, totals, toggles) and render **real series** via a chart library when analytics data exists for the selected range. When no series points are available, panels SHALL show the empty state「暂无数据」without erroring. Consumption toggles MUST switch between stacked bar and stacked area. Model analysis toggles MUST switch among call trend (stacked area), call distribution (donut), and call ranking (horizontal bars). Currency labels MUST use ¥.
@@ -43,6 +14,8 @@ Consumption distribution and model invocation analysis panels SHALL support char
 #### Scenario: Model analysis views
 - **WHEN** analytics returns call series and the user selects 调用趋势, 调用次数分布, or 调用次数排行
 - **THEN** the model panel renders trend, donut distribution, or horizontal ranking respectively
+
+## ADDED Requirements
 
 ### Requirement: Dashboard filter and preference controls
 The dashboard header SHALL provide「筛选」and「偏好设置」actions. Filter MUST allow quick ranges (at least 1 / 7 / 14 / 29 days), optional custom start/end datetime, and granularity `小时` or `天`, then apply to analytics reload. Preferences MUST let the user set default range, default granularity, default consumption chart type, and default model analysis view, persisted in the browser (localStorage).

@@ -1,8 +1,4 @@
-## Purpose
-
-Defines the `/playground` conversation-test workbench: composer-first chat, advanced parameters, streaming output, and view-code snippets against the gateway.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Debug workbench layout
 The `/playground` page SHALL present a conversation-test workbench: a role-labeled message stream (not chat bubbles), a bottom composer containing the prompt field plus toolbar actions (clear, thinking depth when supported, model select, send), and a token summary. System Prompt, Temperature, Max tokens, and Stream MUST NOT occupy the first viewport; they SHALL be reachable only via an「高级」entry. The page MUST NOT show a persistent right-hand parameter panel on the primary layout.
@@ -26,23 +22,11 @@ Changing model (composer), thinking depth (when visible), or advanced parameters
 - **WHEN** the user changes Temperature in「高级」and sends a message
 - **THEN** the chat request includes the updated temperature value
 
+## ADDED Requirements
+
 ### Requirement: Composer-first toolbar
 The bottom composer SHALL include clear-chat and send (or stop while generating) actions, a model selector, and—when the model supports thinking—the thinking-depth stepper. Optional secondary actions such as「查看代码」MAY appear as non-primary toolbar controls but MUST NOT restore a persistent right-hand config column.
 
 #### Scenario: Composer send path
 - **WHEN** the user types a message and activates send
 - **THEN** the message is appended to the stream and a chat request is issued using the composer model and current advanced settings
-
-### Requirement: Streaming assistant output
-Assistant responses SHALL stream into the message list with a trailing caret while generating, and the user MUST be able to stop an in-flight generation when streaming is active.
-
-#### Scenario: Stream tokens
-- **WHEN** the gateway returns an SSE chat stream
-- **THEN** assistant content updates incrementally in the message stream
-
-### Requirement: View code snippet
-The workbench SHALL offer「查看代码」that opens a dialog with an OpenAI-compatible curl or SDK snippet targeting this gateway base URL and the currently selected model.
-
-#### Scenario: Open snippet
-- **WHEN** the user activates「查看代码」
-- **THEN** a dialog shows a copyable request example using the gateway `/v1` base URL placeholder or configured public base URL

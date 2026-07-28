@@ -2,8 +2,11 @@
 export function maskApiKey(token: string | null | undefined): string | null {
   if (!token) return null;
   if (token.startsWith("__app_enforced__:")) return "app-enforced";
-  if (token.length <= 12) return "sk-****";
-  return `${token.slice(0, 7)}…${token.slice(-4)}`;
+  if (token.length <= 12) return `${token.slice(0, 3)}${"*".repeat(Math.max(4, token.length - 3))}`;
+  const head = token.slice(0, 7);
+  const tail = token.slice(-4);
+  const starCount = Math.min(16, Math.max(6, token.length - head.length - tail.length));
+  return `${head}${"*".repeat(starCount)}${tail}`;
 }
 
 export function isAppEnforcedKey(token: string | null | undefined): boolean {

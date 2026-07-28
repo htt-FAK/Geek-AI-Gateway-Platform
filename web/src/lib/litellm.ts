@@ -75,6 +75,91 @@ export async function fetchKeySpendLastDays(apiKey: string, days: number): Promi
   }
   const end = new Date();
   const start = new Date(end.getTime() - days * 24 * 60 * 60 * 1000);
+  const rows = await fetchKeySpendLogs(apiKey, start, end);
+  return rows.reduce((acc, row) => acc + row.spend, 0);
+}
+
+export type NormalizedSpendLog = {
+  at: Date;
+  model: string;
+  spend: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+};
+
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
+}
+
+function pickNumber(...vals: unknown[]): number {
+  for (const v of vals) {
+    const n = Number(v);
+    if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+  }
+  return 0;
+}
+
+function pickString(...vals: unknown[]): string {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "unknown";
+}
+
+function pickDate(...vals: unknown[]): Date | null {
+  for (const v of vals) {
+    if (v instanceof Date && !Number.isNaN(v.getTime())) return v;
+    if (typeof v === "string" || typeof v === "number") {
+      const d = new Date(v);
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+  }
+  return null;
+}
+
+function normalizeSpendLogRow(raw: unknown): NormalizedSpendLog | null {
+  const row = asRecord(raw);
+  if (!row) return null;
+  const at =
+    pickDate(
+      row.startTime,
+      row.endTime,
+      row.start_time,
+      row.end_time,
+      row.timestamp,
+      row.created_at,
+      row.request_start_time,
+    ) ?? null;
+  if (!at) return null;
+  const model = pickString(row.model, row.model_group, row.model_id, row.call_type);
+  const spend = pickNumber(row.spend, row.total_cost, row.cost, row.response_cost);
+  const promptTokens = pickNumber(row.prompt_tokens, row.promptTokens);
+  const completionTokens = pickNumber(row.completion_tokens, row.completionTokens);
+  const totalTokens =
+    pickNumber(row.total_tokens, row.totalTokens) || promptTokens + completionTokens;
+  return { at, model, spend, promptTokens, completionTokens, totalTokens };
+}
+
+function extractSpendLogArray(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data;
+  const obj = asRecord(data);
+  if (!obj) return [];
+  if (Array.isArray(obj.data)) return obj.data;
+  if (Array.isArray(obj.logs)) return obj.logs;
+  if (Array.isArray(obj.results)) return obj.results;
+  return [];
+}
+
+/** Fetch per-request spend logs for a virtual key in [start, end]. */
+export async function fetchKeySpendLogs(
+  apiKey: string,
+  start: Date,
+  end: Date,
+): Promise<NormalizedSpendLog[]> {
+  if (!apiKey || apiKey.startsWith("__app_enforced__:")) {
+    return [];
+  }
   const qs = new URLSearchParams({
     api_key: apiKey,
     start_date: start.toISOString(),
@@ -82,20 +167,15 @@ export async function fetchKeySpendLastDays(apiKey: string, days: number): Promi
   });
   const res = await gatewayFetch(`/spend/logs?${qs.toString()}`);
   if (!res.ok) {
-    return 0;
+    return [];
   }
   const data = (await res.json()) as unknown;
-  if (!Array.isArray(data)) {
-    if (data && typeof data === "object" && Array.isArray((data as { data?: unknown }).data)) {
-      return sumSpend((data as { data: Array<{ spend?: number }> }).data);
-    }
-    return 0;
+  const rows: NormalizedSpendLog[] = [];
+  for (const raw of extractSpendLogArray(data)) {
+    const n = normalizeSpendLogRow(raw);
+    if (n) rows.push(n);
   }
-  return sumSpend(data as Array<{ spend?: number }>);
-}
-
-function sumSpend(rows: Array<{ spend?: number }>): number {
-  return rows.reduce((acc, row) => acc + (Number(row.spend) || 0), 0);
+  return rows;
 }
 
 export async function chatCompletions(params: {

@@ -12,6 +12,50 @@ export default function KeysPage() {
   const [dialogTitle, setDialogTitle] = useState("获取 KEY");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPlain, setShowPlain] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function fetchPlainKey(): Promise<string | null> {
+    if (plaintext) return plaintext;
+    const res = await fetch("/api/keys/copy", { method: "POST" });
+    const data = (await res.json()) as { key?: string; error?: string };
+    if (!res.ok || !data.key) {
+      setMsg(data.error ?? "获取密钥失败");
+      return null;
+    }
+    setPlaintext(data.key);
+    await refresh();
+    return data.key;
+  }
+
+  async function toggleEye() {
+    if (showPlain) {
+      setShowPlain(false);
+      return;
+    }
+    setBusy(true);
+    setMsg("");
+    try {
+      const key = await fetchPlainKey();
+      if (key) setShowPlain(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyKey() {
+    setBusy(true);
+    setMsg("");
+    try {
+      const key = await fetchPlainKey();
+      if (!key) return;
+      await navigator.clipboard.writeText(key);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function reveal() {
     setBusy(true);
@@ -24,6 +68,7 @@ export default function KeysPage() {
         return;
       }
       setPlaintext(data.key);
+      setShowPlain(true);
       setDialogTitle("获取 KEY");
       setDialogOpen(true);
       await refresh();
@@ -45,6 +90,7 @@ export default function KeysPage() {
         return;
       }
       setPlaintext(data.key);
+      setShowPlain(true);
       setDialogTitle("新密钥");
       setDialogOpen(true);
       await refresh();
@@ -52,6 +98,12 @@ export default function KeysPage() {
       setBusy(false);
     }
   }
+
+  const displayKey =
+    showPlain && plaintext
+      ? plaintext
+      : (me?.keyMasked ?? "—");
+  const canUseKeyActions = me?.keyMode === "virtual_key";
 
   return (
     <ConsolePage phone={me?.phone}>
@@ -72,36 +124,64 @@ export default function KeysPage() {
         <div className="space-y-4 bg-[var(--bg-base)]/40 px-5 py-5">
           <Row label="名称" value={me?.phone ?? "…"} />
           <Row label="URL" value={me?.gatewayUrl ?? "…"} mono />
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="group flex flex-wrap items-center gap-3">
             <span className="w-16 shrink-0 text-sm text-[var(--text-secondary)]">KEY</span>
-            <span className="mono flex-1 text-sm">{me?.keyMasked ?? "—"}</span>
+            <span className="mono min-w-0 flex-1 break-all text-sm">{displayKey}</span>
             {me?.keyMode === "app_enforced" ? (
               <span className="text-xs text-[var(--text-tertiary)]">应用代持，不可用于外部 SDK</span>
-            ) : me?.canRevealKey ? (
-              <button type="button" className="text-sm text-[var(--accent-primary)]" disabled={busy} onClick={() => void reveal()}>
-                获取 KEY
-              </button>
-            ) : (
-              <button type="button" className="text-sm text-[var(--accent-primary)]" disabled={busy || !me?.canRegenerateKey} onClick={() => void regenerate()}>
-                重新生成
-              </button>
-            )}
+            ) : canUseKeyActions ? (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="btn btn-ghost px-2 py-1 text-sm"
+                  disabled={busy}
+                  onClick={() => void toggleEye()}
+                  aria-label={showPlain ? "隐藏密钥" : "显示密钥"}
+                  title={showPlain ? "隐藏" : "显示"}
+                >
+                  {showPlain ? "隐藏" : "显示"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost px-2 py-1 text-sm text-[var(--accent-primary)]"
+                  disabled={busy}
+                  onClick={() => void copyKey()}
+                  aria-label="复制密钥"
+                >
+                  {copied ? "已复制" : "复制"}
+                </button>
+                {me?.canRevealKey ? (
+                  <button
+                    type="button"
+                    className="text-sm text-[var(--accent-primary)]"
+                    disabled={busy}
+                    onClick={() => void reveal()}
+                  >
+                    获取 KEY
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="text-sm text-[var(--accent-primary)]"
+                    disabled={busy || !me?.canRegenerateKey}
+                    onClick={() => void regenerate()}
+                  >
+                    重新生成
+                  </button>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
 
-      {me?.canRegenerateKey && !me.canRevealKey && me.keyMode === "virtual_key" ? (
-        <p className="mt-3 text-sm text-[var(--text-tertiary)]">
-          密钥已揭示过。若遗失，请重新生成（旧密钥立即失效）。
-        </p>
-      ) : null}
       {msg ? <p className="mt-3 text-sm text-[var(--status-error)]">{msg}</p> : null}
 
       <KeyRevealDialog
         open={dialogOpen}
         onOpenChange={(o) => {
           setDialogOpen(o);
-          if (!o) setPlaintext(null);
+          if (!o && !showPlain) setPlaintext(null);
         }}
         apiKey={plaintext}
         title={dialogTitle}
@@ -114,7 +194,7 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
   return (
     <div className="flex flex-wrap items-center gap-3">
       <span className="w-16 shrink-0 text-sm text-[var(--text-secondary)]">{label}</span>
-      <span className={`flex-1 text-sm ${mono ? "mono" : ""}`}>{value}</span>
+      <span className={`flex-1 break-all text-sm ${mono ? "mono" : ""}`}>{value}</span>
     </div>
   );
 }
