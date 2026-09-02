@@ -36,8 +36,11 @@ Required values:
 - **WHEN** a DeepSeek call completes during a weekday peak window
 - **THEN** the recorded spend equals 2× the off-peak price (flash in 3.0 / out 9.0; pro in 9.0 / out 27.0 per 1M tokens)
 
-#### Scenario: Cache-hit tier is priced consistently
-- **WHEN** a DeepSeek call reports a cache hit on input
+#### Requirement: Cache-hit tier is priced consistently
+> Verification gate: this Requirement is **binding only if** LiteLLM actually includes `cache_read_input_token_cost` in `response_cost` at runtime. That is decided by the pre-requisite probe in `tasks.md §0`. If it does not, this Requirement is treated as **informational** (config cache fields still update for forward display, but acceptance does not depend on them).
+
+#### Scenario: Cache-hit tier is priced consistently (runtime cache-hit cost)
+- **WHEN** a DeepSeek call reports a cache hit on input **and** LiteLLM includes the cache-hit cost in `response_cost`
 - **THEN** the cache-hit cost component equals the configured off-peak cache-hit price (flash 0.05; pro 0.15) off-peak, and exactly 2× that during a weekday peak
 
 ### Requirement: SQL replay honors the weekday rule

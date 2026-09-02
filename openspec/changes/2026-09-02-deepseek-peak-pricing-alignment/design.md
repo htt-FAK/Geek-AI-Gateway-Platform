@@ -1,19 +1,19 @@
 ## Context
 
-### 计费链路
+### Billing pipeline
 
-LiteLLM 依据 `config.yaml` 里每个模型的 per-token 单价计算 `response_cost`（单位：CNY）。`gateway/callbacks.py` 的 `DeepSeekPeakPricingLogger`（自定义 `CustomLogger`）在成功事件里对 DeepSeek 模型：
-1. 判断当前是否高峰（`is_peak`，北京时间）；
-2. 若是，把 `kwargs["response_cost"]`（或 `standard_logging_object["response_cost"]`）乘 `PEAK_MULTIPLIER`；
-3. 在 `metadata` 写入 `deepseek_peak=true`、`deepseek_peak_multiplier=2.0`、`currency=CNY`；
+LiteLLM computes `response_cost` (CNY) from per-token costs in `config.yaml`. `gateway/callbacks.py` `DeepSeekPeakPricingLogger` (a custom `CustomLogger`) acts on successful events for DeepSeek models:
+1. decides whether it is currently peak (`is_peak`, Chinese time);
+2. if so, multiplies `kwargs["response_cost"]` (or `standard_logging_object["response_cost"]`) by `PEAK_MULTIPLIER`;
+3. writes `metadata.deepseek_peak=true`, `metadata.deepseek_peak_multiplier=2.0`, `metadata.currency=CNY`.
 
-之后 spend 才写入 LiteLLM Postgres 的 `LiteLLM_SpendLogs`。所以默认路径下（回调启用）**入库值已含高峰乘数**，对账 SQL 用 `settled_mode='as_stored'` 直接信存入值即可。
+Only after that does spend land in LiteLLM Postgres `LiteLLM_SpendLogs`. So on the default path (callback enabled) **the stored value already includes the peak multiplier**; the reconciling SQL uses `settled_mode='as_stored'` and trusts the stored value.
 
-`gateway/sql/daily_spend_summary.sql` 另提供 `settled_mode='apply_peak_in_sql'`：在 SQL 侧对 DeepSeek 且落在高峰时钟窗口的行 `base_spend * 2.0`。这两条路径的「高峰」语义**必须一致**，否则会产生“回调已乘、SQL 再乘”或“回调未乘、SQL 也不乘”的口径漂移。
+`gateway/sql/daily_spend_summary.sql` also exposes `settled_mode='apply_peak_in_sql'`: it re-applies `base_spend * 2.0` for DeepSeek rows that fall inside the peak clock window. The "peak" semantics of these two paths **must agree**, otherwise you get "callback multiplied, SQL multiplies again" or "neither multiplies".
 
-### 现状代码（关键段）
+### Current code (key excerpts)
 
-`gateway/deepseek_peak.py`：
+`gateway/deepseek_peak.py`:
 
 ```python
 SHANGHAI = ZoneInfo("Asia/Shanghai")
@@ -32,15 +32,15 @@ def is_peak(moment=None) -> bool:
     return False
 ```
 
-问题：`is_peak` 未对 `local.weekday()` 做判断。
+Problem: `is_peak` never checks `local.weekday()`.
 
-`config.yaml` 相关配置（两个变量族必须同值）：
+`config.yaml` (the two variable families must agree):
 
 ```yaml
-# flash 示例
-input_cost_per_token: 0.000001        # = 1.0 / 1e6
-output_cost_per_token: 0.000002       # = 2.0 / 1e6
-cache_read_input_token_cost: 0.00000002  # = 0.02 / 1e6
+# flash example
+input_cost_per_token: 0.000001            # = 1.0 / 1e6
+output_cost_per_token: 0.000002           # = 2.0 / 1e6
+cache_read_input_token_cost: 0.00000002   # = 0.02 / 1e6
 input_cost_per_million_cny: 1.0
 cache_hit_cost_per_million_cny: 0.02
 output_cost_per_million_cny: 2.0
@@ -50,32 +50,34 @@ output_cost_per_million_cny: 2.0
 
 ### Goals
 
-- 高峰只发生在 **工作日（周一至周五）** 的 09:00-12:00 / 14:00-18:00（北京）。周末任何时刻均不产生高峰乘数。
-- `deepseek-v4-flash` / `deepseek-v4-pro` 的基准价 = **官方低谷价**（含缓存命中档），使现有 2× 乘数在高峰时精确等于官方高峰价。
-- SQL 的 `apply_peak_in_sql` 模式与回调语义一致（也只在工作日高峰 ×2）。
-- 测试同时锁定「工作日高峰 ×2」与「周末不 ×2」两种行为。
-- 历史账单不回填；仅新产生的调用遵循新规则（作为明确约定记录在文档）。
+- Peak occurs **only on weekdays (Mon-Fri)** in 09:00-12:00 / 14:00-18:00 (Beijing). Weekends never trigger a peak multiplier.
+- `deepseek-v4-flash` / `deepseek-v4-pro` base prices = **official off-peak** (including cache-hit), so the existing 2× multiplier equals the official peak exactly.
+- SQL `apply_peak_in_sql` matches callback semantics (also weekday-only).
+- Tests lock both "weekday peak ×2" and "weekend never ×2".
+- Historical spend is not backfilled; only new calls follow the new rule (recorded as an explicit convention).
 
 ### Non-Goals
 
-- 不改 MiMo 系列定价，不加新模型，不做动态目录/价格同步。
-- 高峰倍率不作用于非 DeepSeek 模型。
-- 不做历史 `LiteLLM_SpendLogs` 的回量重算（backfill）。
-- 不在本变更实现高峰/低谷标识的 UI（看板是否展示高峰档，另作变更）。
-- 不建模中国法定调休工作日/节假日补班（规则仅按「周末」描述，见风险条）。
+- No MiMo pricing change, no new models, no dynamic catalog/pricing sync.
+- Peak multiplier does not apply to non-DeepSeek models.
+- No re-rating / backfill of existing `LiteLLM_SpendLogs`.
+- No peak/off-peak UI labeling in this change (separate follow-up).
+- No modeling of China statutory holidays / makeup workdays; we distinguish only Sat/Sun (the rule is described as "weekdays"/"weekends"). See Risks.
 
 ## Decisions
 
-### 决策 1：工作日判断收口在 `is_peak()`
+Each decision maps to one or more requirements in `specs/deepseek-peak-pricing/spec.md` (marked `↦ Req`).
 
-修改 `gateway/deepseek_peak.py`，在时间窗口判断前加一周内日期判断：
+### Decision 1 — Centralize the weekday gate in `is_peak()`
+
+`↦ Req: Peak windows apply on weekdays only`
+
+Modify `gateway/deepseek_peak.py`, adding a weekday check before the window loop:
 
 ```python
-import datetime as dt
-
 def is_peak(moment=None) -> bool:
-    """DeepSeek 高峰判定（北京时间）。仅工作日（周一~周五）的
-    09:00-12:00 与 14:00-18:00 算高峰；周末整天按低谷价。"""
+    """DeepSeek peak decision (Beijing time). Peak is 09:00-12:00 and
+    14:00-18:00, weekdays (Mon-Fri) only; the whole of Saturday/Sunday is off-peak."""
     local = to_shanghai(moment)
     if local.weekday() >= 5:   # Sat=5, Sun=6
         return False
@@ -86,94 +88,106 @@ def is_peak(moment=None) -> bool:
     return False
 ```
 
-- `weekday()`：周一=0 … 周日=6，故 `>=5` 即周六/日。
-- `PEAK_WINDOWS`、`PEAK_MULTIPLIER=2.0`、`billable_cost()`、`to_shanghai()` **均不需改动**。
-- 因为 `billable_cost()` 内部调用 `is_peak()`，回归无需改动调用方，`callbacks.py` 也自动对齐。
+- `weekday()`: Mon=0 … Sun=6, so `>=5` means Sat/Sun.
+- `PEAK_WINDOWS`, `PEAK_MULTIPLIER=2.0`, `billable_cost()`, `to_shanghai()` **do not change**.
+- Because `billable_cost()` calls `is_peak()` internally, no caller changes are needed and `callbacks.py` aligns automatically.
 
-### 决策 2：基准价 = 官方低谷价（两个变量族同值）
+### Decision 2 — Base prices = official off-peak (both variable families)
 
-两处都要改（`_per_token` 用于算细分、`_per_million_cny` 用于展示/记账，缺一不可），并保持一致。
+`↦ Req: DeepSeek config prices equal official off-peak`
 
-`deepseek-v4-flash`（先旧→后新）：
+Change both the `_per_token` fields (used to compute fractional cost) and the `_per_million_cny` fields (used for display/ledger) and keep them equal.
+
+`deepseek-v4-flash` (old → new):
 
 ```yaml
-input_cost_per_token: 0.0000000015    # 1.5 / 1e6
-output_cost_per_token: 0.0000000045   # 4.5 / 1e6
-cache_read_input_token_cost: 0.0000000005  # 0.05 / 1e6
+input_cost_per_token: 0.0000000015        # 1.5 / 1e6
+output_cost_per_token: 0.0000000045       # 4.5 / 1e6
+cache_read_input_token_cost: 0.0000000005 # 0.05 / 1e6
 input_cost_per_million_cny: 1.5
 cache_hit_cost_per_million_cny: 0.05
 output_cost_per_million_cny: 4.5
 ```
 
-`deepseek-v4-pro`：
+`deepseek-v4-pro`:
 
 ```yaml
-input_cost_per_token: 0.0000000045    # 4.5 / 1e6
-output_cost_per_token: 0.0000000135   # 13.5 / 1e6
-cache_read_input_token_cost: 0.0000000015  # 0.15 / 1e6
+input_cost_per_token: 0.0000000045        # 4.5 / 1e6
+output_cost_per_token: 0.0000000135       # 13.5 / 1e6
+cache_read_input_token_cost: 0.0000000015 # 0.15 / 1e6
 input_cost_per_million_cny: 4.5
 cache_hit_cost_per_million_cny: 0.15
 output_cost_per_million_cny: 13.5
 ```
 
-校验期望（高峰 = 低谷 × 2）：
+Expected checks (peak = off-peak × 2):
 
-| 模型 | 低谷输入 | 低谷输出 | 低谷缓存命中 | 高峰输入 | 高峰输出 | 高峰缓存命中 |
+| Model | Off-peak in | Off-peak out | Off-peak cache-hit | Peak in | Peak out | Peak cache-hit |
 |---|---|---|---|---|---|---|
 | flash | 1.5 | 4.5 | 0.05 | 3.0 | 9.0 | 0.10 |
 | pro | 4.5 | 13.5 | 0.15 | 9.0 | 27.0 | 0.30 |
 
-这些值已与 DeepSeek 官方定价页（2026-08-17 版）逐一核对。
+These values match the DeepSeek official pricing page (2026-08-17 revision).
 
-### 决策 3：SQL 回放模式与回调同语义
+### Decision 3 — SQL replay matches the callback
 
-`gateway/sql/daily_spend_summary.sql` 的 `apply_peak_in_sql` 分支，在高峰时间谓词前增加工作日判断，仅对「工作日内高峰」乘 2：
+`↦ Req: SQL replay honors the weekday rule`
+
+In `gateway/sql/daily_spend_summary.sql`, the `apply_peak_in_sql` branch adds a weekday condition to its peak-time predicate, multiplying only "weekday peak" rows:
 
 ```sql
--- 谓词新增：窗口内 且 周1-周5（ISODOW 1-5）
+-- peak window 且 周一~周五（ISODOW 1-5）
 AND EXTRACT(ISODOW FROM r."startTime" AT TIME ZONE 'Asia/Shanghai') BETWEEN 1 AND 5
 ```
 
-同样地，`in_peak_window` 标志列也加同一工作日条件，保证「周末高峰窗口的请求」统计为 `in_peak_window=false`、`settled_spend_cny` 保持 `base_spend`。
+Likewise the `in_peak_window` flag column gets the same weekday condition, so a weekend row inside 09:00-12:00 / 14:00-18:00 counts as `in_peak_window=false` and `settled_spend_cny` stays `base_spend`.
 
-### 决策 4：测试策略与日期选型
+### Decision 4 — Test strategy and date selection
 
-- 现有用例日期 `2026-07-20` 恰为**周一**（已验证），其断言在加入工作日判断后仍成立，无需改日期。
-- 新增用例采用 `2026-07-25`（**周六**）与 `2026-07-26`（**周日**），覆盖周末高峰窗口时间不乘 2。
-- 测试直接调 `deepseek_peak.is_peak` / `billable_cost`，不依赖跑通整条 LiteLLM 链路。
+Run unit tests only against `deepseek_peak` helpers; do not require a live LiteLLM chain.
 
-### 决策 5：历史不回填
+- Existing assertion dates `2026-07-20` are a **Monday** (verified) — still valid after the weekday gate.
+- Add cases for `2026-07-25` (**Saturday**) and `2026-07-26` (**Sunday**) covering "peak-window time on weekend does not multiply".
 
-`LiteLLM_SpendLogs` 中 8-17 前的记录按旧价入账，**不回量重算**。理由：口径变更只影响之后发生的调用；既有对账/报表无需回溯改写，避免与已对过的账目产生偏差。此约定落在 `tasks.md` 与工单文档中。
+### Decision 5 — No backfill, forward only
 
-### 备选方案与取舍
+`↦ Req: Existing spend is not backfilled`
 
-- **备选 A：直接把高峰值写死进 config，去乘数**——否决：高峰期随上游可能再变，保留「乘数 + 低谷基准」更易维护，且 `metadata` 里已有乘数透出便于审计。
-- **备选 B：在 SQL 回放统一重算、回调归零**——否决：回调已按乘数写入是默认路径，改动更大、风险更高；保持「入库即含高峰」的单一口径更稳。
-- **法定节假日取周末法**：不做补班/放假建模，仅天然区分周六日；与官方「工作日」字面规则一致，作为已知边界记录。
+`LiteLLM_SpendLogs` rows before 08-17 were logged at old prices and are **not re-rated**. Rationale: the rate change affects only subsequent calls; rewriting history would break already-reconciled figures. This convention lives in both `tasks.md` and the work ticket.
+
+### Cache-hit pre-requisite (runtime assumption to verify)
+
+Before finalizing the cache-hit tier in the spec is treated as binding, one probe MUST confirm whether LiteLLM actually includes `cache_read_input_token_cost` in `response_cost` at runtime. If it does not, the cache-hit tier updates in config are still applied for forward display but the cache-hit Requirement is downgraded to "informational" — see `tasks.md §0`.
+
+### Alternatives considered
+
+- **A: hardcode peak values in config, drop the multiplier** — rejected: peak prices may drift again; keeping "multiplier + off-peak base" is easier to maintain and `metadata` already exposes the multiplier for audit.
+- **B: zero the callback and re-rerate entirely in SQL** — rejected: callback-at-write is the default path; larger blast radius. Keep the single "storage already includes peak" rule.
+- **Statutory holidays as weekends** — not modeled; we distinguish only Sat/Sun, matching the literal "weekdays" rule; recorded as a known boundary.
 
 ## Risks / Trade-offs
 
-| 风险 | 说明 | 缓解 |
+| Risk | Description | Mitigation |
 |---|---|---|
-| 双路径语义漂移 | 回调已乘 + SQL 再乘，或反之 | 默认 `as_stored`；两处同源实现周末判断，并有对账冒烟 |
-| 舍入漂移 | 对已舍入存值再乘，会累积 CNY 级分数差 | 小数取 8 位（SQL 已 `ROUND(…, 8)`）；推荐 `as_stored` |
-| 法定调休未建模 | 补班周六会被当周末、节假日工作日当工作日 | 官方规则仅「工作日/周末」；记录为已知限制，可后续增强 |
-| 变量族不一致 | `_per_token` 与 `_per_million_cny` 只改一处会账面漂移 | 变更清单两列都改并断言相等；
-  新增 `assert` 用例如 `1e6 * token_cost == million_cny` |
-| 缓存档漏改 | 缓存命中价格占比高，漏改会明显低估 | 三档（入/出/缓存命中）都列入改动与验收表 |
+| Dual-path drift | Callback soaks peak then SQL multiplies again (or neither) | Default `as_stored`; both paths gate on weekday with the same source; reconciliation smoke |
+| Rounding drift | Multiplying an already-rounded stored value accumulates CNY-fraction errors | Keep 8 decimal places (SQL already `ROUND(…, 8)`); prefer `as_stored` |
+| Statutory holidays unmodeled | A makeup-work Saturday treated as weekend; a holiday Monday treated as weekday | Rule is literally "weekdays/weekends"; record as known limitation, possible later enhancement |
+| Variable-family mismatch | Only one of `_per_token` / `_per_million_cny` changed → ledger drift | Change both columns in the same task and assert equality (`1e6 * token == million`); add an assertion step |
+| Cache-hit tier mishandled | Cache-hit prices dominate; missing them visibly understates spend | Add the pre-requisite cache probe (§Decision 4 + tasks §0); cover all three tiers in the acceptance table |
+| Test runner assumed | `pytest` may not be installed in the gateway env | Tasks pin a fallback (`unittest` or direct `python3 -c` with the helpers only, since `deepseek_peak` is stdlib-only) |
 
 ## Migration Plan
 
-1. 改 `deepseek_peak.py` → 跑 `pytest gateway/test_deepseek_peak.py`（先回归，再加新用例）。
-2. 改 `config.yaml` 两个模型各三档价格（`_per_token` + `_per_million_cny`）。
-3. 改 `daily_spend_summary.sql` 的 `apply_peak_in_sql` 谓词与 `in_peak_window` 标志。
-4. 冒烟：在周一高峰/低谷、周末高峰各发一次真实 DeepSeek 调用，核对 `LiteLLM_SpendLogs` 的 `spend` 与 `metadata.deepseek_peak`。
-5. 在 `docs/后续工单-生产就绪.md` 追加已关闭 P0 项 + 历史不回填说明。
+1. Add the pre-requisite cache probe (does `response_cost` include cache-hit?) — decided before final acceptance.
+2. Update `deepseek_peak.py` and run the tests (regression first, then new cases).
+3. Update `config.yaml` prices for both models, all three tiers (both variable families).
+4. Update `daily_spend_summary.sql` `apply_peak_in_sql` predicate and `in_peak_window` flag.
+5. Smoke (optional, real key): one weekday-peak and one weekend-peak call; verify `LiteLLM_SpendLogs.spend` and `metadata.deepseek_peak`.
+6. Record a closed P0 item in `docs/后续工单-生产就绪.md` + no-backfill note; align README Models table.
 
-**回滚**：`is_peak` 的周末判断、config 价目、SQL 谓词三者必须**一起回退**（它们互相依赖，只回退一个会造成高峰口径不一致）。
+**Rollback**: revert `is_peak`'s weekend gate, `config.yaml` prices, and the SQL predicate **together** (they are interdependent; reverting only one makes peak semantics inconsistent).
 
 ## Open Questions
 
-- 缓存命中档 `cache_read_input_token_cost` 需在运行时实测一次，确认 LiteLLM 是否把该字段计入 `response_cost`（若目前计费未含缓存命中，本次主要改入/出两档，缓存档同步更新但不强依赖）。
-- 是否需要把「高峰/低谷」展示到管理端用量 UI（另开变更，本变更不实现）。
+- Whether LiteLLM includes the cache-hit cost in `response_cost` at runtime (probing; if not, cache-hit requirement is downgraded to informational).
+- Whether to surface peak/off-peak in the admin usage UI (separate change; not implemented here).
