@@ -12,10 +12,12 @@ from deepseek_peak import billable_cost, is_deepseek_model, is_peak, to_shanghai
 class DeepSeekPeakPricingLogger(CustomLogger):
     def _adjust(self, kwargs: dict[str, Any], start_time: Any) -> None:
         model = kwargs.get("model")
-        if not is_deepseek_model(str(model) if model is not None else None):
+        if not is_deepseek_model(model):
             return
 
-        moment = to_shanghai(start_time if hasattr(start_time, "tzinfo") else None)
+        # LiteLLM guarantees start_time is a datetime; to_shanghai handles
+        # aware/naive/None, so no runtime type-sniffing is needed.
+        moment = to_shanghai(start_time)
         if not is_peak(moment):
             return
 
