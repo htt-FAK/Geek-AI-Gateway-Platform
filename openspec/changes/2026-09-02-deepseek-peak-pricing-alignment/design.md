@@ -101,9 +101,9 @@ Change both the `_per_token` fields (used to compute fractional cost) and the `_
 `deepseek-v4-flash` (old → new):
 
 ```yaml
-input_cost_per_token: 0.0000000015        # 1.5 / 1e6
-output_cost_per_token: 0.0000000045       # 4.5 / 1e6
-cache_read_input_token_cost: 0.0000000005 # 0.05 / 1e6
+input_cost_per_token: 0.0000015           # 1.5 / 1e6
+output_cost_per_token: 0.0000045          # 4.5 / 1e6
+cache_read_input_token_cost: 0.00000005   # 0.05 / 1e6
 input_cost_per_million_cny: 1.5
 cache_hit_cost_per_million_cny: 0.05
 output_cost_per_million_cny: 4.5
@@ -112,9 +112,9 @@ output_cost_per_million_cny: 4.5
 `deepseek-v4-pro`:
 
 ```yaml
-input_cost_per_token: 0.0000000045        # 4.5 / 1e6
-output_cost_per_token: 0.0000000135       # 13.5 / 1e6
-cache_read_input_token_cost: 0.0000000015 # 0.15 / 1e6
+input_cost_per_token: 0.0000045           # 4.5 / 1e6
+output_cost_per_token: 0.0000135          # 13.5 / 1e6
+cache_read_input_token_cost: 0.00000015   # 0.15 / 1e6
 input_cost_per_million_cny: 4.5
 cache_hit_cost_per_million_cny: 0.15
 output_cost_per_million_cny: 13.5

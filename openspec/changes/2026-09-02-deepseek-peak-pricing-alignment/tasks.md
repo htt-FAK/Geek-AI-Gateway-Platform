@@ -31,13 +31,13 @@ Determines whether Requirement "Cache-hit tier is priced consistently" is bindin
 > Both variable families must stay equal; assert `1e6 * per_token == per_million_cny`.
 
 - [ ] 3.1 `deepseek-v4-flash` three tiers: in 1.5 / out 4.5 / cache-hit 0.05
-  - [ ] 3.1.1 `input_cost_per_token: 0.0000000015` and `input_cost_per_million_cny: 1.5`
-  - [ ] 3.1.2 `output_cost_per_token: 0.0000000045` and `output_cost_per_million_cny: 4.5`
-  - [ ] 3.1.3 `cache_read_input_token_cost: 0.0000000005` and `cache_hit_cost_per_million_cny: 0.05`
+  - [ ] 3.1.1 `input_cost_per_token: 0.0000015` and `input_cost_per_million_cny: 1.5`
+  - [ ] 3.1.2 `output_cost_per_token: 0.0000045` and `output_cost_per_million_cny: 4.5`
+  - [ ] 3.1.3 `cache_read_input_token_cost: 0.00000005` and `cache_hit_cost_per_million_cny: 0.05`
 - [ ] 3.2 `deepseek-v4-pro` three tiers: in 4.5 / out 13.5 / cache-hit 0.15
-  - [ ] 3.2.1 `input_cost_per_token: 0.0000000045` and `input_cost_per_million_cny: 4.5`
-  - [ ] 3.2.2 `output_cost_per_token: 0.0000000135` and `output_cost_per_million_cny: 13.5`
-  - [ ] 3.2.3 `cache_read_input_token_cost: 0.0000000015` and `cache_hit_cost_per_million_cny: 0.15`
+  - [ ] 3.2.1 `input_cost_per_token: 0.0000045` and `input_cost_per_million_cny: 4.5`
+  - [ ] 3.2.2 `output_cost_per_token: 0.0000135` and `output_cost_per_million_cny: 13.5`
+  - [ ] 3.2.3 `cache_read_input_token_cost: 0.00000015` and `cache_hit_cost_per_million_cny: 0.15`
 - [ ] 3.3 Assert equality, e.g. `python3 -c "assert 1e6*0.0000015==1.5"` (repeat for output/cache across both models).
 - [ ] 3.4 Re-check that peak = official ×2 (flash 3.0/9.0/0.10; pro 9.0/27.0/0.30) falls out with no code change.
 

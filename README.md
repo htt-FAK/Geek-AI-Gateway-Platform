@@ -176,12 +176,14 @@ chmod +x scripts/*.sh deploy/web-entrypoint.sh
 
 | Provider | Model | 说明 |
 |:--------:|:-----:|:----:|
-| DeepSeek | `deepseek-v4-flash` | 更快更省 |
-| DeepSeek | `deepseek-v4-pro` | 旗舰 · 思考档 |
+| DeepSeek | `deepseek-v4-flash` | 更快更省 · 峰谷计费<sup>1</sup> |
+| DeepSeek | `deepseek-v4-pro` | 旗舰 · 思考档 · 峰谷计费<sup>1</sup> |
 | MiMo | `mimo-v2.5-pro` | 文本旗舰 |
 | MiMo | `mimo-v2.5-pro-ultraspeed` | 高速档 |
 | MiMo | `mimo-v2.5` | 全模态 |
 | MiMo | `mimo-v2.5-asr` / `*-tts*` | 语音 |
+
+> <sup>1</sup> DeepSeek 按官方峰谷计费（2026-08-17 生效）：工作日 09:00-12:00 / 14:00-18:00（北京）高峰价 = 低谷价 ×2；周六、周日整天按低谷价。文档所列价目为**低谷价基准**。
 
 </div>
 
