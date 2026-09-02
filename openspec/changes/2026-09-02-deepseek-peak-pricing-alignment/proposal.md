@@ -1,31 +1,79 @@
 ## Why
 
-DeepSeek moved DeepSeek-V4 series to **peak/off-peak** billing effective **2026-08-17 00:00 (Beijing)**, and on **2026-08-23** added that **Saturday & Sunday are entirely off-peak** (no peak window). Peak hours are 09:00-12:00 and 14:00-18:00 (Beijing time, weekdays only); off-peak is half of peak.
+### 背景
 
-The gateway already implemented a 2x peak multiplier (`gateway/deepseek_peak.py` + `callbacks.py`) but predates this rule, so it is now wrong in two ways:
+DeepSeek 于 **2026-08-13** 宣布取消 DeepSeek-V4 系列的统一单价，改用**峰谷分时计费**，新价目自 **2026-08-17 00:00（北京时间）** 生效；随后在 **2026-08-23** 增加规则：**周六、周日全天不再区分峰谷，一律按低谷（空闲）价计费**。
 
-1. **Weekends are not exempt.** `is_peak()` only checks the clock window, so on Sat/Sun it still applies 2x during 09:00-12:00 / 14:00-18:00 — overcharging user budgets on weekends.
-2. **Base prices are outdated.** `config.yaml` still uses the pre-08-17 flat rates (flash in ¥1.0 / out ¥2.0, pro in ¥3.0 / out ¥6.0). Official off-peak is now flash in ¥1.5 / out ¥4.5, pro in ¥4.5 / out ¥13.5 (plus new cache-hit prices). Because our multiplier only encodes peak=2×off-peak, the numbers no longer reflect real upstream spend in either window.
+官方规则（权威来源：DeepSeek API 定价页 + DeepSeek 官方公告/央视财经转述）：
+
+- **高峰时段（仅工作日）**：09:00-12:00、14:00-18:00（北京时间）
+- **低谷/空闲时段**：其余时间 = 高峰价的 一半
+- **周末**：周六、周日全天低谷价，无高峰档
+- 换算关系：**高峰价 = 低谷价 × 2；低谷价 = 高峰价 × ½**
+
+### 现有实现已过时/出错
+
+本网关在规则落地前就实现了高峰计费（`gateway/deepseek_peak.py` 的 `PEAK_MULTIPLIER=2.0` + `callbacks.py` 的 `DeepSeekPeakPricingLogger`），但存在两个与官方新规则不一致的问题：
+
+**① 周末未豁免（错误，影响正确性）**
+[`is_peak()`](../gateway/deepseek_peak.py) 只判断时钟窗口，不判断星期。周六、周日落在 09:00-12:00 / 14:00-18:00 时仍会按 2× 高峰价计费，**高扣用户预算**，与官方「周末全天低谷价」冲突。
+
+**② 基准价仍是 8-17 调价前的旧价（过时，影响准确性）**
+[`config.yaml`](../gateway/config.yaml) 中 `deepseek-v4-flash` / `deepseek-v4-pro` 的基准单价仍是调价前旧值：
+
+| 模型 | 计费项 | 旧价（现配置） | 官方低谷价（8-17 起） | 官方高峰价（=低谷×2） |
+|---|---|---|---|---|
+| V4-Flash | 输入（缓存未命中） | ¥1.0 | ¥1.5 | ¥3.0 |
+| V4-Flash | 输出 | ¥2.0 | ¥4.5 | ¥9.0 |
+| V4-Flash | 缓存命中输入 | ¥0.02 | ¥0.05 | ¥0.10 |
+| V4-Pro | 输入（缓存未命中） | ¥3.0 | ¥4.5 | ¥9.0 |
+| V4-Pro | 输出 | ¥6.0 | ¥13.5 | ¥27.0 |
+| V4-Pro | 缓存命中输入 | ¥0.025 | ¥0.15 | ¥0.30 |
+
+由于网关只在高峰时对基准价×2，基准价若不等于官方低谷价，则**低谷和高峰两档都无法反映真实上游成本**——低谷会低估（旧价<官方低谷）、高峰也会低估（旧价×2 < 官方高峰）。
+
+### 影响
+
+- 用户预算/用量看板显示的成本与实际上游账单偏离，可能触发错误的限额放行（低估）或周末错误扣费（多扣）。
+- 对账（`daily_spend_summary.sql`）若用 `apply_peak_in_sql` 回放高峰倍率，同样受周末误判影响。
+
+因此需要按官方最新规则修正：**周末不做高峰** + **基准价 = 官方低谷价**。
 
 ## What Changes
 
-- `is_peak()` returns `False` on weekends — peak windows apply to **weekday** 09:00-12:00 & 14:00-18:00 (Beijing) only.
-- `config.yaml` DeepSeek `flash` / `pro` per-million prices updated to **official off-peak** (peak stays automatically at 2× off-peak via the multiplier), including cache-hit input.
-- `gateway/sql/daily_spend_summary.sql` `apply_peak_in_sql` mode made weekdays-only, matching the callback behavior.
-- Unit tests updated; add weekend cases (peak-window on Sat/Sun must NOT multiply).
+- **`is_peak()` 增加星期判断**：`weekday() >= 5`（周六/日）时返回 `False`，整天按低谷价，不应用 2×。
+- **`config.yaml` 基准价更新为官方低谷价**（含缓存命中档），保持乘数语义不动，高峰=低谷×2 自动对齐官方高峰价。
+- **`daily_spend_summary.sql` 的 `apply_peak_in_sql` 模式增加工作日判断**，与回调行为一致。
+- **`test_deepseek_peak.py` 更新并新增周末用例**（周六/日高峰窗口时间不×2）。
+- **`docs/后续工单-生产就绪.md` 记为新增已关闭 P0 项**，并注明历史账单不回填。
+
+## 非目标（明确不做）
+
+- 不做**历史账单回填**：8-17 前的日志按旧价记录，不回量重算，只影响新发生的调用。
+- 不改 MiMo 定价、不加新模型、不引入动态价格同步。
+- 高峰倍率只作用于 DeepSeek 模型，其余模型不做任何调整。
+- 不属于本变更的 WO-P0/P1/P2 生产就绪事项（网络隔离、密钥策略、备份、管理端用量、迁 Postgres 等）。
+- 不把高峰/低谷标识作为新 UI 能力（可留作后续）。
 
 ## Capabilities
 
 ### New Capabilities
 
-- `deepseek-peak-pricing`: DeepSeek peak/off-peak spend adjustment aligned with the official 2026-08-17 pricing and the 2026-08-23 weekend rule (peaks apply on weekdays only; peak = 2× off-peak).
+- `deepseek-peak-pricing`：DeepSeek 高峰/低谷花费调整，对齐官方 2026-08-17 价目与 2026-08-23 周末规则（仅工作日高峰；高峰=低谷×2）。
 
 ## Impact
 
-- `gateway/deepseek_peak.py` — weekday gate in `is_peak`
-- `gateway/config.yaml` — off-peak prices for `deepseek-v4-flash` / `deepseek-v4-pro` (incl. cache-hit)
-- `gateway/sql/daily_spend_summary.sql` — weekday-only peak window in SQL mode
-- `gateway/test_deepseek_peak.py` — new weekend assertions
-- `docs/后续工单-生产就绪.md` — new P0 item cross-referencing this change
+| 文件 | 变更 |
+|------|------|
+| `gateway/deepseek_peak.py` | `is_peak()` 增加工作日判断（核心） |
+| `gateway/config.yaml` | `flash`/`pro` 单价 → 官方低谷价（含缓存命中） |
+| `gateway/sql/daily_spend_summary.sql` | `apply_peak_in_sql` 高峰谓词增加工作日条件 |
+| `gateway/test_deepseek_peak.py` | 新增周末免单用例 |
+| `docs/后续工单-生产就绪.md` | 新增已关闭 P0 项 + 历史不回填说明 |
 
-Out of scope (tracked separately in the production-readiness work ticket): network isolation, key-policy, backup, admin usage, Postgres migration, etc.
+## 决策摘要
+
+- 规则**收口在 `is_peak()`**：回调、SQL、测试共用同一语义。
+- **乘数与窗口不变**：`PEAK_MULTIPLIER=2.0`、窗口 09:00-12:00/14:00-18:00 仍正确。
+- **基准价 = 官方低谷价**：只需改价目，无需改乘数逻辑。
+- 默认推荐 `settled_mode = 'as_stored'`（回调写入时已乘好），`apply_peak_in_sql` 仅作校验/备份路径，二者语义须保持一致。
