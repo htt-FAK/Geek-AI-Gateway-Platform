@@ -41,6 +41,16 @@
       }
     },
     {
+      "id": "deepseek-v4-flash-vision-exp",
+      "provider": "deepseek",
+      "modality": "vision",
+      "pricing_cny": {
+        "cache_hit_per_million": 0.05,
+        "input_miss_per_million": 1.5,
+        "output_per_million": 4.5
+      }
+    },
+    {
       "id": "mimo-v2.5-pro",
       "provider": "mimo",
       "modality": "text",

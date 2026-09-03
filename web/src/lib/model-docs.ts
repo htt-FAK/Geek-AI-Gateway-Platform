@@ -47,6 +47,17 @@ const DOCS: Record<string, Omit<ModelDoc, "id" | "notes"> & { notes?: string[] }
       "DeepSeek 计费：工作日（周一至周五，北京时间）09:00–12:00、14:00–18:00 为峰时，价格 = 低谷价 ×2；周六、周日整天按低谷价。详见官方定价。",
     ],
   },
+  "deepseek-v4-flash-vision-exp": {
+    summary: "DeepSeek V4 Flash Vision Exp：多模态视觉，支持图片与文本混合输入，图片按官方规则折算 token 计费。",
+    endpoint: "chat",
+    officialUrl: DEEPSEEK_DOCS,
+    officialLabel: "DeepSeek API 文档",
+    notes: [
+      "走本网关 OpenAI 兼容 `/v1/chat/completions`。",
+      "支持图片与文本混合输入；图片按尺寸折算为 token，与文本一并计费。",
+      "DeepSeek 计费：工作日（周一至周五，北京时间）09:00–12:00、14:00–18:00 为峰时，价格 = 低谷价 ×2；周六、周日整天按低谷价。详见官方定价。",
+    ],
+  },
   "mimo-v2.5-pro": {
     summary: "小米 MiMo V2.5 Pro：文本旗舰，支持开启/关闭思考。",
     modality: "文本 · 思考",
