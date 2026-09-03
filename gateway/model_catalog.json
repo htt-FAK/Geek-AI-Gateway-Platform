@@ -17,7 +17,7 @@
       { "start": "09:00", "end": "12:00" },
       { "start": "14:00", "end": "18:00" }
     ],
-    "note": "Applies to all DeepSeek billable items; base rates in models[] are off-peak CNY"
+    "note": "Applies to all DeepSeek billable items; base rates in models[] are off-peak CNY. Peak is weekdays (Mon-Fri) at the listed windows; the whole of Saturday/Sunday is off-peak (2026-08-23 rule)."
   },
   "models": [
     {
@@ -25,9 +25,9 @@
       "provider": "deepseek",
       "modality": "text",
       "pricing_cny": {
-        "cache_hit_per_million": 0.02,
-        "input_miss_per_million": 1.0,
-        "output_per_million": 2.0
+        "cache_hit_per_million": 0.05,
+        "input_miss_per_million": 1.5,
+        "output_per_million": 4.5
       }
     },
     {
@@ -35,9 +35,19 @@
       "provider": "deepseek",
       "modality": "text",
       "pricing_cny": {
-        "cache_hit_per_million": 0.025,
-        "input_miss_per_million": 3.0,
-        "output_per_million": 6.0
+        "cache_hit_per_million": 0.15,
+        "input_miss_per_million": 4.5,
+        "output_per_million": 13.5
+      }
+    },
+    {
+      "id": "deepseek-v4-flash-vision-exp",
+      "provider": "deepseek",
+      "modality": "vision",
+      "pricing_cny": {
+        "cache_hit_per_million": 0.05,
+        "input_miss_per_million": 1.5,
+        "output_per_million": 4.5
       }
     },
     {

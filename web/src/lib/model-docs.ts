@@ -32,7 +32,7 @@ const DOCS: Record<string, Omit<ModelDoc, "id" | "notes"> & { notes?: string[] }
     notes: [
       "走本网关 OpenAI 兼容 `/v1/chat/completions`。",
       "该模型不支持思考深度控制。",
-      "DeepSeek 计费有峰时倍率（上海时区 09–12、14–18 为峰时），详见官方定价。",
+      "DeepSeek 计费：工作日（周一至周五，北京时间）09:00–12:00、14:00–18:00 为峰时，价格 = 低谷价 ×2；周六、周日整天按低谷价。详见官方定价。",
     ],
   },
   "deepseek-v4-pro": {
@@ -44,7 +44,18 @@ const DOCS: Record<string, Omit<ModelDoc, "id" | "notes"> & { notes?: string[] }
     notes: [
       "思考档：关闭（thinking.disabled）、标准（enabled + reasoning_effort=high）、极深（enabled + reasoning_effort=max）。",
       "走本网关 OpenAI 兼容 `/v1/chat/completions`。",
-      "峰时计费见官方定价页。",
+      "DeepSeek 计费：工作日（周一至周五，北京时间）09:00–12:00、14:00–18:00 为峰时，价格 = 低谷价 ×2；周六、周日整天按低谷价。详见官方定价。",
+    ],
+  },
+  "deepseek-v4-flash-vision-exp": {
+    summary: "DeepSeek V4 Flash Vision Exp：多模态视觉，支持图片与文本混合输入，图片按官方规则折算 token 计费。",
+    endpoint: "chat",
+    officialUrl: DEEPSEEK_DOCS,
+    officialLabel: "DeepSeek API 文档",
+    notes: [
+      "走本网关 OpenAI 兼容 `/v1/chat/completions`。",
+      "支持图片与文本混合输入；图片按尺寸折算为 token，与文本一并计费。",
+      "DeepSeek 计费：工作日（周一至周五，北京时间）09:00–12:00、14:00–18:00 为峰时，价格 = 低谷价 ×2；周六、周日整天按低谷价。详见官方定价。",
     ],
   },
   "mimo-v2.5-pro": {
