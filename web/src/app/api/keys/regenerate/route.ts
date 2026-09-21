@@ -1,39 +1,14 @@
 import { NextResponse } from "next/server";
 import { authErrorResponse, requireUser } from "@/lib/auth";
-import { decryptSecret, encryptSecret } from "@/lib/crypto";
-import { prisma } from "@/lib/db";
-import { isAppEnforcedKey, maskApiKey } from "@/lib/keys";
-import { ensureLitellmUserAndKey, revokeLitellmKey } from "@/lib/litellm";
+import { reissueVirtualKey } from "@/lib/key-lifecycle";
+import { maskApiKey } from "@/lib/keys";
 
 export async function POST() {
   try {
-    const { user, session } = await requireUser();
-    if (session.mustChangePassword || user.mustChangePassword) {
-      return NextResponse.json({ error: "请先修改默认密码" }, { status: 403 });
-    }
+    const { user } = await requireUser({ requirePasswordChanged: true });
+    const { issued, updated, revealedAt } = await reissueVirtualKey(user);
 
-    if (user.litellmKeyTokenEnc) {
-      try {
-        const oldKey = decryptSecret(user.litellmKeyTokenEnc);
-        if (!isAppEnforcedKey(oldKey)) {
-          await revokeLitellmKey(oldKey);
-        }
-      } catch {
-        // continue
-      }
-    }
-
-    const issued = await ensureLitellmUserAndKey(user.phone);
     if (issued.mode === "app_enforced") {
-      const updated = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          litellmUserId: issued.userId,
-          litellmKeyId: issued.keyId ?? null,
-          litellmKeyTokenEnc: encryptSecret(issued.key),
-          keyRevealedAt: null,
-        },
-      });
       return NextResponse.json(
         {
           error: "网关未签发 Virtual Key（应用代持模式），无法提供外部 SDK 密钥",
@@ -45,22 +20,11 @@ export async function POST() {
       );
     }
 
-    const now = new Date();
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        litellmUserId: issued.userId,
-        litellmKeyId: issued.keyId ?? null,
-        litellmKeyTokenEnc: encryptSecret(issued.key),
-        keyRevealedAt: now,
-      },
-    });
-
     return NextResponse.json({
       key: issued.key,
       keyMasked: maskApiKey(issued.key),
       keyMode: issued.mode,
-      keyRevealedAt: now.toISOString(),
+      keyRevealedAt: revealedAt?.toISOString() ?? null,
       warning: "请立即复制完整密钥。关闭后无法再看明文；丢失请重新生成。",
     });
   } catch (e) {

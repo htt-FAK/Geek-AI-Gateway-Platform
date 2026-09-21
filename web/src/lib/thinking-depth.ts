@@ -74,38 +74,3 @@ export function thinkingStopToRequest(
   // mimo
   return { thinking: { type: "enabled" } };
 }
-
-/** Smoke-assert catalog mapping; throws on contract break. */
-export function assertThinkingDepthContract(models: readonly string[]): void {
-  for (const model of models) {
-    const profile = getThinkingProfile(model);
-    if (isThinkingUnsupported(model)) {
-      if (profile.kind !== "none") {
-        throw new Error(`${model} must hide thinking depth`);
-      }
-      continue;
-    }
-    if (model.startsWith("deepseek-")) {
-      if (profile.kind !== "deepseek" || profile.stops.length !== 3) {
-        throw new Error(`${model} must be DeepSeek 3-stop`);
-      }
-      const maxPayload = thinkingStopToRequest(profile, "max");
-      if (maxPayload.reasoning_effort !== "max" || maxPayload.thinking?.type !== "enabled") {
-        throw new Error(`${model} max stop mapping broken`);
-      }
-      const std = thinkingStopToRequest(profile, "standard");
-      if (std.reasoning_effort !== "high") {
-        throw new Error(`${model} standard stop mapping broken`);
-      }
-    }
-    if (model.startsWith("mimo-") && !isThinkingUnsupported(model)) {
-      if (profile.kind !== "mimo" || profile.stops.length !== 2) {
-        throw new Error(`${model} must be MiMo 2-stop`);
-      }
-      const on = thinkingStopToRequest(profile, "on");
-      if (on.thinking?.type !== "enabled" || on.reasoning_effort) {
-        throw new Error(`${model} on-stop must enable thinking without effort`);
-      }
-    }
-  }
-}

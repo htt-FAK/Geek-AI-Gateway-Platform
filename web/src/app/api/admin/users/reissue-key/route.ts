@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin";
-import { decryptSecret, encryptSecret } from "@/lib/crypto";
+import { reissueVirtualKey } from "@/lib/key-lifecycle";
 import { prisma } from "@/lib/db";
-import { ensureLitellmUserAndKey, revokeLitellmKey } from "@/lib/litellm";
 import { normalizePhone } from "@/lib/password";
 
 const bodySchema = z.object({
@@ -28,29 +27,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "用户不存在" }, { status: 404 });
   }
 
-  if (user.litellmKeyTokenEnc) {
-    try {
-      const oldKey = decryptSecret(user.litellmKeyTokenEnc);
-      await revokeLitellmKey(oldKey);
-    } catch {
-      // continue — still attempt reissue
-    }
-  }
-
   try {
-    const issued = await ensureLitellmUserAndKey(phone);
-    const now = new Date();
-    const revealedAt = issued.mode === "virtual_key" ? now : null;
-    const updated = await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        litellmUserId: issued.userId,
-        litellmKeyId: issued.keyId ?? null,
-        litellmKeyTokenEnc: encryptSecret(issued.key),
-        keyRevealedAt: revealedAt,
-      },
-    });
-
+    const { issued, updated, revealedAt } = await reissueVirtualKey(user);
     return NextResponse.json({
       ok: true,
       phone: updated.phone,

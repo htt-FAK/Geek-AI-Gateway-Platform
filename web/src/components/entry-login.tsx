@@ -8,16 +8,15 @@ const REMEMBER_KEY = "aigw.login.remember";
 
 type Remembered = {
   phone: string;
-  password: string;
 };
 
 function readRemembered(): Remembered | null {
   try {
     const raw = localStorage.getItem(REMEMBER_KEY);
     if (!raw) return null;
-    const data = JSON.parse(raw) as Remembered;
-    if (!data?.phone || !data?.password) return null;
-    return data;
+    const data = JSON.parse(raw) as { phone?: unknown };
+    if (typeof data?.phone !== "string" || !data.phone.trim()) return null;
+    return { phone: data.phone.trim() };
   } catch {
     return null;
   }
@@ -37,7 +36,6 @@ export function EntryLogin() {
     const saved = readRemembered();
     if (!saved) return;
     setPhone(saved.phone);
-    setPassword(saved.password);
     setRemember(true);
   }, []);
 
@@ -59,7 +57,7 @@ export function EntryLogin() {
       }
       try {
         if (remember) {
-          localStorage.setItem(REMEMBER_KEY, JSON.stringify({ phone, password }));
+          localStorage.setItem(REMEMBER_KEY, JSON.stringify({ phone }));
         } else {
           localStorage.removeItem(REMEMBER_KEY);
         }
@@ -126,7 +124,7 @@ export function EntryLogin() {
                   checked={remember}
                   onChange={(e) => setRemember(e.target.checked)}
                 />
-                <span>记住密码</span>
+                <span>记住手机号</span>
               </label>
               <button type="button" className="entry-link" onClick={onForgot}>
                 忘记密码

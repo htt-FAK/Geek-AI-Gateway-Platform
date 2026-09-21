@@ -132,9 +132,6 @@ function thinkingNotes(model: string): string[] {
   if (profile.kind === "none") {
     return ["本模型不暴露思考深度控制。"];
   }
-  if (profile.kind === "deepseek") {
-    return [`思考档位：${profile.stops.map((s) => s.label).join(" / ")}。`];
-  }
   return [`思考档位：${profile.stops.map((s) => s.label).join(" / ")}。`];
 }
 

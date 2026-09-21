@@ -147,12 +147,6 @@ export function applyAppearance(settings: AppearanceSettings) {
   root.dataset.theme = mode;
   root.classList.toggle("dark", mode === "dark");
   root.classList.toggle("light", mode === "light");
-  delete root.dataset.preset;
-  delete root.dataset.font;
-  delete root.dataset.radius;
-  delete root.dataset.density;
-  delete root.dataset.sidebar;
-  delete root.dataset.layout;
 }
 
 export type UserProfile = {
