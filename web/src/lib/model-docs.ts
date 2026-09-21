@@ -21,6 +21,9 @@ const DEEPSEEK_PRICING = "https://api-docs.deepseek.com/zh-cn/quick_start/pricin
 const MIMO_DOCS = "https://platform.xiaomimimo.com/";
 const MIMO_PRICING = "https://platform.xiaomimimo.com/static/docs/price/pay-as-you-go.md";
 const MIMO_ULTRASPEED = "https://mimo.mi.com/models/en-US/mimo-v2.5-pro-ultraspeed";
+const GLM_DOCS = "https://docs.bigmodel.cn/cn/api/introduction";
+const GLM_PRICING = "https://www.bigmodel.cn/pricing";
+const GLM_THINKING = "https://docs.bigmodel.cn/cn/guide/capabilities/thinking";
 
 const DOCS: Record<string, Omit<ModelDoc, "id" | "notes"> & { notes?: string[] }> = {
   "deepseek-flash": {
@@ -137,6 +140,55 @@ const DOCS: Record<string, Omit<ModelDoc, "id" | "notes"> & { notes?: string[] }
       "能力与计费以官方文档为准。",
     ],
   },
+  "glm-5.3": {
+    summary: "智谱 GLM-5.3：旗舰文本模型，强制思考，支持轻度 / 标准 / 极深。",
+    modality: "文本 · 思考",
+    endpoint: "chat",
+    officialUrl: GLM_DOCS,
+    officialLabel: "智谱 API 文档",
+    notes: [
+      "官方模型名 `glm-5.3`。思考不可关闭；传 `thinking.type=disabled` 会报错。",
+      "思考档：轻度（reasoning_effort=low）/ 标准（high）/ 极深（max）。省略 effort 时官方默认为 max。",
+      "刊例价（每百万 tokens）：输入 8 / 输出 28 / 缓存命中 2 元。",
+      `思考参数说明：${GLM_THINKING}`,
+    ],
+  },
+  "glm-5.3-flash": {
+    summary: "智谱 GLM-5.3-Flash：更快更省的旗舰 Flash，强制思考，支持图文。",
+    modality: "文本 · 多模态 · 思考",
+    endpoint: "chat",
+    officialUrl: GLM_DOCS,
+    officialLabel: "智谱 API 文档",
+    notes: [
+      "官方模型名 `glm-5.3-flash`。思考不可关闭。",
+      "思考档：轻度（low）/ 标准（high）/ 极深（max）。",
+      "刊例价（每百万 tokens）：输入 0.8 / 输出 2.8 / 缓存命中 0.23 元；限时折扣以定价页为准。",
+      `官方定价：${GLM_PRICING}`,
+    ],
+  },
+  "glm-4.7": {
+    summary: "智谱 GLM-4.7：可开关思考的文本模型。",
+    modality: "文本 · 思考",
+    endpoint: "chat",
+    officialUrl: GLM_DOCS,
+    officialLabel: "智谱 API 文档",
+    notes: [
+      "思考档：关闭（thinking.disabled）或开启（thinking.enabled）。开启时为强制思考（非混合自动）。",
+      "不支持 reasoning_effort。",
+      "刊例价按长度分档；网关按最低档计入：输入 2 / 输出 8 / 缓存命中 0.4 元每百万 tokens。更长上下文更贵，以定价页为准。",
+    ],
+  },
+  "glm-4.7-flash": {
+    summary: "智谱 GLM-4.7-Flash：官方免费档文本模型。",
+    modality: "文本 · 思考",
+    endpoint: "chat",
+    officialUrl: GLM_DOCS,
+    officialLabel: "智谱 API 文档",
+    notes: [
+      "思考档：关闭或开启，与 GLM-4.7 相同。",
+      "官方定价页当前为免费；网关侧记 0 元。免费策略以官方为准。",
+    ],
+  },
 };
 
 function thinkingNotes(model: string): string[] {
@@ -166,6 +218,7 @@ export function getModelDoc(model: string): ModelDoc {
   const id = model.toLowerCase();
   const endpoint: ModelEndpoint = id.includes("-asr") ? "asr" : id.includes("-tts") ? "tts" : "chat";
   const isDeepseek = id.includes("deepseek");
+  const isGlm = id.startsWith("glm-");
   return {
     id: model,
     summary: "网关已挂载的上游模型。",
@@ -177,8 +230,8 @@ export function getModelDoc(model: string): ModelDoc {
         ? "走本网关 OpenAI 兼容 `/v1/chat/completions`。"
         : "语音类请按上游 OpenAI 兼容音频接口调用；调试台以文本 chat 为主。",
     ],
-    officialUrl: isDeepseek ? DEEPSEEK_DOCS : MIMO_DOCS,
-    officialLabel: isDeepseek ? "DeepSeek API 文档" : "MiMo 平台文档",
+    officialUrl: isDeepseek ? DEEPSEEK_DOCS : isGlm ? GLM_DOCS : MIMO_DOCS,
+    officialLabel: isDeepseek ? "DeepSeek API 文档" : isGlm ? "智谱 API 文档" : "MiMo 平台文档",
   };
 }
 

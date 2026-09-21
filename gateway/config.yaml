@@ -139,6 +139,67 @@ model_list:
       output_cost_per_token: 0
       pricing_note: limited_time_free
 
+  # ---------- Zhipu GLM ----------
+  # OpenAI-compatible: https://open.bigmodel.cn/api/paas/v4
+  # Pricing: https://www.bigmodel.cn/pricing (CNY per million tokens)
+  - model_name: glm-5.3
+    litellm_params:
+      model: openai/glm-5.3
+      api_base: https://open.bigmodel.cn/api/paas/v4
+      api_key: os.environ/ZHIPU_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0.000008
+      output_cost_per_token: 0.000028
+      cache_read_input_token_cost: 0.000002
+      input_cost_per_million_cny: 8.0
+      cache_hit_cost_per_million_cny: 2.0
+      output_cost_per_million_cny: 28.0
+
+  - model_name: glm-5.3-flash
+    litellm_params:
+      model: openai/glm-5.3-flash
+      api_base: https://open.bigmodel.cn/api/paas/v4
+      api_key: os.environ/ZHIPU_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0.0000008
+      output_cost_per_token: 0.0000028
+      cache_read_input_token_cost: 0.00000023
+      input_cost_per_million_cny: 0.8
+      cache_hit_cost_per_million_cny: 0.23
+      output_cost_per_million_cny: 2.8
+
+  - model_name: glm-4.7
+    litellm_params:
+      model: openai/glm-4.7
+      api_base: https://open.bigmodel.cn/api/paas/v4
+      api_key: os.environ/ZHIPU_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0.000002
+      output_cost_per_token: 0.000008
+      cache_read_input_token_cost: 0.0000004
+      input_cost_per_million_cny: 2.0
+      cache_hit_cost_per_million_cny: 0.4
+      output_cost_per_million_cny: 8.0
+      pricing_note: lowest_length_tier
+
+  - model_name: glm-4.7-flash
+    litellm_params:
+      model: openai/glm-4.7-flash
+      api_base: https://open.bigmodel.cn/api/paas/v4
+      api_key: os.environ/ZHIPU_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      pricing_note: official_free
+
 litellm_settings:
   drop_params: true
   include_cost_in_streaming_usage: true

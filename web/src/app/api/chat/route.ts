@@ -23,7 +23,7 @@ const bodySchema = z.object({
       type: z.enum(["enabled", "disabled"]),
     })
     .optional(),
-  reasoning_effort: z.enum(["high", "max"]).optional(),
+  reasoning_effort: z.enum(["low", "high", "max"]).optional(),
 });
 
 function extractCostFromText(text: string): number {

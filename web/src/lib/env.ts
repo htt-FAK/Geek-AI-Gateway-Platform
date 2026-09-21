@@ -37,4 +37,8 @@ export const GATEWAY_MODELS = [
   "mimo-v2.5-tts",
   "mimo-v2.5-tts-voiceclone",
   "mimo-v2.5-tts-voicedesign",
+  "glm-5.3",
+  "glm-5.3-flash",
+  "glm-4.7",
+  "glm-4.7-flash",
 ] as const;

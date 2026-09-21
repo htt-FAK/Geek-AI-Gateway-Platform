@@ -28,10 +28,12 @@ get_env() {
 
 DS_KEY="$(get_env DEEPSEEK_API_KEY)"
 MIMO_KEY="$(get_env MIMO_API_KEY)"
+ZHIPU_KEY="$(get_env ZHIPU_API_KEY)"
 MASTER="$(get_env LITELLM_MASTER_KEY)"
 
 [[ -n "$DS_KEY" && "$DS_KEY" != sk-your-* ]] || die "Set a real DEEPSEEK_API_KEY in $ENV_FILE"
 [[ -n "$MIMO_KEY" && "$MIMO_KEY" != sk-your-* ]] || die "Set a real MIMO_API_KEY in $ENV_FILE"
+[[ -n "$ZHIPU_KEY" && "$ZHIPU_KEY" != sk-your-* ]] || die "Set a real ZHIPU_API_KEY in $ENV_FILE"
 [[ -n "$MASTER" && "$MASTER" != sk-change-me* && "$MASTER" != sk-your-* ]] || die "LITELLM_MASTER_KEY looks unset in $ENV_FILE"
 
 log "Building and starting stack..."

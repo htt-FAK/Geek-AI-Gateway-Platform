@@ -6,15 +6,21 @@ import { ConsolePage, useMe } from "@/components/console";
 import { ModelDocsDialog } from "@/components/model-docs-dialog";
 import { envPublicGateway } from "@/lib/public-env";
 
-function providerOf(model: string): "deepseek" | "mimo" | "other" {
-  if (model.toLowerCase().includes("deepseek")) return "deepseek";
-  if (model.toLowerCase().includes("mimo")) return "mimo";
+function providerOf(model: string): "deepseek" | "mimo" | "glm" | "other" {
+  const id = model.toLowerCase();
+  if (id.includes("deepseek")) return "deepseek";
+  if (id.includes("mimo")) return "mimo";
+  if (id.startsWith("glm-")) return "glm";
   return "other";
 }
 
 function hint(model: string): string {
   if (model === "deepseek-v4-flash") return "旧名别名 · 现由 DeepSeek-V4.1-Flash 承接";
   if (model === "deepseek-flash") return "V4.1 Flash · 更快更省，支持思考与图像";
+  if (model === "glm-5.3") return "智谱旗舰 · 强制思考，轻度 / 标准 / 极深";
+  if (model === "glm-5.3-flash") return "智谱 Flash · 强制思考，支持图文";
+  if (model === "glm-4.7") return "智谱 4.7 · 可开关思考";
+  if (model === "glm-4.7-flash") return "智谱 4.7 Flash · 官方免费档";
   if (model.includes("flash")) return "更快、更省的文本模型 · 上下文视上游";
   if (model.includes("pro") && model.includes("ultraspeed")) return "文本旗舰 · 更高速度档";
   if (model.includes("pro")) return "文本旗舰";
@@ -48,7 +54,9 @@ export default function ModelsPage() {
               ? "var(--brand-deepseek)"
               : p === "mimo"
                 ? "var(--brand-mimo)"
-                : "var(--text-tertiary)";
+                : p === "glm"
+                  ? "var(--brand-glm)"
+                  : "var(--text-tertiary)";
           return (
             <li
               key={model}

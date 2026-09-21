@@ -70,6 +70,10 @@ def main() -> int:
         "mimo-v2.5-pro",
         "mimo-v2.5-pro-ultraspeed",
         "mimo-v2.5",
+        "glm-5.3",
+        "glm-5.3-flash",
+        "glm-4.7",
+        "glm-4.7-flash",
     ]
     for m in chat_models:
         ok, msg = post(

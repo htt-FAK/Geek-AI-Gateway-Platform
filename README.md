@@ -183,6 +183,10 @@ chmod +x scripts/*.sh deploy/web-entrypoint.sh
 | MiMo | `mimo-v2.5-pro-ultraspeed` | 高速档 |
 | MiMo | `mimo-v2.5` | 全模态 |
 | MiMo | `mimo-v2.5-asr` / `*-tts*` | 语音 |
+| 智谱 GLM | `glm-5.3` | 旗舰 · 强制思考 |
+| 智谱 GLM | `glm-5.3-flash` | Flash · 强制思考 / 图文 |
+| 智谱 GLM | `glm-4.7` | 可开关思考 |
+| 智谱 GLM | `glm-4.7-flash` | 官方免费档 |
 
 </div>
 
@@ -193,7 +197,7 @@ curl "$GATEWAY/v1/chat/completions" \
   -d '{"model":"deepseek-flash","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-控制台 **模型 → 文档** 可查看每个模型的官方说明与完整示例。
+控制台 **模型 → 文档** 可查看每个模型的官方说明与完整示例。已有 Virtual Key 需在控制台 **密钥** 页重新签发后才会放行新增的 GLM 别名。
 
 ---
 
@@ -204,8 +208,8 @@ Browser ──session──► Next.js Web (BFF)
                           │
                           ▼
                     LiteLLM Proxy :4000/v1
-                     ┌────┴────┐
-                DeepSeek     MiMo
+                     ┌────┴────┬────┐
+                DeepSeek     MiMo   智谱 GLM
 ```
 
 ```text

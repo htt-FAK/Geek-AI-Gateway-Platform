@@ -14,6 +14,10 @@ const MODELS = [
   "mimo-v2.5-tts",
   "mimo-v2.5-tts-voiceclone",
   "mimo-v2.5-tts-voicedesign",
+  "glm-5.3",
+  "glm-5.3-flash",
+  "glm-4.7",
+  "glm-4.7-flash",
 ];
 
 function isThinkingUnsupported(model) {
@@ -27,11 +31,17 @@ function profileKind(model) {
   if (isThinkingUnsupported(model)) return "none";
   if (model.startsWith("deepseek-")) return "deepseek";
   if (model.startsWith("mimo-")) return "mimo";
+  if (model.startsWith("glm-5.3")) return "glm53";
+  if (model.startsWith("glm-")) return "glm";
   return "none";
 }
 
 function toRequest(kind, stop) {
   if (kind === "none") return {};
+  if (kind === "glm53") {
+    const effort = stop === "max" ? "max" : stop === "low" ? "low" : "high";
+    return { thinking: { type: "enabled" }, reasoning_effort: effort };
+  }
   if (stop === "off") return { thinking: { type: "disabled" } };
   if (kind === "deepseek") {
     if (stop === "max") return { thinking: { type: "enabled" }, reasoning_effort: "max" };
@@ -65,6 +75,17 @@ for (const model of MODELS) {
   if (model.startsWith("mimo-") && kind === "mimo") {
     const on = toRequest(kind, "on");
     check(on.thinking?.type === "enabled" && !on.reasoning_effort, `${model} on`);
+  }
+  if (kind === "glm53") {
+    check(toRequest(kind, "off").thinking?.type === "enabled", `${model} cannot disable`);
+    check(toRequest(kind, "low").reasoning_effort === "low", `${model} low`);
+    check(toRequest(kind, "standard").reasoning_effort === "high", `${model} standard`);
+    check(toRequest(kind, "max").reasoning_effort === "max", `${model} max`);
+  }
+  if (kind === "glm") {
+    const on = toRequest(kind, "on");
+    check(on.thinking?.type === "enabled" && !on.reasoning_effort, `${model} on`);
+    check(toRequest(kind, "off").thinking?.type === "disabled", `${model} off`);
   }
 }
 
