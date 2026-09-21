@@ -29,7 +29,6 @@ const MIMO_STOPS: ThinkingStop[] = [
 /** Models that must hide the thinking-depth control. */
 export function isThinkingUnsupported(model: string): boolean {
   const id = model.toLowerCase();
-  if (id === "deepseek-v4-flash") return true;
   if (id.includes("-asr")) return true;
   if (id.includes("-tts")) return true;
   return false;

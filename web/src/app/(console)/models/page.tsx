@@ -13,6 +13,8 @@ function providerOf(model: string): "deepseek" | "mimo" | "other" {
 }
 
 function hint(model: string): string {
+  if (model === "deepseek-v4-flash") return "旧名别名 · 现由 DeepSeek-V4.1-Flash 承接";
+  if (model === "deepseek-flash") return "V4.1 Flash · 更快更省，支持思考与图像";
   if (model.includes("flash")) return "更快、更省的文本模型 · 上下文视上游";
   if (model.includes("pro") && model.includes("ultraspeed")) return "文本旗舰 · 更高速度档";
   if (model.includes("pro")) return "文本旗舰";

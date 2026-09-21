@@ -23,16 +23,28 @@ const MIMO_PRICING = "https://platform.xiaomimimo.com/static/docs/price/pay-as-y
 const MIMO_ULTRASPEED = "https://mimo.mi.com/models/en-US/mimo-v2.5-pro-ultraspeed";
 
 const DOCS: Record<string, Omit<ModelDoc, "id" | "notes"> & { notes?: string[] }> = {
-  "deepseek-v4-flash": {
-    summary: "DeepSeek V4 Flash：更快、更省的文本对话模型。",
-    modality: "文本",
+  "deepseek-flash": {
+    summary: "DeepSeek-V4.1-Flash：当前官方 Flash，支持思考与图像理解。",
+    modality: "文本 · 多模态 · 思考",
     endpoint: "chat",
     officialUrl: DEEPSEEK_DOCS,
     officialLabel: "DeepSeek API 文档",
     notes: [
-      "走本网关 OpenAI 兼容 `/v1/chat/completions`。",
-      "该模型不支持思考深度控制。",
-      "DeepSeek 计费有峰时倍率（上海时区 09–12、14–18 为峰时），详见官方定价。",
+      "官方模型名请使用 `deepseek-flash`。",
+      "思考档：关闭 / 标准（reasoning_effort=high） / 极深（max）。默认思考开启。",
+      "DeepSeek 计费有峰时倍率（上海时区工作日 09–12、14–18），空闲价为峰时一半。",
+    ],
+  },
+  "deepseek-v4-flash": {
+    summary: "旧模型名别名：请求由 DeepSeek-V4.1-Flash 承接，按 Flash 价格计费。",
+    modality: "文本 · 思考（别名）",
+    endpoint: "chat",
+    officialUrl: DEEPSEEK_DOCS,
+    officialLabel: "DeepSeek API 文档",
+    notes: [
+      "官方已下线 V4 Flash；此 ID 仍可调用，实际路由到 `deepseek-flash`。",
+      "新接入请改用 `deepseek-flash`。",
+      "DeepSeek 计费有峰时倍率（上海时区工作日 09–12、14–18）。",
     ],
   },
   "deepseek-v4-pro": {

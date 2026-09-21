@@ -176,7 +176,8 @@ chmod +x scripts/*.sh deploy/web-entrypoint.sh
 
 | Provider | Model | 说明 |
 |:--------:|:-----:|:----:|
-| DeepSeek | `deepseek-v4-flash` | 更快更省 |
+| DeepSeek | `deepseek-flash` | V4.1 Flash · 思考 / 图像 |
+| DeepSeek | `deepseek-v4-flash` | 旧名别名，路由到 Flash |
 | DeepSeek | `deepseek-v4-pro` | 旗舰 · 思考档 |
 | MiMo | `mimo-v2.5-pro` | 文本旗舰 |
 | MiMo | `mimo-v2.5-pro-ultraspeed` | 高速档 |
@@ -189,7 +190,7 @@ chmod +x scripts/*.sh deploy/web-entrypoint.sh
 curl "$GATEWAY/v1/chat/completions" \
   -H "Authorization: Bearer $AI_GATEWAY_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"Hello"}]}'
+  -d '{"model":"deepseek-flash","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
 控制台 **模型 → 文档** 可查看每个模型的官方说明与完整示例。

@@ -64,6 +64,7 @@ def main() -> int:
 
     print("\n=== Chat via gateway ===")
     chat_models = [
+        "deepseek-flash",
         "deepseek-v4-flash",
         "deepseek-v4-pro",
         "mimo-v2.5-pro",

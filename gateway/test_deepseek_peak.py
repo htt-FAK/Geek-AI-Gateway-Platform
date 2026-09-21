@@ -21,13 +21,14 @@ def test_peak_windows_beijing():
 
 def test_billable_cost_deepseek_peak_doubles():
     moment = datetime(2026, 7, 20, 10, 0, tzinfo=SH)
+    assert billable_cost(0.01, "deepseek-flash", moment) == 0.02
     assert billable_cost(0.01, "deepseek-v4-flash", moment) == 0.02
     assert billable_cost(0.01, "deepseek/deepseek-v4-pro", moment) == 0.02
 
 
 def test_billable_cost_offpeak_and_mimo_unchanged():
     moment = datetime(2026, 7, 20, 13, 0, tzinfo=SH)
-    assert billable_cost(0.01, "deepseek-v4-flash", moment) == 0.01
+    assert billable_cost(0.01, "deepseek-flash", moment) == 0.01
     peak = datetime(2026, 7, 20, 10, 0, tzinfo=SH)
     assert billable_cost(0.01, "mimo-v2.5-pro", peak) == 0.01
 
@@ -59,7 +60,7 @@ def test_unix_timestamp_utc():
 
 def test_billable_cost_idempotent_via_metadata():
     moment = datetime(2026, 7, 20, 10, 0, tzinfo=SH)
-    once = billable_cost(0.01, "deepseek-v4-flash", moment)
+    once = billable_cost(0.01, "deepseek-flash", moment)
     assert once == 0.02
-    twice = billable_cost(once, "deepseek-v4-flash", moment, metadata={"deepseek_peak": True})
+    twice = billable_cost(once, "deepseek-flash", moment, metadata={"deepseek_peak": True})
     assert twice == 0.02

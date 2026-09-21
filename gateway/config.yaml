@@ -1,18 +1,34 @@
 model_list:
   # ---------- DeepSeek ----------
-  - model_name: deepseek-v4-flash
+  # Official name for DeepSeek-V4.1-Flash (https://api-docs.deepseek.com/quick_start/pricing)
+  - model_name: deepseek-flash
     litellm_params:
-      model: deepseek/deepseek-v4-flash
+      model: deepseek/deepseek-flash
       api_key: os.environ/DEEPSEEK_API_KEY
     model_info:
       currency: CNY
       mode: chat
       input_cost_per_token: 0.000001
-      output_cost_per_token: 0.000002
+      output_cost_per_token: 0.000004
       cache_read_input_token_cost: 0.00000002
       input_cost_per_million_cny: 1.0
       cache_hit_cost_per_million_cny: 0.02
-      output_cost_per_million_cny: 2.0
+      output_cost_per_million_cny: 4.0
+
+  # Legacy alias: retired V4 Flash, routed to V4.1-Flash at Flash rates
+  - model_name: deepseek-v4-flash
+    litellm_params:
+      model: deepseek/deepseek-flash
+      api_key: os.environ/DEEPSEEK_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0.000001
+      output_cost_per_token: 0.000004
+      cache_read_input_token_cost: 0.00000002
+      input_cost_per_million_cny: 1.0
+      cache_hit_cost_per_million_cny: 0.02
+      output_cost_per_million_cny: 4.0
 
   - model_name: deepseek-v4-pro
     litellm_params:
@@ -21,12 +37,12 @@ model_list:
     model_info:
       currency: CNY
       mode: chat
-      input_cost_per_token: 0.000003
-      output_cost_per_token: 0.000006
-      cache_read_input_token_cost: 0.000000025
-      input_cost_per_million_cny: 3.0
-      cache_hit_cost_per_million_cny: 0.025
-      output_cost_per_million_cny: 6.0
+      input_cost_per_token: 0.0000045
+      output_cost_per_token: 0.0000135
+      cache_read_input_token_cost: 0.00000015
+      input_cost_per_million_cny: 4.5
+      cache_hit_cost_per_million_cny: 0.15
+      output_cost_per_million_cny: 13.5
 
   # ---------- MiMo text ----------
   - model_name: mimo-v2.5-pro
