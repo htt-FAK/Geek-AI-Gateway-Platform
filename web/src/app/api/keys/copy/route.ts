@@ -7,10 +7,7 @@ import { isAppEnforcedKey } from "@/lib/keys";
 /** Return plaintext virtual key for the signed-in owner (for copy / eye toggle). */
 export async function POST() {
   try {
-    const { user, session } = await requireUser();
-    if (session.mustChangePassword || user.mustChangePassword) {
-      return NextResponse.json({ error: "请先修改默认密码" }, { status: 403 });
-    }
+    const { user } = await requireUser({ requirePasswordChanged: true });
     if (!user.litellmKeyTokenEnc) {
       return NextResponse.json({ error: "账号未开通 API Key" }, { status: 400 });
     }

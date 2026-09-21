@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
-import { fetchKeySpendLastDays } from "@/lib/litellm";
+import { isAppEnforcedKey } from "@/lib/keys";
+import { fetchKeySpendLogs } from "@/lib/litellm";
 
 export async function getAppSpendSince(userId: string, since: Date): Promise<number> {
   const agg = await prisma.spendEvent.aggregate({
@@ -38,20 +39,40 @@ export async function getBudgetUsage(params: {
   litellmKeyToken: string | null;
 }): Promise<BudgetUsage> {
   const { dailyBudgetCny, weeklyBudgetCny, monthlyBudgetCny } = env();
-  const now = Date.now();
-  const dayAgo = new Date(now - 24 * 60 * 60 * 1000);
-  const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
-  const monthStart = startOfMonthShanghai(new Date(now));
+  const nowMs = Date.now();
+  const now = new Date(nowMs);
+  const dayAgo = new Date(nowMs - 24 * 60 * 60 * 1000);
+  const weekAgo = new Date(nowMs - 7 * 24 * 60 * 60 * 1000);
+  const monthStart = startOfMonthShanghai(now);
+  const earliest = weekAgo < monthStart ? weekAgo : monthStart;
 
-  const appDaily = await getAppSpendSince(params.userId, dayAgo);
-  const appWeekly = await getAppSpendSince(params.userId, weekAgo);
-  const appMonthly = await getAppSpendSince(params.userId, monthStart);
+  const hasGatewayKey = Boolean(params.litellmKeyToken) && !isAppEnforcedKey(params.litellmKeyToken);
+
+  const [rows, gwLogs] = await Promise.all([
+    prisma.spendEvent.findMany({
+      where: { userId: params.userId, createdAt: { gte: earliest } },
+      select: { createdAt: true, costCny: true },
+    }),
+    hasGatewayKey
+      ? fetchKeySpendLogs(params.litellmKeyToken as string, weekAgo, now)
+      : Promise.resolve([]),
+  ]);
+
+  let appDaily = 0;
+  let appWeekly = 0;
+  let appMonthly = 0;
+  for (const row of rows) {
+    const cost = row.costCny ?? 0;
+    if (row.createdAt >= monthStart) appMonthly += cost;
+    if (row.createdAt >= weekAgo) appWeekly += cost;
+    if (row.createdAt >= dayAgo) appDaily += cost;
+  }
 
   let gwDaily = 0;
   let gwWeekly = 0;
-  if (params.litellmKeyToken && !params.litellmKeyToken.startsWith("__app_enforced__:")) {
-    gwDaily = await fetchKeySpendLastDays(params.litellmKeyToken, 1);
-    gwWeekly = await fetchKeySpendLastDays(params.litellmKeyToken, 7);
+  for (const log of gwLogs) {
+    gwWeekly += log.spend;
+    if (log.at >= dayAgo) gwDaily += log.spend;
   }
 
   return {
@@ -69,7 +90,7 @@ export async function assertWithinBudget(params: {
   litellmKeyToken: string | null;
 }): Promise<void> {
   const usage = await getBudgetUsage(params);
-  const isAppEnforced = !params.litellmKeyToken || params.litellmKeyToken.startsWith("__app_enforced__:");
+  const isAppEnforced = !params.litellmKeyToken || isAppEnforcedKey(params.litellmKeyToken);
 
   if (isAppEnforced && usage.dailyUsed >= usage.dailyLimit) {
     throw new BudgetError(`日限额已用尽（¥${usage.dailyLimit}/天）`);

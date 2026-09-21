@@ -187,8 +187,8 @@ export async function buildUserAnalytics(params: {
           source: "litellm",
         };
       }
-    } catch {
-      // fall through to SpendEvent
+    } catch (e) {
+      console.warn("[analytics] LiteLLM spend logs failed; falling back to SpendEvent", e);
     }
   }
 

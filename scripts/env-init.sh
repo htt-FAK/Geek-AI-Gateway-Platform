@@ -52,5 +52,11 @@ set_if_placeholder "AUTH_SECRET" "$(rand_hex 32)"
 set_if_placeholder "CREDENTIALS_ENCRYPTION_KEY" "$(rand_b64 32)"
 
 echo ""
+if ! grep -qE "^ZHIPU_API_KEY=" "$ENV_FILE"; then
+  echo "ZHIPU_API_KEY=sk-your-zhipu-key" >>"$ENV_FILE"
+  echo "Appended ZHIPU_API_KEY placeholder"
+fi
+
+echo ""
 echo "Review upstream keys in $ENV_FILE:"
-echo "  DEEPSEEK_API_KEY / MIMO_API_KEY must be real values (not sk-your-*)."
+echo "  DEEPSEEK_API_KEY / MIMO_API_KEY / ZHIPU_API_KEY must be real values (not sk-your-*)."

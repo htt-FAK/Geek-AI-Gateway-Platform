@@ -1,4 +1,5 @@
 import { env, GATEWAY_MODELS } from "@/lib/env";
+import { isAppEnforcedKey } from "@/lib/keys";
 
 type KeyGenerateResult = {
   key: string;
@@ -6,6 +7,14 @@ type KeyGenerateResult = {
   userId: string;
   mode: "virtual_key" | "app_enforced";
 };
+
+function warnLiteLLM(event: string, detail?: Record<string, unknown>) {
+  if (detail) {
+    console.warn(`[litellm] ${event}`, detail);
+  } else {
+    console.warn(`[litellm] ${event}`);
+  }
+}
 
 async function gatewayFetch(path: string, init?: RequestInit): Promise<Response> {
   const { gatewayBaseUrl, litellmMasterKey } = env();
@@ -19,6 +28,11 @@ async function gatewayFetch(path: string, init?: RequestInit): Promise<Response>
   });
 }
 
+function isDbMissing(text: string): boolean {
+  const lower = text.toLowerCase();
+  return lower.includes("db not connected") || lower.includes("database not connected");
+}
+
 export async function ensureLitellmUserAndKey(phone: string): Promise<KeyGenerateResult> {
   const userId = `phone:${phone}`;
   const { dailyBudgetCny } = env();
@@ -29,8 +43,13 @@ export async function ensureLitellmUserAndKey(phone: string): Promise<KeyGenerat
   });
   if (!userRes.ok && userRes.status !== 400) {
     const text = await userRes.text();
-    if (!text.includes("already") && !text.includes("exists")) {
-      // continue — user may already exist or DB missing
+    if (text.includes("already") || text.includes("exists")) {
+      // user already provisioned
+    } else {
+      warnLiteLLM("user/new failed; continuing to key/generate", {
+        status: userRes.status,
+        body: text.slice(0, 500),
+      });
     }
   }
 
@@ -55,11 +74,10 @@ export async function ensureLitellmUserAndKey(phone: string): Promise<KeyGenerat
   }
 
   const errText = await keyRes.text();
-  if (
-    errText.includes("DB not connected") ||
-    keyRes.status === 404 ||
-    keyRes.status >= 500
-  ) {
+  if (isDbMissing(errText)) {
+    warnLiteLLM("key/generate: LiteLLM DB missing, using app_enforced placeholder", {
+      status: keyRes.status,
+    });
     return {
       key: `__app_enforced__:${userId}`,
       userId,
@@ -70,7 +88,7 @@ export async function ensureLitellmUserAndKey(phone: string): Promise<KeyGenerat
 }
 
 export async function fetchKeySpendLastDays(apiKey: string, days: number): Promise<number> {
-  if (apiKey.startsWith("__app_enforced__:")) {
+  if (isAppEnforcedKey(apiKey)) {
     return 0;
   }
   const end = new Date();
@@ -157,7 +175,7 @@ export async function fetchKeySpendLogs(
   start: Date,
   end: Date,
 ): Promise<NormalizedSpendLog[]> {
-  if (!apiKey || apiKey.startsWith("__app_enforced__:")) {
+  if (!apiKey || isAppEnforcedKey(apiKey)) {
     return [];
   }
   const qs = new URLSearchParams({
@@ -167,6 +185,11 @@ export async function fetchKeySpendLogs(
   });
   const res = await gatewayFetch(`/spend/logs?${qs.toString()}`);
   if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    warnLiteLLM("spend/logs failed; treating as empty", {
+      status: res.status,
+      body: text.slice(0, 500),
+    });
     return [];
   }
   const data = (await res.json()) as unknown;
@@ -184,7 +207,7 @@ export async function chatCompletions(params: {
   appEnforcedUserId?: string;
 }): Promise<Response> {
   const { gatewayBaseUrl, litellmMasterKey } = env();
-  const useMaster = params.apiKey.startsWith("__app_enforced__:");
+  const useMaster = isAppEnforcedKey(params.apiKey);
   const authKey = useMaster ? litellmMasterKey : params.apiKey;
   const body = { ...params.body };
   if (useMaster && params.appEnforcedUserId) {
@@ -202,7 +225,7 @@ export async function chatCompletions(params: {
 
 /** Best-effort revoke. No-op for app_enforced placeholders or when LiteLLM DB is down. */
 export async function revokeLitellmKey(apiKey: string): Promise<void> {
-  if (!apiKey || apiKey.startsWith("__app_enforced__:")) {
+  if (!apiKey || isAppEnforcedKey(apiKey)) {
     return;
   }
   try {
@@ -212,10 +235,13 @@ export async function revokeLitellmKey(apiKey: string): Promise<void> {
     });
     if (res.ok) return;
     const text = await res.text();
-    if (text.includes("DB not connected") || res.status === 404 || res.status >= 500) {
-      return;
-    }
-  } catch {
-    // ignore — reissue will still overwrite local encrypted key
+    warnLiteLLM("key/delete failed; continuing so local key can be overwritten", {
+      status: res.status,
+      body: text.slice(0, 500),
+    });
+  } catch (e) {
+    warnLiteLLM("key/delete threw; continuing so local key can be overwritten", {
+      error: e instanceof Error ? e.message : String(e),
+    });
   }
 }

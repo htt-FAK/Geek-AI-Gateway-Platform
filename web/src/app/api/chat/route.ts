@@ -23,7 +23,7 @@ const bodySchema = z.object({
       type: z.enum(["enabled", "disabled"]),
     })
     .optional(),
-  reasoning_effort: z.enum(["high", "max"]).optional(),
+  reasoning_effort: z.enum(["low", "high", "max"]).optional(),
 });
 
 function extractCostFromText(text: string): number {
@@ -80,10 +80,7 @@ function extractUsageFromText(text: string): TokenUsage {
 
 export async function POST(req: Request) {
   try {
-    const { user, session } = await requireUser();
-    if (session.mustChangePassword || user.mustChangePassword) {
-      return NextResponse.json({ error: "请先修改默认密码" }, { status: 403 });
-    }
+    const { user } = await requireUser({ requirePasswordChanged: true });
 
     const parsed = bodySchema.safeParse(await req.json());
     if (!parsed.success) {

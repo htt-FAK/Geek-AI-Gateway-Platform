@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  BudgetColumns,
   ConsumptionChartPanel,
-  KpiRow,
   ModelCallChartPanel,
-  type SeriesPoint,
 } from "@/components/charts";
+import { BudgetColumns, KpiRow, type SeriesPoint } from "@/components/chart-chrome";
 import { ConsolePage, useMe } from "@/components/console";
 import { DashboardFilterDialog } from "@/components/dashboard-filter";
 import { DashboardPrefsDialog } from "@/components/dashboard-prefs-dialog";

@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { EmptyChartPanel, KpiRow } from "@/components/charts";
+import { EmptyChartPanel, KpiRow } from "@/components/chart-chrome";
 
 type UsagePayload = {
   kpis: {

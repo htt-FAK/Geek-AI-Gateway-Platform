@@ -47,7 +47,7 @@ const GW = (process.env.GATEWAY_BASE_URL || "http://127.0.0.1:4000").replace(/\/
 const MASTER = process.env.LITELLM_MASTER_KEY;
 const ADMIN = process.env.ADMIN_TOKEN;
 const DEFAULT_PWD = process.env.DEFAULT_USER_PASSWORD;
-const MODEL = process.env.TEST_MODEL || "deepseek-v4-flash";
+const MODEL = process.env.TEST_MODEL || "deepseek-flash";
 const REQUIRE_VK = process.env.REQUIRE_VIRTUAL_KEY === "true";
 const SKIP_LLM = process.env.SKIP_LIVE_LLM === "true";
 const PHONE = process.env.TEST_PHONE || `138${String(Date.now()).slice(-8)}`;

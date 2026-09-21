@@ -11,7 +11,9 @@ export class AuthError extends Error {
   }
 }
 
-export async function requireUser(): Promise<{ user: User; session: SessionPayload }> {
+export async function requireUser(opts?: {
+  requirePasswordChanged?: boolean;
+}): Promise<{ user: User; session: SessionPayload }> {
   const session = await readSession();
   if (!session) {
     throw new AuthError("未登录", 401);
@@ -26,6 +28,9 @@ export async function requireUser(): Promise<{ user: User; session: SessionPaylo
   }
   if (session.passwordVersion !== Number(user.passwordVersion ?? 0)) {
     throw new AuthError("会话已失效，请重新登录", 401);
+  }
+  if (opts?.requirePasswordChanged && (session.mustChangePassword || user.mustChangePassword)) {
+    throw new AuthError("请先修改默认密码", 403);
   }
 
   return { user, session };

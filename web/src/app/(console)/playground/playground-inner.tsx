@@ -21,7 +21,7 @@ type Msg = {
 export default function PlaygroundInner() {
   const { me, refresh } = useMe();
   const search = useSearchParams();
-  const [model, setModel] = useState("deepseek-v4-flash");
+  const [model, setModel] = useState("deepseek-flash");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(1024);
