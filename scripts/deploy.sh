@@ -28,10 +28,12 @@ get_env() {
 
 DS_KEY="$(get_env DEEPSEEK_API_KEY)"
 MIMO_KEY="$(get_env MIMO_API_KEY)"
+GLM_KEY="$(get_env GLM_API_KEY)"
 MASTER="$(get_env LITELLM_MASTER_KEY)"
 
 [[ -n "$DS_KEY" && "$DS_KEY" != sk-your-* ]] || die "Set a real DEEPSEEK_API_KEY in $ENV_FILE"
 [[ -n "$MIMO_KEY" && "$MIMO_KEY" != sk-your-* ]] || die "Set a real MIMO_API_KEY in $ENV_FILE"
+[[ -n "$GLM_KEY" && "$GLM_KEY" != sk-your-* ]] || die "Set a real GLM_API_KEY in $ENV_FILE"
 [[ -n "$MASTER" && "$MASTER" != sk-change-me* && "$MASTER" != sk-your-* ]] || die "LITELLM_MASTER_KEY looks unset in $ENV_FILE"
 
 log "Building and starting stack..."
@@ -59,7 +61,7 @@ log "Probing Virtual Key (/key/generate)..."
 KEY_PROBE="$(curl -fsS -X POST "http://127.0.0.1:4000/key/generate" \
   -H "Authorization: Bearer ${MASTER}" \
   -H "Content-Type: application/json" \
-  -d '{"models":["deepseek-v4-flash"],"max_budget":50,"budget_duration":"24h","key_alias":"deploy-probe"}' \
+  -d '{"models":["deepseek-flash"],"max_budget":50,"budget_duration":"24h","key_alias":"deploy-probe"}' \
   || true)"
 echo "$KEY_PROBE" | grep -qE '"key"|"token"' || die "Virtual Key probe failed. Check Postgres + LiteLLM logs: ${COMPOSE[*]} logs litellm"
 log "Virtual Key OK"

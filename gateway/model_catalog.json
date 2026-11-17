@@ -1,14 +1,15 @@
 {
   "currency": "CNY",
   "unit_notes": {
-    "chat": "prices are CNY per 1 million tokens",
+    "chat": "prices are CNY per 1 million tokens, off-peak where a provider has peak pricing",
     "asr": "price is CNY per audio hour",
     "tts": "limited-time free per official pricing page"
   },
   "sources": {
     "deepseek": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
-    "mimo": "https://platform.xiaomimimo.com/static/docs/price/pay-as-you-go.md",
-    "mimo_ultraspeed": "https://mimo.mi.com/models/en-US/mimo-v2.5-pro-ultraspeed"
+    "glm": "https://docs.bigmodel.cn/cn/guide/start/pricing",
+    "mimo": "https://mimo.mi.com/docs/price/pay-as-you-go",
+    "mimo_ultraspeed": "https://mimo.mi.com/models/en-US/mimo-v2.6-pro-ultraspeed"
   },
   "deepseek_peak_pricing": {
     "timezone": "Asia/Shanghai",
@@ -17,17 +18,18 @@
       { "start": "09:00", "end": "12:00" },
       { "start": "14:00", "end": "18:00" }
     ],
+    "days": "Monday–Friday, excluding Chinese statutory holidays (holiday calendar is not encoded; weekends are off-peak)",
     "note": "Applies to all DeepSeek billable items; base rates in models[] are off-peak CNY"
   },
   "models": [
     {
-      "id": "deepseek-v4-flash",
+      "id": "deepseek-flash",
       "provider": "deepseek",
       "modality": "text",
       "pricing_cny": {
         "cache_hit_per_million": 0.02,
         "input_miss_per_million": 1.0,
-        "output_per_million": 2.0
+        "output_per_million": 4.0
       }
     },
     {
@@ -35,15 +37,26 @@
       "provider": "deepseek",
       "modality": "text",
       "pricing_cny": {
-        "cache_hit_per_million": 0.025,
-        "input_miss_per_million": 3.0,
-        "output_per_million": 6.0
+        "cache_hit_per_million": 0.15,
+        "input_miss_per_million": 4.5,
+        "output_per_million": 13.5
       }
     },
     {
-      "id": "mimo-v2.5-pro",
+      "id": "glm-5.3-flash",
+      "provider": "glm",
+      "modality": "omni",
+      "pricing_cny": {
+        "cache_hit_per_million": 0.23,
+        "input_miss_per_million": 0.8,
+        "output_per_million": 2.8,
+        "note": "official list price; the open platform may show a limited-time discount"
+      }
+    },
+    {
+      "id": "mimo-v2.6-pro",
       "provider": "mimo",
-      "modality": "text",
+      "modality": "omni",
       "pricing_cny": {
         "cache_hit_per_million": 0.025,
         "input_miss_per_million": 3.0,
@@ -51,23 +64,23 @@
       }
     },
     {
-      "id": "mimo-v2.5-pro-ultraspeed",
-      "provider": "mimo",
-      "modality": "text",
-      "pricing_cny": {
-        "cache_hit_per_million": 0.075,
-        "input_miss_per_million": 9.0,
-        "output_per_million": 18.0
-      }
-    },
-    {
-      "id": "mimo-v2.5",
+      "id": "mimo-v2.6-flash",
       "provider": "mimo",
       "modality": "omni",
       "pricing_cny": {
         "cache_hit_per_million": 0.02,
         "input_miss_per_million": 1.0,
         "output_per_million": 2.0
+      }
+    },
+    {
+      "id": "mimo-v2.6-pro-ultraspeed",
+      "provider": "mimo",
+      "modality": "omni",
+      "pricing_cny": {
+        "cache_hit_per_million": 0.25,
+        "input_miss_per_million": 30.0,
+        "output_per_million": 60.0
       }
     },
     {

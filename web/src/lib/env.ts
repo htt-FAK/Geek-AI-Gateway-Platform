@@ -27,11 +27,12 @@ export function env() {
 }
 
 export const GATEWAY_MODELS = [
-  "deepseek-v4-flash",
+  "deepseek-flash",
   "deepseek-v4-pro",
-  "mimo-v2.5-pro",
-  "mimo-v2.5-pro-ultraspeed",
-  "mimo-v2.5",
+  "glm-5.3-flash",
+  "mimo-v2.6-pro",
+  "mimo-v2.6-flash",
+  "mimo-v2.6-pro-ultraspeed",
   "mimo-v2.5-asr",
   "mimo-v2.5-tts",
   "mimo-v2.5-tts-voiceclone",

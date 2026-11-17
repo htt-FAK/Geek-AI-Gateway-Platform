@@ -1,18 +1,20 @@
 model_list:
   # ---------- DeepSeek ----------
-  - model_name: deepseek-v4-flash
+  # Official name is deepseek-flash (V4.1-Flash). Legacy deepseek-v4-flash is retired upstream.
+  # Costs below are off-peak CNY. Peak (weekday 09–12, 14–18 Asia/Shanghai) is applied in callbacks.
+  - model_name: deepseek-flash
     litellm_params:
-      model: deepseek/deepseek-v4-flash
+      model: deepseek/deepseek-flash
       api_key: os.environ/DEEPSEEK_API_KEY
     model_info:
       currency: CNY
       mode: chat
       input_cost_per_token: 0.000001
-      output_cost_per_token: 0.000002
+      output_cost_per_token: 0.000004
       cache_read_input_token_cost: 0.00000002
       input_cost_per_million_cny: 1.0
       cache_hit_cost_per_million_cny: 0.02
-      output_cost_per_million_cny: 2.0
+      output_cost_per_million_cny: 4.0
 
   - model_name: deepseek-v4-pro
     litellm_params:
@@ -21,17 +23,35 @@ model_list:
     model_info:
       currency: CNY
       mode: chat
-      input_cost_per_token: 0.000003
-      output_cost_per_token: 0.000006
-      cache_read_input_token_cost: 0.000000025
-      input_cost_per_million_cny: 3.0
-      cache_hit_cost_per_million_cny: 0.025
-      output_cost_per_million_cny: 6.0
+      input_cost_per_token: 0.0000045
+      output_cost_per_token: 0.0000135
+      cache_read_input_token_cost: 0.00000015
+      input_cost_per_million_cny: 4.5
+      cache_hit_cost_per_million_cny: 0.15
+      output_cost_per_million_cny: 13.5
 
-  # ---------- MiMo text ----------
-  - model_name: mimo-v2.5-pro
+  # ---------- GLM ----------
+  # Only glm-5.3-flash. OpenAI-compatible Chat Completions on the domestic BigModel host.
+  # List price CNY per million tokens: input 0.8 / output 2.8 / cache hit 0.23.
+  - model_name: glm-5.3-flash
     litellm_params:
-      model: openai/mimo-v2.5-pro
+      model: openai/glm-5.3-flash
+      api_base: https://open.bigmodel.cn/api/paas/v4
+      api_key: os.environ/GLM_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0.0000008
+      output_cost_per_token: 0.0000028
+      cache_read_input_token_cost: 0.00000023
+      input_cost_per_million_cny: 0.8
+      cache_hit_cost_per_million_cny: 0.23
+      output_cost_per_million_cny: 2.8
+
+  # ---------- MiMo text (V2.6; V2.5 text IDs retired 2026-10-21) ----------
+  - model_name: mimo-v2.6-pro
+    litellm_params:
+      model: openai/mimo-v2.6-pro
       api_base: https://api.xiaomimimo.com/v1
       api_key: os.environ/MIMO_API_KEY
     model_info:
@@ -44,25 +64,9 @@ model_list:
       cache_hit_cost_per_million_cny: 0.025
       output_cost_per_million_cny: 6.0
 
-  - model_name: mimo-v2.5-pro-ultraspeed
+  - model_name: mimo-v2.6-flash
     litellm_params:
-      model: openai/mimo-v2.5-pro-ultraspeed
-      api_base: https://api.xiaomimimo.com/v1
-      api_key: os.environ/MIMO_API_KEY
-    model_info:
-      currency: CNY
-      mode: chat
-      input_cost_per_token: 0.000009
-      output_cost_per_token: 0.000018
-      cache_read_input_token_cost: 0.000000075
-      input_cost_per_million_cny: 9.0
-      cache_hit_cost_per_million_cny: 0.075
-      output_cost_per_million_cny: 18.0
-
-  # ---------- MiMo omni ----------
-  - model_name: mimo-v2.5
-    litellm_params:
-      model: openai/mimo-v2.5
+      model: openai/mimo-v2.6-flash
       api_base: https://api.xiaomimimo.com/v1
       api_key: os.environ/MIMO_API_KEY
     model_info:
@@ -75,7 +79,22 @@ model_list:
       cache_hit_cost_per_million_cny: 0.02
       output_cost_per_million_cny: 2.0
 
-  # ---------- MiMo speech ----------
+  - model_name: mimo-v2.6-pro-ultraspeed
+    litellm_params:
+      model: openai/mimo-v2.6-pro-ultraspeed
+      api_base: https://api.xiaomimimo.com/v1
+      api_key: os.environ/MIMO_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0.00003
+      output_cost_per_token: 0.00006
+      cache_read_input_token_cost: 0.00000025
+      input_cost_per_million_cny: 30.0
+      cache_hit_cost_per_million_cny: 0.25
+      output_cost_per_million_cny: 60.0
+
+  # ---------- MiMo speech (V2.5 audio IDs still current) ----------
   - model_name: mimo-v2.5-asr
     litellm_params:
       model: openai/mimo-v2.5-asr

@@ -64,11 +64,12 @@ def main() -> int:
 
     print("\n=== Chat via gateway ===")
     chat_models = [
-        "deepseek-v4-flash",
+        "deepseek-flash",
         "deepseek-v4-pro",
-        "mimo-v2.5-pro",
-        "mimo-v2.5-pro-ultraspeed",
-        "mimo-v2.5",
+        "glm-5.3-flash",
+        "mimo-v2.6-pro",
+        "mimo-v2.6-flash",
+        "mimo-v2.6-pro-ultraspeed",
     ]
     for m in chat_models:
         ok, msg = post(
