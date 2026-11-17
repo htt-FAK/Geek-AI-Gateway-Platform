@@ -76,7 +76,7 @@ async function main() {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookie },
     body: JSON.stringify({
-      model: "deepseek-v4-flash",
+      model: "deepseek-flash",
       stream: false,
       max_tokens: 16,
       messages: [{ role: "user", content: "回复一个字：好" }],
@@ -101,7 +101,7 @@ async function main() {
     data: {
       userId: user.id,
       costCny: 200,
-      model: "deepseek-v4-flash",
+      model: "deepseek-flash",
       createdAt: threeDaysAgo,
     },
   });
@@ -109,7 +109,7 @@ async function main() {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookie },
     body: JSON.stringify({
-      model: "deepseek-v4-flash",
+      model: "deepseek-flash",
       stream: false,
       messages: [{ role: "user", content: "hi" }],
     }),

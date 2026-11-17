@@ -6,19 +6,22 @@ import { ConsolePage, useMe } from "@/components/console";
 import { ModelDocsDialog } from "@/components/model-docs-dialog";
 import { envPublicGateway } from "@/lib/public-env";
 
-function providerOf(model: string): "deepseek" | "mimo" | "other" {
-  if (model.toLowerCase().includes("deepseek")) return "deepseek";
-  if (model.toLowerCase().includes("mimo")) return "mimo";
+function providerOf(model: string): "deepseek" | "mimo" | "glm" | "other" {
+  const id = model.toLowerCase();
+  if (id.includes("deepseek")) return "deepseek";
+  if (id.includes("mimo")) return "mimo";
+  if (id.startsWith("glm-")) return "glm";
   return "other";
 }
 
 function hint(model: string): string {
-  if (model.includes("flash")) return "更快、更省的文本模型 · 上下文视上游";
-  if (model.includes("pro") && model.includes("ultraspeed")) return "文本旗舰 · 更高速度档";
-  if (model.includes("pro")) return "文本旗舰";
+  if (model.startsWith("glm-")) return "智谱多模态 · 思考始终开启";
+  if (model.includes("ultraspeed")) return "全模态旗舰 · 更高速度档";
   if (model.includes("asr")) return "语音识别";
   if (model.includes("tts")) return "语音合成";
-  if (model === "mimo-v2.5") return "全模态";
+  if (model.startsWith("mimo-")) return "全模态";
+  if (model.includes("flash")) return "更快、更省 · 支持图像";
+  if (model.includes("pro")) return "文本旗舰";
   return "网关已挂载能力";
 }
 
@@ -46,7 +49,9 @@ export default function ModelsPage() {
               ? "var(--brand-deepseek)"
               : p === "mimo"
                 ? "var(--brand-mimo)"
-                : "var(--text-tertiary)";
+                : p === "glm"
+                  ? "var(--brand-glm)"
+                  : "var(--text-tertiary)";
           return (
             <li
               key={model}

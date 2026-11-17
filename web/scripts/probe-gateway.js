@@ -30,7 +30,7 @@ console.log("base", base, "keyLen", key ? key.length : 0);
         body: isPost
           ? JSON.stringify(
               p.includes("generate")
-                ? { models: ["deepseek-v4-flash"], max_budget: 50, budget_duration: "24h" }
+                ? { models: ["deepseek-flash"], max_budget: 50, budget_duration: "24h" }
                 : { user_id: "probe-user" },
             )
           : undefined,

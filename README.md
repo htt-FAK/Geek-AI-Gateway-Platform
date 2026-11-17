@@ -116,7 +116,7 @@
 
 ## Features
 
-- **统一网关** — OpenAI 兼容 `/v1`；DeepSeek / MiMo；峰时计费可配  
+- **统一网关** — OpenAI 兼容 `/v1`；DeepSeek / GLM-5.3-Flash / MiMo；峰时计费可配  
 - **控制台** — 手机号登录、预算、用量曲线、密钥轮换、模型文档  
 - **调试台** — 流式输出、思考深度、附件、cURL / SDK 示例  
 - **多皮肤** — 8 套整站气质；侧栏几何统一；进入页品牌钉死  
@@ -176,11 +176,12 @@ chmod +x scripts/*.sh deploy/web-entrypoint.sh
 
 | Provider | Model | 说明 |
 |:--------:|:-----:|:----:|
-| DeepSeek | `deepseek-v4-flash` | 更快更省 |
+| DeepSeek | `deepseek-flash` | V4.1 Flash · 更快更省 · 图像 |
 | DeepSeek | `deepseek-v4-pro` | 旗舰 · 思考档 |
-| MiMo | `mimo-v2.5-pro` | 文本旗舰 |
-| MiMo | `mimo-v2.5-pro-ultraspeed` | 高速档 |
-| MiMo | `mimo-v2.5` | 全模态 |
+| 智谱 | `glm-5.3-flash` | 多模态 · 思考不可关 |
+| MiMo | `mimo-v2.6-pro` | 全模态旗舰 |
+| MiMo | `mimo-v2.6-flash` | 全模态 · 高性价比 |
+| MiMo | `mimo-v2.6-pro-ultraspeed` | 高速档 |
 | MiMo | `mimo-v2.5-asr` / `*-tts*` | 语音 |
 
 </div>
@@ -189,7 +190,7 @@ chmod +x scripts/*.sh deploy/web-entrypoint.sh
 curl "$GATEWAY/v1/chat/completions" \
   -H "Authorization: Bearer $AI_GATEWAY_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"Hello"}]}'
+  -d '{"model":"glm-5.3-flash","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
 控制台 **模型 → 文档** 可查看每个模型的官方说明与完整示例。
@@ -204,7 +205,7 @@ Browser ──session──► Next.js Web (BFF)
                           ▼
                     LiteLLM Proxy :4000/v1
                      ┌────┴────┐
-                DeepSeek     MiMo
+           DeepSeek   GLM   MiMo
 ```
 
 ```text

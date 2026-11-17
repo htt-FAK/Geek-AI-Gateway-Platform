@@ -1,7 +1,9 @@
 """DeepSeek peak/off-peak pricing helpers (Asia/Shanghai).
 
-Official rule (expected mid-July): peak hours charge 2x the normal rate for all
-billable items. Peak windows (Beijing time): 09:00-12:00 and 14:00-18:00.
+Official rule: peak hours charge 2x the off-peak rate for all billable items.
+Peak windows (Beijing time): Monday–Friday 09:00-12:00 and 14:00-18:00.
+Weekends are off-peak. Chinese statutory holidays are also off-peak upstream;
+this helper does not encode the holiday calendar.
 """
 
 from __future__ import annotations
@@ -27,6 +29,8 @@ def to_shanghai(moment: datetime | None = None) -> datetime:
 
 def is_peak(moment: datetime | None = None) -> bool:
     local = to_shanghai(moment)
+    if local.weekday() >= 5:
+        return False
     clock = local.timetz().replace(tzinfo=None)
     for start, end in PEAK_WINDOWS:
         if start <= clock < end:

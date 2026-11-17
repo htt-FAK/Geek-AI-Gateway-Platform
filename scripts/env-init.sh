@@ -53,4 +53,4 @@ set_if_placeholder "CREDENTIALS_ENCRYPTION_KEY" "$(rand_b64 32)"
 
 echo ""
 echo "Review upstream keys in $ENV_FILE:"
-echo "  DEEPSEEK_API_KEY / MIMO_API_KEY must be real values (not sk-your-*)."
+echo "  DEEPSEEK_API_KEY / MIMO_API_KEY / GLM_API_KEY must be real values (not sk-your-*)."

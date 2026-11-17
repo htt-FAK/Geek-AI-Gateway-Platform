@@ -20,12 +20,19 @@ def test_peak_windows_beijing():
 
 def test_billable_cost_deepseek_peak_doubles():
     moment = datetime(2026, 7, 20, 10, 0, tzinfo=SH)
-    assert billable_cost(0.01, "deepseek-v4-flash", moment) == 0.02
+    assert billable_cost(0.01, "deepseek-flash", moment) == 0.02
     assert billable_cost(0.01, "deepseek/deepseek-v4-pro", moment) == 0.02
 
 
-def test_billable_cost_offpeak_and_mimo_unchanged():
+def test_weekend_clock_window_is_offpeak():
+    saturday = datetime(2026, 7, 25, 10, 0, tzinfo=SH)
+    assert is_peak(saturday) is False
+    assert billable_cost(0.01, "deepseek-flash", saturday) == 0.01
+
+
+def test_billable_cost_offpeak_and_other_providers_unchanged():
     moment = datetime(2026, 7, 20, 13, 0, tzinfo=SH)
-    assert billable_cost(0.01, "deepseek-v4-flash", moment) == 0.01
+    assert billable_cost(0.01, "deepseek-flash", moment) == 0.01
     peak = datetime(2026, 7, 20, 10, 0, tzinfo=SH)
-    assert billable_cost(0.01, "mimo-v2.5-pro", peak) == 0.01
+    assert billable_cost(0.01, "mimo-v2.6-pro", peak) == 0.01
+    assert billable_cost(0.01, "glm-5.3-flash", peak) == 0.01
