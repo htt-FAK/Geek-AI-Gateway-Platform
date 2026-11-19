@@ -52,3 +52,4 @@ web/.tmp-skin-shots/
 # agent scratch
 web/aa_models_tmp.html
 *.tmp.html
+web/*_tmp.html
