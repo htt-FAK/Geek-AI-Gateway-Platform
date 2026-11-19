@@ -139,7 +139,7 @@ model UserMemory {
   contentHash          String
   sourceConversationId String?
   sourceConversation   Conversation? @relation(fields: [sourceConversationId], references: [id], onDelete: SetNull)
-  /// active 会注入上下文 / dropped 用户删除或被合并淘汰
+  /// active 会注入上下文 / dropped 被合并淘汰 / deleted 用户手动删除（后台不再复活）
   status               String        @default("active")
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt

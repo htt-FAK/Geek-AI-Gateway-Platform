@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { fetchKeySpendLogs, type NormalizedSpendLog } from "@/lib/litellm";
+import { spendSeriesModel } from "@/lib/spend-kind";
 
 export type AnalyticsGranularity = "hour" | "day";
 export type AnalyticsSource = "litellm" | "spend_event" | "mixed_fallback";
@@ -204,13 +205,14 @@ export async function buildUserAnalytics(params: {
       promptTokens: true,
       completionTokens: true,
       totalTokens: true,
+      kind: true,
     },
     orderBy: { createdAt: "asc" },
   });
 
   const events: AnalyticsEvent[] = rows.map((r) => ({
     at: r.createdAt,
-    model: r.model,
+    model: spendSeriesModel(r.model, r.kind),
     spendCny: r.costCny,
     promptTokens: r.promptTokens,
     completionTokens: r.completionTokens,

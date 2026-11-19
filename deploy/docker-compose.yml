@@ -78,6 +78,8 @@ services:
       CREDENTIALS_ENCRYPTION_KEY: ${CREDENTIALS_ENCRYPTION_KEY}
       ADMIN_TOKEN: ${ADMIN_TOKEN}
       ALLOW_TEST_HOOKS: ${ALLOW_TEST_HOOKS:-false}
+      # 调试台图片必须落在挂载卷里；/app/data 在镜像层，重建容器即丢
+      PLAYGROUND_UPLOAD_ROOT: /data/playground-uploads
     volumes:
       - web_data:/data
     depends_on:

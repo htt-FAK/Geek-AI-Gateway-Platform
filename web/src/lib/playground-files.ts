@@ -17,7 +17,14 @@ const EXT_MIME: Record<string, string> = {
   gif: "image/gif",
 };
 
+/**
+ * 图片落盘目录。默认在项目 cwd 下（本机开发）；
+ * 容器里 cwd 是镜像层 /app，必须用 PLAYGROUND_UPLOAD_ROOT 指到挂载卷（/data），
+ * 否则重建容器后图片全丢、会话里的图片链接全部 404。
+ */
 export function playgroundUploadRoot(): string {
+  const configured = process.env.PLAYGROUND_UPLOAD_ROOT?.trim();
+  if (configured) return path.resolve(configured);
   return path.join(process.cwd(), "data", "playground-uploads");
 }
 

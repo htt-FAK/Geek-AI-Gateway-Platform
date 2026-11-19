@@ -20,6 +20,7 @@ __pycache__/
 web/dev.db
 web/dev.db-journal
 web/*.db
+web/data/playground-uploads/
 web/tsconfig.tsbuildinfo
 
 # ide / os / agents

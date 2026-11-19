@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authErrorResponse, requireUser } from "@/lib/auth";
 import { assertHasBalance, BudgetError } from "@/lib/budget";
+import { validateImageDataUrl } from "@/lib/chat-payload";
 import { decryptSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { getGatewayModels } from "@/lib/gateway-models";
@@ -9,6 +10,7 @@ import { chatCompletions } from "@/lib/litellm";
 import { getMarketModel } from "@/lib/model-market";
 import { applyDeepSeekPeak } from "@/lib/peak-pricing";
 import { rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { costFromPayload, parseSseTotals, tokensFromUsage, type TokenUsage } from "@/lib/sse-usage";
 
 /** OpenAI vision 消息内容：纯文本或 文本/图片 混合 parts。 */
 const contentPartSchema = z.union([
@@ -40,30 +42,6 @@ const bodySchema = z.object({
 
 type ChatMessage = z.infer<typeof bodySchema>["messages"][number];
 
-const ALLOWED_IMAGE_MIME = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"]);
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
-/**
- * 图片只接受 base64 data URL（png/jpeg/webp/gif）。
- * 接口不把 http:// 外链转给网关——网关侧可能去拉取任意 URL。
- * 单张解码后 ≤5MB；条数上限在 validateVision 里统一查。
- */
-function validateImageDataUrl(url: string): string | null {
-  const m = /^data:([a-z]+\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/i.exec(url.trim());
-  if (!m) {
-    return "仅支持 base64 data URL 图片（data:image/png|jpeg|webp|gif），不接受外链";
-  }
-  const mime = m[1].toLowerCase();
-  if (!ALLOWED_IMAGE_MIME.has(mime)) {
-    return `不支持的图片类型 ${mime}，仅支持 png/jpeg/webp/gif`;
-  }
-  const bytes = Buffer.byteLength(m[2], "base64");
-  if (bytes > MAX_IMAGE_BYTES) {
-    return "单张图片解码后不能超过 5MB";
-  }
-  return null;
-}
-
 /** 校验图片 parts：仅视觉模型可用，单请求 ≤4 张，且每张 URL 合法。 */
 function validateVision(model: string, messages: ChatMessage[]): string | null {
   const imageCount = messages.reduce((n, m) => {
@@ -85,63 +63,6 @@ function validateVision(model: string, messages: ChatMessage[]): string | null {
     return `模型 ${model} 不支持图像输入`;
   }
   return null;
-}
-
-type TokenUsage = {
-  promptTokens: number;
-  completionTokens: number;
-  totalTokens: number;
-};
-
-function tokensFromUsage(usage: unknown): TokenUsage {
-  if (!usage || typeof usage !== "object") {
-    return { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
-  }
-  const u = usage as Record<string, unknown>;
-  const promptTokens = Number(u.prompt_tokens ?? u.promptTokens ?? 0) || 0;
-  const completionTokens = Number(u.completion_tokens ?? u.completionTokens ?? 0) || 0;
-  const totalTokens =
-    Number(u.total_tokens ?? u.totalTokens ?? 0) || promptTokens + completionTokens;
-  return { promptTokens, completionTokens, totalTokens };
-}
-
-/** 非流式：直接读 JSON 顶层 response_cost（LiteLLM 代理回包字段），不再用正则抠。 */
-function costFromPayload(payload: unknown): number {
-  if (!payload || typeof payload !== "object") return 0;
-  const n = Number((payload as Record<string, unknown>).response_cost);
-  return Number.isFinite(n) ? n : 0;
-}
-
-/**
- * 流式：按 SSE 行解析 JSON，取最后一条带 usage 的对象和费用。
- * LiteLLM 把费用放在末块 usage.cost（老版本顶层 response_cost / 响应头也认）。
- * 替代旧的正则扫全文——`[^}]*` 会在嵌套对象的第一个 } 截断，Token 记少。
- */
-function parseSseTotals(text: string): { usage: TokenUsage; cost: number } {
-  let usage: TokenUsage | null = null;
-  let cost = 0;
-  for (const line of text.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith("data:")) continue;
-    const data = trimmed.slice(5).trim();
-    if (!data || data === "[DONE]") continue;
-    let chunk: unknown;
-    try {
-      chunk = JSON.parse(data);
-    } catch {
-      continue;
-    }
-    if (!chunk || typeof chunk !== "object") continue;
-    const rec = chunk as Record<string, unknown>;
-    if (rec.usage && typeof rec.usage === "object") {
-      usage = tokensFromUsage(rec.usage);
-      const usageCost = Number((rec.usage as Record<string, unknown>).cost);
-      if (Number.isFinite(usageCost) && usageCost > 0) cost = usageCost;
-    }
-    const n = Number(rec.response_cost);
-    if (Number.isFinite(n) && n > 0) cost = n;
-  }
-  return { usage: usage ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, cost };
 }
 
 export async function POST(req: Request) {
@@ -292,6 +213,7 @@ export async function POST(req: Request) {
           promptTokens: usage.promptTokens,
           completionTokens: usage.completionTokens,
           totalTokens: usage.totalTokens,
+          kind: "chat",
         },
       });
       return NextResponse.json(payload);
@@ -312,6 +234,7 @@ export async function POST(req: Request) {
           promptTokens: usage.promptTokens,
           completionTokens: usage.completionTokens,
           totalTokens: usage.totalTokens,
+          kind: "chat",
         },
       });
     };

@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin";
 import { aggregateEvents, type AnalyticsEvent } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { fetchAllSpendLogs } from "@/lib/litellm";
+import { spendSeriesModel } from "@/lib/spend-kind";
 
 /** 全员用量：网关全量 spend logs 优先（覆盖直连），回退本地 SpendEvent。 */
 export async function GET(req: Request) {
@@ -49,12 +50,13 @@ export async function GET(req: Request) {
         completionTokens: true,
         totalTokens: true,
         userId: true,
+        kind: true,
       },
       orderBy: { createdAt: "asc" },
     });
     events = rows.map((r) => ({
       at: r.createdAt,
-      model: r.model,
+      model: spendSeriesModel(r.model, r.kind),
       spendCny: r.costCny,
       promptTokens: r.promptTokens,
       completionTokens: r.completionTokens,

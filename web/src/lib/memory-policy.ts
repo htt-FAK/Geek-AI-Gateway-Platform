@@ -18,6 +18,8 @@ export type MemoryItem = {
   content: string;
   hash: string;
   createdAt: number;
+  /** 读取时的 updatedAt（毫秒），用于写入前做并发 CAS。 */
+  updatedAt?: number;
 };
 
 export function normalizeMemory(content: string): string {
@@ -43,7 +45,15 @@ export function isRejectedMemory(content: string): boolean {
 export function redactSecrets(text: string): string {
   return text
     .replace(/sk-[A-Za-z0-9_-]{6,}/gi, "[已省略密钥]")
-    .replace(/bearer\s+[A-Za-z0-9\-._~+/]{8,}/gi, "[已省略密钥]");
+    .replace(/bearer\s+[A-Za-z0-9\-._~+/]{8,}/gi, "[已省略密钥]")
+    // 密码/口令/密钥类：抹掉关键词后紧跟的值（允许“是/为/：/= ”分隔）。
+    // 值必须是 ASCII 串，避免把“用户忘记了密码，后来重置”整句删掉。
+    .replace(
+      /(密码|口令|密钥|pass(?:word|wd)?|pwd|secret|token|api[_-]?key)\s*(?:是|为|[:：=])?\s*[A-Za-z0-9!@#$%^&*._+\-]{3,64}/gi,
+      "$1：[已省略]",
+    )
+    // 验证码/动态码：关键词后 4-8 位数字
+    .replace(/(验证码|校验码|动态码)\s*(?:是|为|[:：=])?\s*\d{4,8}/g, "$1：[已省略]");
 }
 
 export function parseMemoryOps(raw: string): MemoryOp[] {

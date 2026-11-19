@@ -11,7 +11,8 @@
     "db:generate": "prisma generate",
     "postinstall": "prisma generate",
     "smoke": "node scripts/e2e-smoke.js",
-    "test:server": "node scripts/server-e2e.mjs"
+    "test:server": "node scripts/server-e2e.mjs",
+    "test:memory": "node --experimental-strip-types --test src/lib/playground-memory.test.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.20",

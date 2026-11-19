@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ConsolePage, useMe } from "@/components/console";
+import { isPlaygroundChatModel } from "@/lib/conversation-policy";
 import { getMarketModel } from "@/lib/model-market";
 import { envPublicGateway } from "@/lib/public-env";
 import {
@@ -14,25 +15,44 @@ import {
 } from "@/lib/thinking-depth";
 
 type Msg = {
+  id?: string;
   role: "user" | "assistant" | "system";
   content: string;
   reasoningContent?: string;
-  /** 用户消息附带的图片（data URL），仅视觉模型可发送 */
+  /** 用户消息附带的图片（data URL 或已保存图片地址） */
   images?: string[];
+  status?: string;
 };
 
-type ContentPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
+type ConversationListItem = {
+  id: string;
+  title: string;
+  model: string;
+  status: string;
+  totalTokens: number;
+  updatedAt: string;
+  hasSummary: boolean;
+};
+
+type MemoryView = { id: string; content: string };
+
+function formatWhen(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /** 调试台只做文本对话：ASR/TTS 语音与嵌入/重排序模型不进下拉（网关 API 侧仍可调用）。 */
-function isChatModel(m: string): boolean {
-  if (m.includes("-asr") || m.includes("-tts")) return false;
-  if (/^bge-|rerank|embed/i.test(m)) return false;
-  return true;
+function isChatModel(model: string): boolean {
+  return isPlaygroundChatModel(model);
 }
 
 export default function PlaygroundInner() {
@@ -56,9 +76,21 @@ export default function PlaygroundInner() {
   const [tokens, setTokens] = useState({ in: 0, out: 0, total: 0 });
   const [thinkingStop, setThinkingStop] = useState<ThinkingStopId | null>(null);
   const [openReasoning, setOpenReasoning] = useState<Record<number, boolean>>({});
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(true);
+  const [hasSummary, setHasSummary] = useState(false);
+  const [memoryOpen, setMemoryOpen] = useState(false);
+  const [memories, setMemories] = useState<MemoryView[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const conversationIdRef = useRef<string | null>(null);
+  const viewGen = useRef(0);
+  const sendingRef = useRef(false);
+  const thinkingHold = useRef(false);
 
   const chatModels = useMemo(() => (me?.models ?? []).filter(isChatModel), [me]);
   const thinkingProfile = useMemo(() => getThinkingProfile(model), [model]);
@@ -80,9 +112,25 @@ export default function PlaygroundInner() {
   }, [chatModels, search]);
 
   useEffect(() => {
-    const next = defaultThinkingStop(thinkingProfile);
-    setThinkingStop(next);
+    if (thinkingHold.current) {
+      thinkingHold.current = false;
+      return;
+    }
+    setThinkingStop(defaultThinkingStop(thinkingProfile));
   }, [thinkingProfile]);
+
+  useEffect(() => {
+    conversationIdRef.current = conversationId;
+  }, [conversationId]);
+
+  useEffect(() => {
+    void fetch("/api/conversations")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.conversations) setConversations(data.conversations);
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -112,12 +160,151 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
   }'`;
   }, [gatewayBase, model, systemPrompt, temperature, maxTokens, stream, thinkingFields]);
 
-  function clearChat() {
+  function newChat() {
+    viewGen.current += 1;
+    if (abortRef.current) stop();
+    setConversationId(null);
     setMessages([]);
     setImages([]);
     setTokens({ in: 0, out: 0, total: 0 });
     setError("");
     setOpenReasoning({});
+    setHasSummary(false);
+  }
+
+  function applyConversationList(list: ConversationListItem[], id: string | null) {
+    setConversations(list);
+    if (!id) return;
+    const found = list.find((item) => item.id === id);
+    if (found) setHasSummary(found.hasSummary);
+  }
+
+  async function refreshConversations(id: string | null = conversationIdRef.current): Promise<boolean> {
+    try {
+      const res = await fetch("/api/conversations");
+      if (!res.ok) return false;
+      const data = await res.json();
+      const list = (data.conversations ?? []) as ConversationListItem[];
+      applyConversationList(list, id);
+      if (!id) return false;
+      return Boolean(list.find((item) => item.id === id)?.hasSummary);
+    } catch {
+      return false;
+    }
+  }
+
+  function watchSummary(id: string) {
+    // 摘要由后台 deepseek-flash 生成，通常 2–10 秒；只等 2.5s 会经常错过，
+    // 导致「更早内容已压缩」要刷新页面才出现。分档退避，出现摘要即停。
+    const delays = [2500, 6000, 12000];
+    const tick = (index: number) => {
+      if (index >= delays.length) return;
+      window.setTimeout(async () => {
+        if (conversationIdRef.current !== id) return;
+        const summarized = await refreshConversations(id);
+        if (!summarized) tick(index + 1);
+      }, delays[index]);
+    };
+    tick(0);
+  }
+
+  async function openConversation(id: string) {
+    const gen = ++viewGen.current;
+    if (abortRef.current) stop();
+    const res = await fetch(`/api/conversations/${id}`);
+    const data = await res.json().catch(() => ({}));
+    if (viewGen.current !== gen) return;
+    if (!res.ok) {
+      setError(data.error ?? "无法打开对话");
+      return;
+    }
+    if (data.conversation.model !== model) thinkingHold.current = true;
+    setConversationId(data.conversation.id);
+    setModel(data.conversation.model);
+    setSystemPrompt(data.conversation.systemPrompt ?? "");
+    setTemperature(data.conversation.temperature);
+    setMaxTokens(data.conversation.maxTokens);
+    setStream(data.conversation.stream);
+    setThinkingStop(data.conversation.thinkingStop ?? null);
+    setHasSummary(Boolean(data.conversation.hasSummary));
+    setMessages(
+      (data.messages ?? []).flatMap((message: {
+        id: string;
+        role: string;
+        content: string;
+        reasoningContent?: string;
+        status?: string;
+        images?: string[];
+      }) => {
+        if (message.role !== "user" && message.role !== "assistant") return [];
+        return [
+          {
+            id: message.id,
+            role: message.role,
+            content: message.content,
+            ...(message.reasoningContent ? { reasoningContent: message.reasoningContent } : {}),
+            ...(message.images?.length ? { images: message.images } : {}),
+            status: message.status,
+          },
+        ];
+      }),
+    );
+    setTokens({
+      in: data.lastUsage?.promptTokens ?? 0,
+      out: data.lastUsage?.completionTokens ?? 0,
+      total: data.lastUsage?.totalTokens ?? 0,
+    });
+    setOpenReasoning({});
+    setError("");
+  }
+
+  async function commitTitle(id: string) {
+    const title = editingTitle.trim();
+    setEditingId(null);
+    if (!title) return;
+    const res = await fetch(`/api/conversations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "改名失败");
+      return;
+    }
+    setConversations((prev) => prev.map((item) => (item.id === id ? { ...item, title } : item)));
+  }
+
+  async function removeConversation(id: string) {
+    if (!window.confirm("删除这场对话？删除后无法恢复。")) return;
+    const res = await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "删除失败");
+      return;
+    }
+    setConversations((prev) => prev.filter((item) => item.id !== id));
+    if (conversationIdRef.current === id) newChat();
+  }
+
+  async function loadMemories() {
+    const res = await fetch("/api/memories");
+    if (!res.ok) return;
+    const data = await res.json();
+    setMemories(data.memories ?? []);
+  }
+
+  async function deleteMemory(id: string) {
+    const res = await fetch(`/api/memories?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!res.ok) return;
+    setMemories((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  async function clearMemories() {
+    if (!window.confirm("清空全部长期记忆？")) return;
+    const res = await fetch("/api/memories?all=1", { method: "DELETE" });
+    if (!res.ok) return;
+    setMemories([]);
   }
 
   function stop() {
@@ -188,18 +375,19 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
 
   async function onSend(e?: FormEvent) {
     e?.preventDefault();
-    if ((!input.trim() && images.length === 0) || loading) return;
+    if ((!input.trim() && images.length === 0) || loading || sendingRef.current) return;
     setError("");
     const vision = getMarketModel(model)?.capabilities.vision ?? false;
-    const hasImages = images.length > 0 || messages.some((m) => m.images?.length);
-    if (hasImages && !vision) {
-      setError(`模型 ${model} 不支持图像输入，请切换视觉模型或清空对话`);
+    if (images.length > 0 && !vision) {
+      setError(`模型 ${model} 不支持图像输入，请换 deepseek-flash 或 MiMo v2.6 系列`);
       return;
     }
+    sendingRef.current = true;
+    const gen = ++viewGen.current;
     const userMsg: Msg = {
       role: "user",
       content: input.trim(),
-      ...(images.length ? { images } : {}),
+      ...(images.length ? { images: [...images] } : {}),
     };
     const history = [...messages, userMsg];
     setMessages(history);
@@ -207,51 +395,73 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
     setImages([]);
     setLoading(true);
 
-    const payloadMessages: { role: string; content: string | ContentPart[] }[] = [];
-    if (systemPrompt.trim()) {
-      payloadMessages.push({ role: "system", content: systemPrompt.trim() });
-    }
-    payloadMessages.push(
-      ...history
-        .filter((m) => m.role !== "system")
-        .map((m) => ({
-          role: m.role,
-          content: m.images?.length
-            ? [
-                { type: "text" as const, text: m.content || "请描述这张图片" },
-                ...m.images.map((url) => ({ type: "image_url" as const, image_url: { url } })),
-              ]
-            : m.content,
-        })),
-    );
-
+    const settings = {
+      model,
+      systemPrompt,
+      temperature,
+      maxTokens,
+      stream,
+      thinkingStop,
+    };
     const ac = new AbortController();
     abortRef.current = ac;
 
+    const rollback = () => {
+      if (viewGen.current !== gen) return;
+      setInput(userMsg.content);
+      setImages(userMsg.images ?? []);
+      setMessages((prev) => prev.slice(0, -1));
+    };
+
     try {
-      const res = await fetch("/api/chat", {
+      let id = conversationId;
+      if (!id) {
+        const created = await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: ac.signal,
+          body: JSON.stringify(settings),
+        });
+        const createdBody = await created.json().catch(() => ({}));
+        if (viewGen.current !== gen) return;
+        if (!created.ok) {
+          setError(createdBody.error ?? "无法开始对话");
+          rollback();
+          return;
+        }
+        id = createdBody.conversation.id as string;
+        setConversationId(id);
+        conversationIdRef.current = id;
+        void refreshConversations(id);
+      }
+
+      const res = await fetch(`/api/conversations/${id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: ac.signal,
         body: JSON.stringify({
-          model,
-          messages: payloadMessages,
-          stream,
-          max_tokens: maxTokens,
-          temperature,
-          ...thinkingFields,
+          ...settings,
+          content: userMsg.content,
+          images: userMsg.images ?? [],
         }),
       });
+
+      if (viewGen.current !== gen) return;
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? `请求失败 (${res.status})`);
-        setLoading(false);
+        if (data.saved) {
+          await openConversation(id);
+        } else {
+          rollback();
+        }
         return;
       }
 
       if (!stream) {
         const json = await res.json();
+        if (viewGen.current !== gen) return;
         const content = json.choices?.[0]?.message?.content ?? "";
         const reasoningContent = json.choices?.[0]?.message?.reasoning_content ?? "";
         setMessages((m) => [
@@ -271,14 +481,14 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
           });
         }
         await refresh();
-        setLoading(false);
+        await refreshConversations(id);
+        watchSummary(id);
         return;
       }
 
       const reader = res.body?.getReader();
       if (!reader) {
         setError("无流式响应");
-        setLoading(false);
         return;
       }
 
@@ -292,7 +502,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done || viewGen.current !== gen) break;
         buffer += decoder.decode(value, { stream: true });
         const parts = buffer.split("\n");
         buffer = parts.pop() ?? "";
@@ -313,9 +523,11 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
             const contentDelta = delta?.content ?? "";
             if (reasoningDelta) reasoning += reasoningDelta;
             if (contentDelta) assistant += contentDelta;
-            if (reasoningDelta || contentDelta) {
+            if ((reasoningDelta || contentDelta) && viewGen.current === gen) {
               setMessages((m) => {
                 const copy = [...m];
+                const last = copy[copy.length - 1];
+                if (!last || last.role !== "assistant") return m;
                 copy[copy.length - 1] = {
                   role: "assistant",
                   content: assistant,
@@ -324,7 +536,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                 return copy;
               });
             }
-            if (json.usage) {
+            if (json.usage && viewGen.current === gen) {
               setTokens({
                 in: json.usage.prompt_tokens ?? 0,
                 out: json.usage.completion_tokens ?? 0,
@@ -336,15 +548,21 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
           }
         }
       }
+      if (viewGen.current !== gen) return;
       setOpenReasoning((prev) => ({ ...prev, [assistantIndex]: false }));
       await refresh();
+      await refreshConversations(id);
+      watchSummary(id);
     } catch (err) {
-      if ((err as Error).name !== "AbortError") {
+      if (viewGen.current === gen && (err as Error).name !== "AbortError") {
         setError("请求失败。检查密钥、模型名或网关是否在线。");
       }
     } finally {
-      setLoading(false);
-      abortRef.current = null;
+      sendingRef.current = false;
+      if (viewGen.current === gen) {
+        setLoading(false);
+        abortRef.current = null;
+      }
     }
   }
 
@@ -359,10 +577,91 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
 
   return (
     <ConsolePage phone={me?.phone} maxWidth={false}>
-      <div className="flex h-[calc(100vh-52px-2.5rem)] min-h-[520px] flex-col">
+      <div className="flex h-[calc(100vh-52px-2.5rem)] min-h-[520px] gap-4">
+        {historyOpen ? (
+          <aside className="flex min-h-0 w-56 shrink-0 flex-col overflow-hidden border-r border-[var(--border-subtle)] pr-3">
+            <div className="flex items-center justify-between pb-3">
+              <span className="text-[13px] font-medium text-[var(--text-primary)]">历史对话</span>
+              <button type="button" className="btn btn-ghost py-1 text-[12px]" onClick={newChat}>
+                新对话
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+              {conversations.length === 0 ? (
+                <p className="px-1 py-6 text-[12px] text-[var(--text-tertiary)]">还没有保存的对话</p>
+              ) : (
+                conversations.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`rounded-[var(--radius-md)] px-2 py-2 ${item.id === conversationId ? "bg-[var(--bg-elevated)]" : ""}`}
+                  >
+                    {editingId === item.id ? (
+                      <input
+                        className="field py-1 text-[13px]"
+                        value={editingTitle}
+                        autoFocus
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onBlur={() => void commitTitle(item.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="block w-full text-left"
+                        onClick={() => void openConversation(item.id)}
+                      >
+                        <span className="block truncate text-[13px] text-[var(--text-primary)]">{item.title}</span>
+                        <span className="mt-0.5 block truncate text-[11px] text-[var(--text-tertiary)]">
+                          {item.model} · {formatWhen(item.updatedAt)}
+                          {item.status === "error" ? " · 失败" : item.status === "aborted" ? " · 已停止" : ""}
+                        </span>
+                      </button>
+                    )}
+                    <div className="mt-1 flex gap-2">
+                      <button
+                        type="button"
+                        className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                        onClick={() => {
+                          setEditingId(item.id);
+                          setEditingTitle(item.title);
+                        }}
+                      >
+                        改名
+                      </button>
+                      <button
+                        type="button"
+                        className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                        onClick={() => void removeConversation(item.id)}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </aside>
+        ) : null}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-3">
           <h1 className="text-[15px] font-medium tracking-tight text-[var(--text-primary)]">对话测试</h1>
           <div className="flex items-center gap-2">
+            <button type="button" className="btn btn-ghost py-1.5 text-[13px]" onClick={() => setHistoryOpen((open) => !open)}>
+              {historyOpen ? "收起历史" : "历史"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost py-1.5 text-[13px]"
+              onClick={() => {
+                setMemoryOpen(true);
+                void loadMemories();
+              }}
+            >
+              记忆
+            </button>
             <button type="button" className="btn btn-ghost py-1.5 text-[13px]" onClick={() => setCodeOpen(true)}>
               查看代码
             </button>
@@ -373,6 +672,9 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
         </div>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-5">
+          {hasSummary ? (
+            <p className="text-[12px] text-[var(--text-tertiary)]">更早内容已压缩</p>
+          ) : null}
           {messages.length === 0 ? (
             <div className="py-20 text-center">
               <p className="text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">有什么可以帮忙的？</p>
@@ -380,7 +682,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
             </div>
           ) : (
             messages.map((m, i) => (
-              <div key={i} className="space-y-2">
+              <div key={m.id ?? i} className="space-y-2">
                 <div className="text-[12px] font-medium uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
                   {m.role}
                 </div>
@@ -474,8 +776,8 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                 >
                   上传
                 </button>
-                <button type="button" className="btn btn-ghost py-1.5 text-[13px]" onClick={clearChat}>
-                  清空
+                <button type="button" className="btn btn-ghost py-1.5 text-[13px]" onClick={newChat}>
+                  新对话
                 </button>
                 {thinkingProfile.kind !== "none" ? (
                   <div className="thinking-depth" title="思考深度">
@@ -513,7 +815,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                     停止
                   </button>
                 ) : (
-                  <button className="btn py-1.5 text-[13px]" type="submit" disabled={!input.trim()}>
+                  <button className="btn py-1.5 text-[13px]" type="submit" disabled={!input.trim() && images.length === 0}>
                     发送
                   </button>
                 )}
@@ -525,7 +827,56 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
             {loading ? " · 生成中…" : ""}
           </div>
         </form>
+        </div>
       </div>
+
+      <Dialog.Root open={memoryOpen} onOpenChange={setMemoryOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
+            <Dialog.Title className="text-[15px] font-medium">长期记忆</Dialog.Title>
+            <Dialog.Description className="mt-1 text-[13px] text-[var(--text-secondary)]">
+              这些事实会在之后的对话里自动带上。可以删除单条，或全部清空。
+            </Dialog.Description>
+            <div className="mt-4 max-h-72 space-y-2 overflow-y-auto">
+              {memories.length === 0 ? (
+                <p className="text-[13px] text-[var(--text-tertiary)]">还没有记住的事实。聊过几轮后会自动出现。</p>
+              ) : (
+                memories.map((memory) => (
+                  <div
+                    key={memory.id}
+                    className="flex items-start justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2"
+                  >
+                    <p className="text-[13px] leading-relaxed text-[var(--text-primary)]">{memory.content}</p>
+                    <button
+                      type="button"
+                      className="shrink-0 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                      onClick={() => void deleteMemory(memory.id)}
+                    >
+                      删除
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => void clearMemories()}
+                disabled={memories.length === 0}
+              >
+                清空
+              </button>
+              <Dialog.Close asChild>
+                <button type="button" className="btn">
+                  关闭
+                </button>
+              </Dialog.Close>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       <Dialog.Root
         open={uploadOpen}

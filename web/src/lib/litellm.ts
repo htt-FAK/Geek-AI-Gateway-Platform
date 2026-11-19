@@ -1,4 +1,5 @@
 import { env, GATEWAY_MODELS } from "@/lib/env";
+import { kindFromUnknown, spendSeriesModel } from "@/lib/spend-kind";
 
 type KeyGenerateResult = {
   key: string;
@@ -196,10 +197,12 @@ function normalizeSpendLogRow(raw: unknown): NormalizedSpendLog | null {
     null;
   if (!at) return null;
   // 去掉 provider 前缀（deepseek/xxx、openai/xxx），与本地 SpendEvent 口径一致
-  const model = pickString(row.model, row.model_group, row.model_id, row.call_type).replace(
+  const rawModel = pickString(row.model, row.model_group, row.model_id, row.call_type).replace(
     /^(deepseek|openai)\//,
     "",
   );
+  const meta = row.metadata ?? row.request_tags;
+  const model = spendSeriesModel(rawModel, kindFromUnknown(meta));
   const spend = pickNumber(row.spend, row.total_cost, row.cost, row.response_cost);
   const promptTokens = pickNumber(row.prompt_tokens, row.promptTokens);
   const completionTokens = pickNumber(row.completion_tokens, row.completionTokens);
