@@ -99,6 +99,38 @@ export async function ensureLitellmUserAndKey(
   throw new Error(`LiteLLM key/generate failed: ${keyRes.status} ${errText.slice(0, 200)}`);
 }
 
+/**
+ * 只确保网关用户存在并写入用户级预算，**不签发密钥**。
+ * 用于「新账号默认无 Key」：账号建好后由用户在密钥页自行创建 Key。
+ * 网关 DB 不可用 / 预算同步失败时抛错（调用方进 errors），绝不建一个无预算约束的账号。
+ */
+export async function ensureLitellmUser(
+  phone: string,
+  budget?: { grantedCny: number; unlimited: boolean },
+): Promise<{ userId: string }> {
+  const userId = `phone:${phone}`;
+  const userRes = await gatewayFetch("/user/new", {
+    method: "POST",
+    body: JSON.stringify({
+      user_id: userId,
+      max_budget: budget ? (budget.unlimited ? null : budget.grantedCny) : undefined,
+    }),
+  });
+  if (!userRes.ok) {
+    const text = await userRes.text();
+    if (!USER_EXISTS_PATTERN.test(text)) {
+      throw new Error(`LiteLLM /user/new 失败：${userRes.status} ${text.slice(0, 200)}`);
+    }
+  }
+  if (budget) {
+    const synced = await syncUserBudget(userId, budget.grantedCny, budget.unlimited);
+    if (!synced) {
+      throw new Error("网关用户预算同步失败（max_budget 未写入），已停止创建账号");
+    }
+  }
+  return { userId };
+}
+
 export type NormalizedSpendLog = {
   at: Date;
   model: string;

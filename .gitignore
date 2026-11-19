@@ -48,3 +48,7 @@ Thumbs.db
 /ui_kits/
 /TikTok/
 web/.tmp-skin-shots/
+
+# agent scratch
+web/aa_models_tmp.html
+*.tmp.html

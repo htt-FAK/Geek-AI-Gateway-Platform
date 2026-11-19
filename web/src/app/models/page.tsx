@@ -16,15 +16,34 @@ import {
 } from "@/lib/model-market";
 
 type Filter = "all" | MarketProvider;
+type Category = "all" | "text" | "voice" | "vector";
+
+/** 按用途分类：文本模型(chat) / 语音模型(asr+tts) / 知识库向量(embedding+rerank)。 */
+function categoryOf(endpoint: string): Exclude<Category, "all"> {
+  if (endpoint === "asr" || endpoint === "tts") return "voice";
+  if (endpoint === "embedding" || endpoint === "rerank") return "vector";
+  return "text";
+}
+
+const CATEGORY_TABS: [Category, string][] = [
+  ["all", "全部"],
+  ["text", "文本模型"],
+  ["voice", "语音模型"],
+  ["vector", "知识库向量"],
+];
 
 export default function ModelsPage() {
   const { me } = useMe();
   const [filter, setFilter] = useState<Filter>("all");
+  const [category, setCategory] = useState<Category>("all");
   const [docsModel, setDocsModel] = useState<string | null>(null);
 
   const mounted = me?.models ?? [];
   const cards = MARKET_MODELS.filter(
-    (m) => mounted.includes(m.id) && (filter === "all" || m.provider === filter),
+    (m) =>
+      mounted.includes(m.id) &&
+      (filter === "all" || m.provider === filter) &&
+      (category === "all" || categoryOf(m.endpoint) === category),
   );
 
   return (
@@ -34,6 +53,19 @@ export default function ModelsPage() {
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
           当前网关已接入 {mounted.length} 个上游能力 · 价格单位：人民币 / 百万 token
         </p>
+      </div>
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {CATEGORY_TABS.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className={`btn px-3 py-1.5 text-[13px] ${category === key ? "" : "btn-ghost"}`}
+            onClick={() => setCategory(key)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
