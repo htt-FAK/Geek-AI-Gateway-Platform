@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   ConsumptionChartPanel,
   KpiRow,
@@ -29,6 +29,7 @@ type UsagePayload = {
 
 export default function AdminUsagePage() {
   const [adminToken, setAdminToken] = useState("");
+  const [sessionAdmin, setSessionAdmin] = useState(false);
   const [data, setData] = useState<UsagePayload | null>(null);
   const [error, setError] = useState("");
   const [consumeToggle, setConsumeToggle] = useState<"柱状图" | "面积图">("柱状图");
@@ -40,12 +41,14 @@ export default function AdminUsagePage() {
     e?.preventDefault();
     setError("");
     const token = adminToken || sessionStorage.getItem("admin_token") || "";
-    if (!token) {
-      setError("请填写 Admin Token");
+    if (!token && !sessionAdmin) {
+      setError("请填写 Admin Token，或以管理员身份登录");
       return;
     }
-    sessionStorage.setItem("admin_token", token);
-    setAdminToken(token);
+    if (token) {
+      sessionStorage.setItem("admin_token", token);
+      setAdminToken(token);
+    }
     const res = await fetch("/api/admin/usage", {
       headers: { "x-admin-token": token },
     });
@@ -57,6 +60,25 @@ export default function AdminUsagePage() {
     }
     setData(json);
   }
+
+  // 已登录管理员凭会话自动加载，无需 Token
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const meRes = await fetch("/api/me");
+        if (!meRes.ok) return;
+        const me = await meRes.json();
+        if (!alive || me.role !== "admin") return;
+        setSessionAdmin(true);
+        const res = await fetch("/api/admin/usage", { headers: { "x-admin-token": "" } });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (alive) setData(json);
+      } catch { /* 未登录走 Token 模式 */ }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   const hasData = data !== null;
 
@@ -73,21 +95,27 @@ export default function AdminUsagePage() {
           </a>
         </div>
 
-        <form onSubmit={(e) => void load(e)} className="panel flex flex-wrap items-end gap-3 p-4">
-          <label className="min-w-[240px] flex-1 space-y-1">
-            <span className="text-sm text-[var(--text-secondary)]">Admin Token</span>
-            <input
-              className="field"
-              type="password"
-              value={adminToken}
-              onChange={(e) => setAdminToken(e.target.value)}
-              placeholder="x-admin-token"
-            />
-          </label>
-          <button className="btn" type="submit">
-            加载
-          </button>
-        </form>
+        {sessionAdmin ? (
+          <p className="text-sm" style={{ color: "var(--accent-primary)" }}>
+            管理员会话（凭登录身份查看全员用量，无需 Token）
+          </p>
+        ) : (
+          <form onSubmit={(e) => void load(e)} className="panel flex flex-wrap items-end gap-3 p-4">
+            <label className="min-w-[240px] flex-1 space-y-1">
+              <span className="text-sm text-[var(--text-secondary)]">Admin Token</span>
+              <input
+                className="field"
+                type="password"
+                value={adminToken}
+                onChange={(e) => setAdminToken(e.target.value)}
+                placeholder="x-admin-token"
+              />
+            </label>
+            <button className="btn" type="submit">
+              加载
+            </button>
+          </form>
+        )}
         {error ? (
           <p className="text-sm text-[var(--status-error)]" role="alert">
             {error}

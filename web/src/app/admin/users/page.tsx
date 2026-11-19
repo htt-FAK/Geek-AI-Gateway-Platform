@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useCallback, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 
 type AdminUser = {
   phone: string;
   disabled: boolean;
+  role: string;
   mustChangePassword: boolean;
   keyMode: "virtual_key" | "app_enforced" | "none";
   balanceGrantedCny: number;
@@ -22,6 +23,8 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [listError, setListError] = useState("");
   const [actionMsg, setActionMsg] = useState("");
+  const [sessionAdmin, setSessionAdmin] = useState(false);
+  const [adminPhone, setAdminPhone] = useState("");
 
   const loadUsers = useCallback(async (token: string) => {
     setListError("");
@@ -36,6 +39,24 @@ export default function AdminUsersPage() {
     }
     setUsers(data.users ?? []);
   }, []);
+
+  // 已登录的管理员（role=admin）：凭会话自动加载成员，无需手填 Token
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/me");
+        if (!res.ok) return;
+        const me = await res.json();
+        if (alive && me.role === "admin") {
+          setSessionAdmin(true);
+          setAdminPhone(me.phone ?? "");
+          await loadUsers("");
+        }
+      } catch { /* 未登录则走 Token 模式 */ }
+    })();
+    return () => { alive = false; };
+  }, [loadUsers]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -74,8 +95,8 @@ export default function AdminUsersPage() {
     body: Record<string, unknown>,
     okText: string,
   ) {
-    if (!adminToken) {
-      setActionMsg("请先填写 Admin Token");
+    if (!adminToken && !sessionAdmin) {
+      setActionMsg("请先填写 Admin Token，或以管理员身份登录");
       return;
     }
     setActionMsg("");
@@ -111,16 +132,22 @@ export default function AdminUsersPage() {
             每行一个手机号。将创建账号、默认密码，并尝试签发 Virtual Key（初始余额 ¥0，充值后可用）。
           </p>
         </div>
-        <label className="block space-y-1.5">
-          <span className="text-sm muted">Admin Token</span>
-          <input
-            className="field"
-            type="password"
-            value={adminToken}
-            onChange={(e) => setAdminToken(e.target.value)}
-            required
-          />
-        </label>
+        {sessionAdmin ? (
+          <p className="text-sm" style={{ color: "var(--accent-primary)" }}>
+            管理员会话：{adminPhone}（凭登录身份管理，无需 Token）
+          </p>
+        ) : (
+          <label className="block space-y-1.5">
+            <span className="text-sm muted">Admin Token</span>
+            <input
+              className="field"
+              type="password"
+              value={adminToken}
+              onChange={(e) => setAdminToken(e.target.value)}
+              required
+            />
+          </label>
+        )}
         <label className="block space-y-1.5">
           <span className="text-sm muted">手机号列表</span>
           <textarea
@@ -143,7 +170,7 @@ export default function AdminUsersPage() {
           <button
             className="btn"
             type="button"
-            disabled={!adminToken}
+            disabled={!adminToken && !sessionAdmin}
             onClick={() => loadUsers(adminToken)}
           >
             刷新用户列表
@@ -182,7 +209,7 @@ export default function AdminUsersPage() {
               {users.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-4 muted">
-                    暂无数据，填写 Token 后点「刷新用户列表」
+                    {sessionAdmin ? "暂无成员" : "暂无数据，填写 Token 后点「刷新用户列表」，或以管理员身份登录"}
                   </td>
                 </tr>
               ) : (
@@ -191,6 +218,7 @@ export default function AdminUsersPage() {
                     <td className="py-2 pr-3 mono">{u.phone}</td>
                     <td className="py-2 pr-3">
                       {u.disabled ? "已禁用" : "正常"}
+                      {u.role === "admin" ? " · 管理员" : ""}
                       {u.mustChangePassword ? " · 待改密" : ""}
                     </td>
                     <td className="py-2 pr-3 mono">{u.keyMode}</td>

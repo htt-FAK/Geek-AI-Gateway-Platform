@@ -16,7 +16,7 @@ const bodySchema = z.object({
 
 /** 管理员充值 / 不限额开关：本地流水 + 网关用户级预算同步。 */
 export async function POST(req: Request) {
-  const denied = requireAdmin(req);
+  const denied = await requireAdmin(req);
   if (denied) return denied;
 
   const parsed = bodySchema.safeParse(await req.json());

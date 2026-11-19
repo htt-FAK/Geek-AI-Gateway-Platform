@@ -15,7 +15,7 @@ const bodySchema = z.object({
  * 成功后才改本地 disabled。解禁同时按当前余额再同步一次用户级 max_budget。
  */
 export async function POST(req: Request) {
-  const denied = requireAdmin(req);
+  const denied = await requireAdmin(req);
   if (denied) return denied;
 
   const parsed = bodySchema.safeParse(await req.json());

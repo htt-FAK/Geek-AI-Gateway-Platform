@@ -4,7 +4,7 @@ import { decryptSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 
 export async function GET(req: Request) {
-  const denied = requireAdmin(req);
+  const denied = await requireAdmin(req);
   if (denied) return denied;
 
   const users = await prisma.user.findMany({
@@ -13,6 +13,7 @@ export async function GET(req: Request) {
       id: true,
       phone: true,
       disabled: true,
+      role: true,
       mustChangePassword: true,
       litellmKeyTokenEnc: true,
       balanceGrantedCny: true,
@@ -36,6 +37,7 @@ export async function GET(req: Request) {
       return {
         phone: u.phone,
         disabled: u.disabled,
+        role: u.role,
         mustChangePassword: u.mustChangePassword,
         keyMode,
         balanceGrantedCny: u.balanceGrantedCny,

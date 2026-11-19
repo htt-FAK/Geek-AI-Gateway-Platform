@@ -12,7 +12,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const denied = requireAdmin(req);
+  const denied = await requireAdmin(req);
   if (denied) return denied;
 
   const parsed = bodySchema.safeParse(await req.json());

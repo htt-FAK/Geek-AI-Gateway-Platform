@@ -12,6 +12,8 @@ model User {
   passwordHash       String
   mustChangePassword Boolean  @default(true)
   disabled           Boolean  @default(false)
+  /// 角色：user 普通成员 / admin 管理员（可登录管理成员，与 ADMIN_TOKEN 并行）
+  role               String   @default("user")
   passwordVersion    Int      @default(0)
   litellmUserId      String?
   litellmKeyTokenEnc String?

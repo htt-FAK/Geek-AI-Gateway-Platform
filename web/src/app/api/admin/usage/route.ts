@@ -6,7 +6,7 @@ import { fetchAllSpendLogs } from "@/lib/litellm";
 
 /** 全员用量：网关全量 spend logs 优先（覆盖直连），回退本地 SpendEvent。 */
 export async function GET(req: Request) {
-  const denied = requireAdmin(req);
+  const denied = await requireAdmin(req);
   if (denied) return denied;
 
   const url = new URL(req.url);

@@ -28,6 +28,7 @@ export async function GET() {
       phone: user.phone,
       mustChangePassword: user.mustChangePassword,
       disabled: user.disabled,
+      role: user.role,
       models,
       balance,
       keyMode,
