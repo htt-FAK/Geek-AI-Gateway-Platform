@@ -39,4 +39,11 @@ export const GATEWAY_MODELS = [
   "mimo-v2.5-tts",
   "mimo-v2.5-tts-voiceclone",
   "mimo-v2.5-tts-voicedesign",
+  "qwen4-max",
+  "qwen3.8-flash",
+  "kimi-k3.1-pro",
+  "glm-5.3-flash",
+  "glm-5.3",
+  "minimax-m3.1-flash",
+  "step-5-preview",
 ] as const;

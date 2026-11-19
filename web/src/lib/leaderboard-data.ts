@@ -1,10 +1,12 @@
 /**
  * 模型榜单数据（Artificial Analysis 式，模型 × 思考档位）。
- * 智能指数与每任务成本采集自 AA 排行榜对比图（2026-11-18 用户截图核对），
+ * 智能指数与每任务成本采集自 AA 排行榜对比图（2026-11-18 用户截图核对，v5.0.1 口径），
  * 版本与网关一致：DeepSeek V4.1 Flash 1017 / V4 Pro 0813、MiMo V2.6 系列。
  * 速度 / 延迟采集自 AA 模型页；价格列为本网关官方 CNY 价。
  * 每任务成本保留美元原值（散点图对数轴用）与人民币折算（1 USD = 6.68 CNY，2026-11-18）。
- * 更新方式：直接编辑本文件并更新 LEADERBOARD_FETCHED_AT。
+ * ⚠ 2026-11-19：AA 指数改版（新口径范围约 40–61，旧 v5.0.1 为 12–32）。百炼 7 模型已上榜
+ * （价格/规格真实，智能指数 null 待新口径数据）；存量行仍为旧口径，全量刷新需新口径数据源，
+ * 刷新前勿把新旧口径数值直接比较。更新方式：编辑本文件并更新 LEADERBOARD_FETCHED_AT。
  */
 
 export type LeaderboardRow = {
@@ -165,6 +167,129 @@ export const LEADERBOARD_ROWS: LeaderboardRow[] = [
     source: AA_LEADERBOARD,
     sourceLabel: "AA 评测",
     note: "全场最低每任务成本。",
+  },
+  // ---------- 阿里云百炼（2026-11-19 上榜） ----------
+  // AA 于 2026-11-19 前后改版指数口径（旧 v5.0.1 范围 12–32，新图范围约 40–61）。
+  // 上方存量行为旧口径；新模型智能指数待新口径数据补齐（null → 页面显示"—"，图表自动跳过）。
+  // 已知新口径锚点（用户截图清晰标注）：Qwen3.8 Max 58.1 / Qwen3.8 2.4T A95B 57.7 / Qwen3.8 27B xhigh 52.0。
+  {
+    model: "qwen4-max",
+    variantId: "default",
+    variantLabel: "默认",
+    intelligence: null,
+    speedTokS: null,
+    ttftS: null,
+    costPerTaskUsd: null,
+    costPerTaskCny: null,
+    inputPerM: 10,
+    outputPerM: 30,
+    context: "1M",
+    maxOutput: "128K / 256K（思考）",
+    source: AA_LEADERBOARD,
+    sourceLabel: "AA 评测（待补）",
+    note: "百炼旗舰；AA 新口径数据待补（截图仅标注 Qwen3.8 系列，未含 Qwen4-Max）。",
+  },
+  {
+    model: "qwen3.8-flash",
+    variantId: "default",
+    variantLabel: "默认",
+    intelligence: null,
+    speedTokS: null,
+    ttftS: null,
+    costPerTaskUsd: null,
+    costPerTaskCny: null,
+    inputPerM: 0.8,
+    outputPerM: 2.7,
+    context: "1M",
+    maxOutput: "128K",
+    source: AA_LEADERBOARD,
+    sourceLabel: "AA 评测（待补）",
+    note: "百炼轻量旗舰；智能指数待 AA 新口径数据。",
+  },
+  {
+    model: "kimi-k3.1-pro",
+    variantId: "default",
+    variantLabel: "默认",
+    intelligence: null,
+    speedTokS: null,
+    ttftS: null,
+    costPerTaskUsd: null,
+    costPerTaskCny: null,
+    inputPerM: 13,
+    outputPerM: 68,
+    context: "1M",
+    maxOutput: "以百炼模型页为准",
+    source: AA_LEADERBOARD,
+    sourceLabel: "AA 评测（待补）",
+    note: "思考默认开启；AA 新图有 Kimi K3 (max) 约 59.7（坐标估读，未采入）。",
+  },
+  {
+    model: "glm-5.3-flash",
+    variantId: "default",
+    variantLabel: "默认",
+    intelligence: null,
+    speedTokS: null,
+    ttftS: null,
+    costPerTaskUsd: null,
+    costPerTaskCny: null,
+    inputPerM: 0.8,
+    outputPerM: 2.8,
+    context: "以百炼模型页为准",
+    maxOutput: "以百炼模型页为准",
+    source: AA_LEADERBOARD,
+    sourceLabel: "AA 评测（待补）",
+    note: "智谱自营托管；智能指数待 AA 新口径数据。",
+  },
+  {
+    model: "glm-5.3",
+    variantId: "default",
+    variantLabel: "默认",
+    intelligence: null,
+    speedTokS: null,
+    ttftS: null,
+    costPerTaskUsd: null,
+    costPerTaskCny: null,
+    inputPerM: 8,
+    outputPerM: 28,
+    context: "1M",
+    maxOutput: "以百炼模型页为准",
+    source: AA_LEADERBOARD,
+    sourceLabel: "AA 评测（待补）",
+    note: "仅思考模式；AA 新图有 GLM-5.3 (max) 约 55.7（坐标估读，未采入）。",
+  },
+  {
+    model: "minimax-m3.1-flash",
+    variantId: "default",
+    variantLabel: "默认",
+    intelligence: null,
+    speedTokS: null,
+    ttftS: null,
+    costPerTaskUsd: null,
+    costPerTaskCny: null,
+    inputPerM: 1,
+    outputPerM: 4,
+    context: "1M",
+    maxOutput: "以百炼模型页为准",
+    source: AA_LEADERBOARD,
+    sourceLabel: "AA 评测（待补）",
+    note: "缓存折扣价官方未公布，暂按输入价；智能指数待 AA 新口径数据。",
+  },
+  {
+    model: "step-5-preview",
+    variantId: "default",
+    variantLabel: "默认",
+    intelligence: null,
+    speedTokS: null,
+    ttftS: null,
+    costPerTaskUsd: null,
+    costPerTaskCny: null,
+    inputPerM: 7,
+    outputPerM: 20,
+    context: "1M",
+    maxOutput: "以百炼模型页为准",
+    source: AA_LEADERBOARD,
+    sourceLabel: "AA 评测（待补）",
+    note: "预览版；智能指数待 AA 新口径数据。",
   },
 ];
 

@@ -24,6 +24,8 @@ const MIMO_PRO = "https://mimo.mi.com/models/en-US/mimo-v2.6-pro";
 const MIMO_FLASH = "https://mimo.mi.com/models/en-US/mimo-v2.6-flash";
 const XFYUN_MAAS = "https://maas.xfyun.cn/";
 const SILICONFLOW_DOCS = "https://docs.siliconflow.cn/";
+const BAILIAN_MODELS = "https://help.aliyun.com/zh/model-studio/text-generation-model";
+const BAILIAN_PRICING = "https://help.aliyun.com/zh/model-studio/billing-for-model-studio";
 
 const DOCS: Record<string, Omit<ModelDoc, "id" | "notes"> & { notes?: string[] }> = {
   "deepseek-flash": {
@@ -207,6 +209,92 @@ const DOCS: Record<string, Omit<ModelDoc, "id" | "notes"> & { notes?: string[] }
     notes: [
       "按上游 TTS / 声音设计接口调用；调试台以文本 chat 为主。",
       "能力与计费以官方文档为准。",
+    ],
+  },
+  "qwen4-max": {
+    summary: "千问 Qwen4-Max：复杂推理与编程旗舰，思考/非思考双模式。",
+    modality: "文本 · 图像 · 视频 · 思考",
+    endpoint: "chat",
+    officialUrl: BAILIAN_MODELS,
+    officialLabel: "百炼模型文档",
+    notes: [
+      "经阿里云百炼 DashScope 接入（OpenAI 兼容 /compatible-mode/v1）。",
+      "1M 上下文；最大输出 128K（非思考）/ 256K（思考+输出）。",
+      "百炼原价：输入 ¥10/M、输出 ¥30/M、缓存命中 ¥0.5/M；Batch File 半价。",
+      "支持图像（单图 ≤16M 像素、≤2048 张）与视频（≤2 小时/2GB、≤64 个）输入。",
+      "走本网关 OpenAI 兼容 `/v1/chat/completions`。",
+    ],
+  },
+  "qwen3.8-flash": {
+    summary: "千问 Qwen3.8-Flash：快速低成本，支持图像/视频理解。",
+    modality: "文本 · 图像 · 视频 · 思考",
+    endpoint: "chat",
+    officialUrl: BAILIAN_MODELS,
+    officialLabel: "百炼模型文档",
+    notes: [
+      "经阿里云百炼 DashScope 接入；1M 上下文，最大 128K 输出。",
+      "百炼价：输入 ¥0.8/M、输出 ¥2.7/M、缓存命中 ¥0.1/M。",
+      "上游档位 RPM 30000 / TPM 5M，网关侧已设同档限流。",
+    ],
+  },
+  "kimi-k3.1-pro": {
+    summary: "月之暗面 Kimi K3.1 Pro：1M 上下文，默认开启思考。",
+    modality: "文本 · 思考",
+    endpoint: "chat",
+    officialUrl: "https://help.aliyun.com/zh/model-studio/kimi-k3-1-pro",
+    officialLabel: "百炼 Kimi K3.1 Pro 文档",
+    notes: [
+      "经阿里云百炼 DashScope 接入；思考默认开启。",
+      "百炼价：输入 ¥13/M、输出 ¥68/M、缓存命中 ¥1.3/M（思考 token 按输出价）。",
+      "工具调用达标；结构化输出支持 JSON Mode。",
+    ],
+  },
+  "glm-5.3-flash": {
+    summary: "智谱 GLM-5.3-Flash：轻量快速，低成本日常任务。",
+    modality: "文本 · 思考",
+    endpoint: "chat",
+    officialUrl: BAILIAN_PRICING,
+    officialLabel: "百炼计费文档",
+    notes: [
+      "智谱自营托管，模型代码 ZHIPU/GLM-5.3-Flash，经百炼 DashScope 接入。",
+      "百炼模型广场价：输入 ¥0.8/M、输出 ¥2.8/M、缓存命中 ¥0.08/M。",
+      "上游档位 RPM 500 / TPM 10M，网关侧已设同档限流。",
+    ],
+  },
+  "glm-5.3": {
+    summary: "智谱 GLM-5.3 旗舰：1M 上下文，仅思考模式。",
+    modality: "文本 · 思考",
+    endpoint: "chat",
+    officialUrl: BAILIAN_PRICING,
+    officialLabel: "百炼计费文档",
+    notes: [
+      "智谱自营托管，模型代码 ZHIPU/GLM-5.3，经百炼 DashScope 接入。",
+      "百炼价：输入 ¥8/M、输出 ¥28/M；缓存命中 ¥2/M（模型广场）。",
+      "仅思考模式；上游档位 RPM 500 / TPM 5M，网关侧已设同档限流。",
+    ],
+  },
+  "minimax-m3.1-flash": {
+    summary: "MiniMax M3.1 Flash：1M 上下文，低成本快速响应。",
+    modality: "文本",
+    endpoint: "chat",
+    officialUrl: BAILIAN_PRICING,
+    officialLabel: "百炼计费文档",
+    notes: [
+      "模型代码 MiniMax/MiniMax-M3.1-Flash，经百炼 DashScope 接入。",
+      "百炼价：输入 ¥1/M、输出 ¥4/M。",
+      "官方仅标「上下文缓存享有折扣」未公布单价：网关暂按输入价计缓存命中，官方公布后同步。",
+    ],
+  },
+  "step-5-preview": {
+    summary: "阶跃星辰 Step-5 Preview：1M 上下文旗舰预览版。",
+    modality: "文本 · 思考",
+    endpoint: "chat",
+    officialUrl: BAILIAN_PRICING,
+    officialLabel: "百炼计费文档",
+    notes: [
+      "模型代码 stepfun/step-5-preview，经百炼 DashScope 接入。",
+      "百炼价：输入 ¥7/M、输出 ¥20/M；官方未提供缓存折扣价。",
+      "预览版能力以百炼模型页为准。",
     ],
   },
 };

@@ -5,7 +5,7 @@
  * 改价时请同步 gateway/config.yaml 与 gateway/model_catalog.json。
  */
 
-export type MarketProvider = "deepseek" | "mimo" | "xfyun" | "siliconflow";
+export type MarketProvider = "deepseek" | "mimo" | "xfyun" | "siliconflow" | "bailian";
 export type MarketEndpoint = "chat" | "asr" | "tts" | "embedding" | "rerank";
 
 export type MarketCapabilities = {
@@ -59,6 +59,8 @@ const MIMO_FLASH = "https://mimo.mi.com/models/en-US/mimo-v2.6-flash";
 const MIMO_PRICING = "https://mimo.mi.com/docs/price/pay-as-you-go";
 const XFYUN_MAAS = "https://maas.xfyun.cn/";
 const SILICONFLOW_DOCS = "https://docs.siliconflow.cn/";
+const BAILIAN_MODELS = "https://help.aliyun.com/zh/model-studio/text-generation-model";
+const BAILIAN_PRICING = "https://help.aliyun.com/zh/model-studio/billing-for-model-studio";
 
 export const MARKET_MODELS: MarketModel[] = [
   {
@@ -306,6 +308,118 @@ export const MARKET_MODELS: MarketModel[] = [
     capabilities: NO_CAPS,
     officialUrl: MIMO_PRICING,
   },
+  // ---------- 阿里云百炼（2026-11-19 接入，价格为百炼华北2原价） ----------
+  {
+    id: "qwen4-max",
+    provider: "bailian",
+    endpoint: "chat",
+    recommended: true,
+    tagline: "千问旗舰：复杂推理与编程，1M 上下文，思考/非思考双模式。",
+    tags: ["文本", "图像", "视频", "思考"],
+    modalityIn: ["文本", "图像", "视频"],
+    modalityOut: ["文本"],
+    pricing: { kind: "tokens", inputPerM: 10, outputPerM: 30, cacheHitPerM: 0.5 },
+    context: "1M",
+    maxOutput: "128K（非思考）/ 256K（思考+输出）",
+    capabilities: { ...NO_CAPS, thinking: true, toolCall: true, webSearch: true, structuredOutput: true, contextCache: true, vision: true },
+    officialUrl: BAILIAN_MODELS,
+    versionNote: "百炼官方价：输入 ¥10/M、输出 ¥30/M、缓存命中 ¥0.5/M（显式缓存创建另计）。单图 ≤16M 像素、视频 ≤2 小时/2GB。",
+  },
+  {
+    id: "qwen3.8-flash",
+    provider: "bailian",
+    endpoint: "chat",
+    tagline: "千问轻量旗舰：快速低成本，1M 上下文，支持图像/视频理解。",
+    tags: ["文本", "图像", "视频", "思考"],
+    modalityIn: ["文本", "图像", "视频"],
+    modalityOut: ["文本"],
+    pricing: { kind: "tokens", inputPerM: 0.8, outputPerM: 2.7, cacheHitPerM: 0.1 },
+    context: "1M",
+    maxOutput: "128K",
+    rpm: 30000,
+    tpm: "5M",
+    capabilities: { ...NO_CAPS, thinking: true, toolCall: true, webSearch: true, structuredOutput: true, contextCache: true, vision: true },
+    officialUrl: BAILIAN_MODELS,
+  },
+  {
+    id: "kimi-k3.1-pro",
+    provider: "bailian",
+    endpoint: "chat",
+    tagline: "月之暗面 Kimi K3.1 Pro：1M 上下文，默认开启思考，工具调用达标。",
+    tags: ["文本", "思考"],
+    modalityIn: ["文本"],
+    modalityOut: ["文本"],
+    pricing: { kind: "tokens", inputPerM: 13, outputPerM: 68, cacheHitPerM: 1.3 },
+    context: "1M",
+    maxOutput: "以百炼模型页为准",
+    capabilities: { ...NO_CAPS, thinking: true, toolCall: true, structuredOutput: true, contextCache: true },
+    officialUrl: "https://help.aliyun.com/zh/model-studio/kimi-k3-1-pro",
+    versionNote: "思考默认开启；结构化输出支持 JSON Mode。百炼自营与月之暗面自营（kimi/kimi-k3.1-pro）同价。",
+  },
+  {
+    id: "glm-5.3-flash",
+    provider: "bailian",
+    endpoint: "chat",
+    tagline: "智谱 GLM-5.3-Flash：轻量快速，低成本日常对话与抽取。",
+    tags: ["文本", "思考"],
+    modalityIn: ["文本"],
+    modalityOut: ["文本"],
+    pricing: { kind: "tokens", inputPerM: 0.8, outputPerM: 2.8, cacheHitPerM: 0.08 },
+    context: "以百炼模型页为准",
+    maxOutput: "以百炼模型页为准",
+    rpm: 500,
+    tpm: "10M",
+    capabilities: { ...NO_CAPS, thinking: true, contextCache: true },
+    officialUrl: BAILIAN_PRICING,
+    versionNote: "智谱自营托管（模型代码 ZHIPU/GLM-5.3-Flash），价格取自百炼模型广场。",
+  },
+  {
+    id: "glm-5.3",
+    provider: "bailian",
+    endpoint: "chat",
+    tagline: "智谱 GLM-5.3 旗舰：1M 上下文，仅思考模式。",
+    tags: ["文本", "思考"],
+    modalityIn: ["文本"],
+    modalityOut: ["文本"],
+    pricing: { kind: "tokens", inputPerM: 8, outputPerM: 28, cacheHitPerM: 2 },
+    context: "1M",
+    maxOutput: "以百炼模型页为准",
+    rpm: 500,
+    tpm: "5M",
+    capabilities: { ...NO_CAPS, thinking: true, contextCache: true },
+    officialUrl: BAILIAN_PRICING,
+    versionNote: "智谱自营托管（模型代码 ZHIPU/GLM-5.3），仅思考模式；缓存命中 ¥2/M 取自百炼模型广场。",
+  },
+  {
+    id: "minimax-m3.1-flash",
+    provider: "bailian",
+    endpoint: "chat",
+    tagline: "MiniMax M3.1 Flash：1M 上下文，低成本快速响应。",
+    tags: ["文本"],
+    modalityIn: ["文本"],
+    modalityOut: ["文本"],
+    pricing: { kind: "tokens", inputPerM: 1, outputPerM: 4, cacheHitPerM: 1 },
+    context: "1M",
+    maxOutput: "以百炼模型页为准",
+    capabilities: { ...NO_CAPS, contextCache: true },
+    officialUrl: BAILIAN_PRICING,
+    versionNote: "模型代码 MiniMax/MiniMax-M3.1-Flash。官方仅标「缓存享有折扣」未公布单价，网关暂按输入价计缓存命中，公布后同步。",
+  },
+  {
+    id: "step-5-preview",
+    provider: "bailian",
+    endpoint: "chat",
+    tagline: "阶跃星辰 Step-5 Preview：1M 上下文多模态旗舰预览版。",
+    tags: ["文本", "思考"],
+    modalityIn: ["文本"],
+    modalityOut: ["文本"],
+    pricing: { kind: "tokens", inputPerM: 7, outputPerM: 20, cacheHitPerM: 0 },
+    context: "1M",
+    maxOutput: "以百炼模型页为准",
+    capabilities: { ...NO_CAPS, thinking: true },
+    officialUrl: BAILIAN_PRICING,
+    versionNote: "模型代码 stepfun/step-5-preview。官方未提供缓存价（无上下文缓存折扣）。",
+  },
 ];
 
 export function getMarketModel(id: string): MarketModel | undefined {
@@ -315,7 +429,15 @@ export function getMarketModel(id: string): MarketModel | undefined {
 export const CHAT_MODEL_IDS = MARKET_MODELS.filter((m) => m.endpoint === "chat").map((m) => m.id);
 
 export function providerLabel(p: MarketProvider): string {
-  return p === "deepseek" ? "DeepSeek" : p === "xfyun" ? "讯飞星火" : p === "siliconflow" ? "硅基流动" : "小米 MiMo";
+  return p === "deepseek"
+    ? "DeepSeek"
+    : p === "xfyun"
+      ? "讯飞星火"
+      : p === "siliconflow"
+        ? "硅基流动"
+        : p === "bailian"
+          ? "阿里云百炼"
+          : "小米 MiMo";
 }
 
 export function providerVar(p: MarketProvider): string {
@@ -325,7 +447,9 @@ export function providerVar(p: MarketProvider): string {
       ? "var(--brand-xfyun)"
       : p === "siliconflow"
         ? "var(--brand-siliconflow)"
-        : "var(--brand-mimo)";
+        : p === "bailian"
+          ? "var(--brand-bailian)"
+          : "var(--brand-mimo)";
 }
 
 /** 供应商品牌图标路径（web/public/brands/） */
@@ -336,7 +460,9 @@ export function providerLogo(p: MarketProvider): string {
       ? "/brands/xfyun.ico"
       : p === "siliconflow"
         ? "/brands/siliconflow.png"
-        : "/brands/mimo.png";
+        : p === "bailian"
+          ? "/brands/bailian.svg"
+          : "/brands/mimo.png";
 }
 
 /** 峰时计费口径（与 gateway/deepseek_peak.py 一致：峰时 = 空闲价 ×2，回调自动计价）。 */

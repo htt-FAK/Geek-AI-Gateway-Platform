@@ -1,6 +1,6 @@
 /**
  * 商业级计费审计套件。运行：node scripts/billing-audit.mjs
- * 覆盖：峰时规则单测 / 四模型流式与非流式记账精度 / 密钥归属 / 失败路径不记账 /
+ * 覆盖：峰时规则单测 / 11 模型流式与非流式记账精度 / 密钥归属 / 失败路径不记账 /
  *       缓存计价 / 网关-本地对账 / 密钥级预算硬闸 / 余额门 402 / 限流 429。
  * 会创建临时测试账号与探针密钥，结束后清理。真实调用约 10 次（费用 < ¥0.05）。
  */
@@ -21,6 +21,14 @@ const PRICES = {
   "deepseek-v4-pro": [4.5, 13.5],
   "mimo-v2.6-pro": [3, 6],
   "mimo-v2.6-flash": [1, 2],
+  // 阿里云百炼（2026-11-19 接入，专属 MaaS endpoint 实测计费精确）
+  "qwen4-max": [10, 30],
+  "qwen3.8-flash": [0.8, 2.7],
+  "kimi-k3.1-pro": [13, 68],
+  "glm-5.3-flash": [0.8, 2.8],
+  "glm-5.3": [8, 28],
+  "minimax-m3.1-flash": [1, 4],
+  "step-5-preview": [7, 20],
 };
 // 缓存命中输入价（¥/M，与 gateway/config.yaml 的 cache_read_input_token_cost 一致）
 const CACHE_PRICES = {
@@ -28,6 +36,13 @@ const CACHE_PRICES = {
   "deepseek-v4-pro": 0.15,
   "mimo-v2.6-pro": 0.025,
   "mimo-v2.6-flash": 0.02,
+  "qwen4-max": 0.5,
+  "qwen3.8-flash": 0.1,
+  "kimi-k3.1-pro": 1.3,
+  "glm-5.3-flash": 0.08,
+  "glm-5.3": 2,
+  "minimax-m3.1-flash": 1, // 官方折扣价未公布，暂按输入价
+  // step-5-preview 无缓存价 → 下方 ?? pi 兜底
 };
 
 // 从调用结果取上游 usage（流式解析 SSE 末块）——用于缓存折扣口径
@@ -184,7 +199,7 @@ for (const model of Object.keys(PRICES)) {
     const after = await eventCount(demo.id);
     const ev = await latestEvent(demo.id);
     const [pi, po] = PRICES[model];
-    const pc = CACHE_PRICES[model];
+    const pc = CACHE_PRICES[model] ?? pi;
     // 缓存命中部分按缓存价计费（MiMo ±8% 口径差已定位为此折扣，见 probe-mimo-billing.mjs）：
     // 期望值 = (输入-缓存)×输入价 + 缓存×缓存价 + 输出×输出价，与网关引擎同口径
     const cached = usageOf(r)?.prompt_tokens_details?.cached_tokens ?? 0;

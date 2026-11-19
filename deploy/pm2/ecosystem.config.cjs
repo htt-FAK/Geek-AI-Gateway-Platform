@@ -14,6 +14,7 @@
  * kill 任一进程后 PM2 会在数秒内自动拉起（restart_delay=2000）。
  */
 const path = require("path");
+const fs = require("fs");
 
 const REPO = path.resolve(__dirname, "..", "..");
 const WEB = path.join(REPO, "web");
@@ -24,6 +25,21 @@ const NODE = process.execPath;
 // 与当前 shell 的 python 保持一致（litellm 装在 D:/PythonUser/Python310/site-packages，
 // 由解释器侧 .pth 引入，勿换成其他 Python）
 const PYTHON = process.env.AIGW_PYTHON || "python";
+
+// 强制以 gateway/.env 为准注入环境变量：litellm 的 load_dotenv() 不覆盖已存在的
+// 进程环境变量，若系统/用户环境里有同名旧值（实测踩过 DASHSCOPE_API_KEY 旧值），
+// 网关会拿错 Key。这里显式注入，.env 成为唯一事实来源。
+function readEnvFile(p) {
+  const out = {};
+  try {
+    for (const line of fs.readFileSync(p, "utf8").split(/\r?\n/)) {
+      const m = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line.trim());
+      if (m) out[m[1]] = m[2].replace(/^["']|["']$/g, "");
+    }
+  } catch { /* 文件缺失时退回 litellm 自加载 */ }
+  return out;
+}
+const GATEWAY_ENV = readEnvFile(path.join(GATEWAY, ".env"));
 
 const common = {
   autorestart: true,
@@ -61,10 +77,11 @@ module.exports = {
       cwd: GATEWAY,
       out_file: path.join(LOGS, "pm2-gateway.log"),
       error_file: path.join(LOGS, "pm2-gateway.log"),
-      // LiteLLM 启动时自行加载 cwd 下 gateway/.env（上游 Key / MASTER_KEY / DATABASE_URL）
+      // gateway/.env 显式注入（见 readEnvFile 注释）＋运行时调优：
       // LITELLM_LOCAL_MODEL_COST_MAP：跳过启动期远程价目表拉取（国内必断连，白等超时）
       // 看门狗探针放宽：默认 5s 探针超时偶发误判 → 无谓重建引擎（每次重建有数秒 DB 空窗）
       env: {
+        ...GATEWAY_ENV,
         PYTHONUNBUFFERED: "1",
         PYTHONIOENCODING: "utf-8",
         LITELLM_LOCAL_MODEL_COST_MAP: "True",
