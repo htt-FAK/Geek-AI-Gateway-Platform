@@ -24,6 +24,9 @@ type UsagePayload = {
     spendCny?: number;
     requests?: number;
     tokens?: number;
+    grantedCny?: number;
+    unlimited?: boolean;
+    remainingCny?: number | null;
   }>;
 };
 
@@ -180,7 +183,9 @@ export default function AdminUsagePage() {
                   <thead className="text-[13px] text-[var(--text-tertiary)]">
                     <tr>
                       <th className="px-4 py-3 font-normal">手机号</th>
-                      <th className="px-4 py-3 font-normal">费用</th>
+                      <th className="px-4 py-3 font-normal">累计充值</th>
+                      <th className="px-4 py-3 font-normal">剩余余额</th>
+                      <th className="px-4 py-3 font-normal">本期费用</th>
                       <th className="px-4 py-3 font-normal">请求</th>
                       <th className="px-4 py-3 font-normal">Token</th>
                     </tr>
@@ -188,14 +193,22 @@ export default function AdminUsagePage() {
                   <tbody>
                     {data.members.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-4 py-10 text-center text-[var(--text-tertiary)]">
-                          暂无成员用量数据
+                        <td colSpan={6} className="px-4 py-10 text-center text-[var(--text-tertiary)]">
+                          暂无成员
                         </td>
                       </tr>
                     ) : (
                       data.members.map((m, i) => (
                         <tr key={i} className="border-t border-[var(--border-subtle)]">
                           <td className="px-4 py-3 mono">{m.phone}</td>
+                          <td className="px-4 py-3 tabular">¥{(m.grantedCny ?? 0).toFixed(2)}</td>
+                          <td className="px-4 py-3 tabular">
+                            {m.unlimited ? (
+                              <span className="text-[var(--accent-primary)]">不限额</span>
+                            ) : (
+                              <>¥{(m.remainingCny ?? 0).toFixed(2)}</>
+                            )}
+                          </td>
                           <td className="px-4 py-3 tabular">¥{(m.spendCny ?? 0).toFixed(2)}</td>
                           <td className="px-4 py-3 tabular">{m.requests ?? 0}</td>
                           <td className="px-4 py-3 tabular">{m.tokens ?? 0}</td>

@@ -71,17 +71,40 @@ export async function GET(req: Request) {
   });
   const phoneByGwId = new Map(users.filter((u) => u.litellmUserId).map((u) => [u.litellmUserId!, u.phone]));
   const phoneById = new Map(users.map((u) => [u.id, u.phone]));
-  const byUser = new Map<string, { phone: string; spendCny: number; requests: number; tokens: number }>();
+  // 本期（date range）用量按手机号分组
+  const byUser = new Map<string, { spendCny: number; requests: number; tokens: number }>();
   for (const ev of events) {
     const uid = ev.userId ?? "unknown";
     const phone = phoneByGwId.get(uid) ?? phoneById.get(uid) ?? uid;
-    const cur = byUser.get(phone) ?? { phone, spendCny: 0, requests: 0, tokens: 0 };
+    const cur = byUser.get(phone) ?? { spendCny: 0, requests: 0, tokens: 0 };
     cur.spendCny += ev.spendCny;
     cur.requests += 1;
     cur.tokens += ev.totalTokens;
     byUser.set(phone, cur);
   }
-  const members = [...byUser.values()].sort((a, b) => b.spendCny - a.spendCny);
+  // 全量流水（算剩余余额用，不受日期范围影响）
+  const lifetime = await prisma.spendEvent.groupBy({ by: ["userId"], _sum: { costCny: true } });
+  const lifetimeByPhone = new Map<string, number>();
+  for (const l of lifetime) {
+    const phone = phoneById.get(l.userId) ?? l.userId;
+    lifetimeByPhone.set(phone, (lifetimeByPhone.get(phone) ?? 0) + (l._sum.costCny ?? 0));
+  }
+  // 覆盖全部账号（含零用量），左 join 本期用量＋余额
+  const members = users
+    .map((u) => {
+      const s = byUser.get(u.phone) ?? { spendCny: 0, requests: 0, tokens: 0 };
+      const usedTotal = lifetimeByPhone.get(u.phone) ?? 0;
+      return {
+        phone: u.phone,
+        spendCny: s.spendCny,
+        requests: s.requests,
+        tokens: s.tokens,
+        grantedCny: u.balanceGrantedCny,
+        unlimited: u.balanceUnlimited,
+        remainingCny: u.balanceUnlimited ? null : Math.max(0, u.balanceGrantedCny - usedTotal),
+      };
+    })
+    .sort((a, b) => b.spendCny - a.spendCny);
 
   return NextResponse.json({
     range: `${Math.round((to.getTime() - from.getTime()) / 86400000)}d`,
