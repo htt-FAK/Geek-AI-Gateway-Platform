@@ -40,6 +40,7 @@ export default function ModelsPage() {
             ["all", "全部"],
             ["deepseek", "DeepSeek"],
             ["mimo", "小米 MiMo"],
+            ["bailian", "阿里云百炼"],
             ["xfyun", "讯飞星火"],
             ["siliconflow", "硅基流动"],
           ] as [Filter, string][]

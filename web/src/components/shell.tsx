@@ -8,15 +8,17 @@ import { UserMenu } from "@/components/user-menu";
 import { EntryAmbient } from "@/components/entry-ambient";
 import { StyleOnboarding } from "@/components/style-onboarding";
 
-const NAV = [
+type NavIconId = "playground" | "dashboard" | "models" | "leaderboard" | "keys" | "users" | "usage";
+
+const NAV: { href: string; label: string; icon: NavIconId; adminOnly?: boolean }[] = [
   { href: "/playground", label: "调试台", icon: "playground" },
   { href: "/dashboard", label: "看板", icon: "dashboard" },
   { href: "/models", label: "模型", icon: "models" },
   { href: "/leaderboard", label: "榜单", icon: "leaderboard" },
   { href: "/keys", label: "密钥", icon: "keys" },
-] as const;
-
-type NavIconId = (typeof NAV)[number]["icon"];
+  { href: "/admin/users", label: "成员管理", icon: "users", adminOnly: true },
+  { href: "/admin/usage", label: "成员用量", icon: "usage", adminOnly: true },
+];
 
 function NavIcon({ id, size = 20 }: { id: NavIconId; size?: number }) {
   const common = {
@@ -73,6 +75,26 @@ function NavIcon({ id, size = 20 }: { id: NavIconId; size?: number }) {
           <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
           <path d="M7 5H4.5v1.5A3 3 0 0 0 7 9.5" />
           <path d="M17 5h2.5v1.5a3 3 0 0 1-2.5 3" />
+        </svg>
+      );
+    case "users":
+      return (
+        <svg {...common}>
+          <circle cx="9" cy="8" r="3" />
+          <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+          <path d="M16 5.5a3 3 0 0 1 0 5.8" />
+          <path d="M17.5 13.5a5.5 5.5 0 0 1 3 5" />
+        </svg>
+      );
+    case "usage":
+      return (
+        <svg {...common}>
+          <path d="M4 19V5" />
+          <path d="M4 19h16" />
+          <path d="M8 16v-3" />
+          <path d="M12 16V8" />
+          <path d="M16 16v-5" />
+          <path d="M20 16V6" />
         </svg>
       );
   }
@@ -169,6 +191,7 @@ export function AppShell({
   const pathname = usePathname();
   const docs = process.env.NEXT_PUBLIC_DOCS_BASE_URL;
   const [collapsed, setCollapsed] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     try {
@@ -177,6 +200,20 @@ export function AppShell({
       // ignore
     }
   }, []);
+
+  // 管理员（role=admin）才显示成员管理 / 成员用量入口
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/me");
+        if (!res.ok) return;
+        const me = await res.json();
+        if (alive) setIsAdmin(me.role === "admin");
+      } catch { /* 未登录忽略 */ }
+    })();
+    return () => { alive = false; };
+  }, [pathname]);
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -219,7 +256,7 @@ export function AppShell({
           </div>
         </div>
         <nav className="app-sidebar-nav flex flex-1 flex-col overflow-y-auto p-2">
-          {NAV.map((item) => {
+          {NAV.filter((item) => !item.adminOnly || isAdmin).map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
