@@ -30,12 +30,12 @@ async function main() {
   const password = process.env.DEFAULT_USER_PASSWORD || "ChangeMe123";
   const existing = await prisma.user.findUnique({ where: { phone } });
   if (existing) {
-    // ensure can login for UI preview: clear mustChangePassword for demo ease
+    // 重置为「默认密码 + 首登强制改密」初始态（生产安全口径，勿改回 false）
     await prisma.user.update({
       where: { phone },
       data: {
         disabled: false,
-        mustChangePassword: false,
+        mustChangePassword: true,
         passwordHash: await bcrypt.hash(password, 10),
         passwordVersion: { increment: 1 },
       },
@@ -47,7 +47,7 @@ async function main() {
       data: {
         phone,
         passwordHash: hash,
-        mustChangePassword: false,
+        mustChangePassword: true,
         litellmUserId: "phone:" + phone,
         litellmKeyTokenEnc: encryptSecret("__app_enforced__:phone:" + phone),
       },

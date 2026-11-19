@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  BudgetColumns,
+  BalancePanel,
   ConsumptionChartPanel,
   KpiRow,
   ModelCallChartPanel,
@@ -178,9 +178,9 @@ export default function DashboardPage() {
 
       <div className="space-y-5">
         <div>
-          <h2 className="mb-3 text-sm font-medium text-[var(--text-secondary)]">限额消耗情况</h2>
+          <h2 className="mb-3 text-sm font-medium text-[var(--text-secondary)]">账户余额</h2>
           {me ? (
-            <BudgetColumns budget={me.budget} />
+            <BalancePanel balance={me.balance} />
           ) : (
             <div className="panel p-8 text-sm text-[var(--text-tertiary)]">加载中…</div>
           )}

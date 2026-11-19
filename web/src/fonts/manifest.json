@@ -1,0 +1,110 @@
+[
+  {
+    "name": "dm-serif-display",
+    "variable": false,
+    "files": [
+      {
+        "file": "dm-serif-display-400.woff2",
+        "weight": "400",
+        "style": "normal"
+      }
+    ]
+  },
+  {
+    "name": "ibm-plex-mono",
+    "variable": false,
+    "files": [
+      {
+        "file": "ibm-plex-mono-400.woff2",
+        "weight": "400",
+        "style": "normal"
+      },
+      {
+        "file": "ibm-plex-mono-500.woff2",
+        "weight": "500",
+        "style": "normal"
+      }
+    ]
+  },
+  {
+    "name": "inter",
+    "variable": true,
+    "files": [
+      {
+        "file": "inter-100-900.woff2",
+        "weight": "100 900",
+        "style": "normal"
+      }
+    ]
+  },
+  {
+    "name": "jetbrains-mono",
+    "variable": false,
+    "files": [
+      {
+        "file": "jetbrains-mono-400.woff2",
+        "weight": "400",
+        "style": "normal"
+      },
+      {
+        "file": "jetbrains-mono-500.woff2",
+        "weight": "500",
+        "style": "normal"
+      }
+    ]
+  },
+  {
+    "name": "dm-sans",
+    "variable": true,
+    "files": [
+      {
+        "file": "dm-sans-100-1000.woff2",
+        "weight": "100 1000",
+        "style": "normal"
+      }
+    ]
+  },
+  {
+    "name": "poppins",
+    "variable": false,
+    "files": [
+      {
+        "file": "poppins-400.woff2",
+        "weight": "400",
+        "style": "normal"
+      },
+      {
+        "file": "poppins-500.woff2",
+        "weight": "500",
+        "style": "normal"
+      },
+      {
+        "file": "poppins-600.woff2",
+        "weight": "600",
+        "style": "normal"
+      }
+    ]
+  },
+  {
+    "name": "fraunces",
+    "variable": true,
+    "files": [
+      {
+        "file": "fraunces-400-700.woff2",
+        "weight": "400 700",
+        "style": "normal"
+      }
+    ]
+  },
+  {
+    "name": "newsreader",
+    "variable": true,
+    "files": [
+      {
+        "file": "newsreader-400-600.woff2",
+        "weight": "400 600",
+        "style": "normal"
+      }
+    ]
+  }
+]

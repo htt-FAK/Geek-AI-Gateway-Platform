@@ -15,6 +15,8 @@ export async function GET(req: Request) {
       disabled: true,
       mustChangePassword: true,
       litellmKeyTokenEnc: true,
+      balanceGrantedCny: true,
+      balanceUnlimited: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -36,6 +38,8 @@ export async function GET(req: Request) {
         disabled: u.disabled,
         mustChangePassword: u.mustChangePassword,
         keyMode,
+        balanceGrantedCny: u.balanceGrantedCny,
+        balanceUnlimited: u.balanceUnlimited,
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
       };

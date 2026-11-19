@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ConsolePage, useMe } from "@/components/console";
+import { getMarketModel } from "@/lib/model-market";
 import { envPublicGateway } from "@/lib/public-env";
 import {
   defaultThinkingStop,
@@ -16,12 +17,26 @@ type Msg = {
   role: "user" | "assistant" | "system";
   content: string;
   reasoningContent?: string;
+  /** 用户消息附带的图片（data URL），仅视觉模型可发送 */
+  images?: string[];
 };
+
+type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+const MAX_IMAGES = 4;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/** 调试台只做文本对话：ASR/TTS 语音模型不进下拉（网关 API 侧仍可调用）。 */
+function isChatModel(m: string): boolean {
+  return !m.includes("-asr") && !m.includes("-tts");
+}
 
 export default function PlaygroundInner() {
   const { me, refresh } = useMe();
   const search = useSearchParams();
-  const [model, setModel] = useState("deepseek-v4-flash");
+  const [model, setModel] = useState("deepseek-flash");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(1024);
@@ -34,6 +49,7 @@ export default function PlaygroundInner() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [images, setImages] = useState<string[]>([]);
   const [uploadError, setUploadError] = useState("");
   const [tokens, setTokens] = useState({ in: 0, out: 0, total: 0 });
   const [thinkingStop, setThinkingStop] = useState<ThinkingStopId | null>(null);
@@ -42,6 +58,7 @@ export default function PlaygroundInner() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const chatModels = useMemo(() => (me?.models ?? []).filter(isChatModel), [me]);
   const thinkingProfile = useMemo(() => getThinkingProfile(model), [model]);
   const thinkingFields = useMemo(
     () => thinkingStopToRequest(thinkingProfile, thinkingStop),
@@ -50,14 +67,15 @@ export default function PlaygroundInner() {
 
   useEffect(() => {
     const q = search.get("model");
-    if (q) setModel(q);
+    if (q && isChatModel(q)) setModel(q);
   }, [search]);
 
   useEffect(() => {
-    if (me?.models[0] && !search.get("model")) {
-      setModel((m) => (me.models.includes(m) ? m : me.models[0]));
+    const first = chatModels[0];
+    if (first && !search.get("model")) {
+      setModel((m) => (chatModels.includes(m) ? m : first));
     }
-  }, [me, search]);
+  }, [chatModels, search]);
 
   useEffect(() => {
     const next = defaultThinkingStop(thinkingProfile);
@@ -94,6 +112,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
 
   function clearChat() {
     setMessages([]);
+    setImages([]);
     setTokens({ in: 0, out: 0, total: 0 });
     setError("");
     setOpenReasoning({});
@@ -122,13 +141,42 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
     }
     setUploadError("");
     try {
-      const chunks: string[] = [];
-      for (const file of pendingFiles) {
-        const text = await file.text();
-        chunks.push(`【附件: ${file.name}】\n${text}`);
+      const imgFiles = pendingFiles.filter((f) => f.type.startsWith("image/"));
+      const txtFiles = pendingFiles.filter((f) => !f.type.startsWith("image/"));
+
+      if (imgFiles.length) {
+        if (!getMarketModel(model)?.capabilities.vision) {
+          setUploadError(`模型 ${model} 不支持图像输入，请换 deepseek-flash 或 MiMo v2.6 系列`);
+          return;
+        }
+        if (images.length + imgFiles.length > MAX_IMAGES) {
+          setUploadError(`单次对话最多 ${MAX_IMAGES} 张图片`);
+          return;
+        }
+        for (const file of imgFiles) {
+          if (file.size > MAX_IMAGE_BYTES) {
+            setUploadError(`图片 ${file.name} 超过 5MB 限制`);
+            return;
+          }
+          const url = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(new Error("read failed"));
+            reader.readAsDataURL(file);
+          });
+          setImages((prev) => [...prev, url]);
+        }
       }
-      const block = chunks.join("\n\n");
-      setInput((prev) => (prev.trim() ? `${prev.trim()}\n\n${block}` : block));
+
+      if (txtFiles.length) {
+        const chunks: string[] = [];
+        for (const file of txtFiles) {
+          const text = await file.text();
+          chunks.push(`【附件: ${file.name}】\n${text}`);
+        }
+        const block = chunks.join("\n\n");
+        setInput((prev) => (prev.trim() ? `${prev.trim()}\n\n${block}` : block));
+      }
       setPendingFiles([]);
       setUploadOpen(false);
     } catch {
@@ -138,22 +186,41 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
 
   async function onSend(e?: FormEvent) {
     e?.preventDefault();
-    if (!input.trim() || loading) return;
+    if ((!input.trim() && images.length === 0) || loading) return;
     setError("");
-    const userMsg: Msg = { role: "user", content: input.trim() };
+    const vision = getMarketModel(model)?.capabilities.vision ?? false;
+    const hasImages = images.length > 0 || messages.some((m) => m.images?.length);
+    if (hasImages && !vision) {
+      setError(`模型 ${model} 不支持图像输入，请切换视觉模型或清空对话`);
+      return;
+    }
+    const userMsg: Msg = {
+      role: "user",
+      content: input.trim(),
+      ...(images.length ? { images } : {}),
+    };
     const history = [...messages, userMsg];
     setMessages(history);
     setInput("");
+    setImages([]);
     setLoading(true);
 
-    const payloadMessages: Msg[] = [];
+    const payloadMessages: { role: string; content: string | ContentPart[] }[] = [];
     if (systemPrompt.trim()) {
       payloadMessages.push({ role: "system", content: systemPrompt.trim() });
     }
     payloadMessages.push(
       ...history
         .filter((m) => m.role !== "system")
-        .map((m) => ({ role: m.role, content: m.content })),
+        .map((m) => ({
+          role: m.role,
+          content: m.images?.length
+            ? [
+                { type: "text" as const, text: m.content || "请描述这张图片" },
+                ...m.images.map((url) => ({ type: "image_url" as const, image_url: { url } })),
+              ]
+            : m.content,
+        })),
     );
 
     const ac = new AbortController();
@@ -315,6 +382,18 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                 <div className="text-[12px] font-medium uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
                   {m.role}
                 </div>
+                {m.role === "user" && m.images?.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {m.images.map((url, j) => (
+                      <img
+                        key={j}
+                        src={url}
+                        alt={`附图 ${j + 1}`}
+                        className="max-h-40 rounded-[var(--radius-md)] border border-[var(--border-subtle)]"
+                      />
+                    ))}
+                  </div>
+                ) : null}
                 {m.role === "assistant" && m.reasoningContent ? (
                   <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
                     <button
@@ -347,6 +426,27 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
         <form onSubmit={onSend} className="shrink-0 pt-2">
           {error ? <p className="mb-2 text-[13px] text-[var(--status-error)]">{error}</p> : null}
           <div className="playground-composer">
+            {images.length ? (
+              <div className="flex flex-wrap gap-2 px-3 pt-2">
+                {images.map((url, i) => (
+                  <span key={i} className="relative inline-block">
+                    <img
+                      src={url}
+                      alt={`待发送图片 ${i + 1}`}
+                      className="h-14 w-14 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] object-cover"
+                    />
+                    <button
+                      type="button"
+                      aria-label="移除图片"
+                      className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[10px] leading-none"
+                      onClick={() => setImages((p) => p.filter((_, j) => j !== i))}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
             <textarea
               className="playground-composer-input"
               value={input}
@@ -400,7 +500,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
                 >
-                  {(me?.models ?? [model]).map((m) => (
+                  {(chatModels.length ? chatModels : [model]).map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>

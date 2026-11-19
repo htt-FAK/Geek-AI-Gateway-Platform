@@ -19,7 +19,8 @@ services:
   litellm:
     image: docker.litellm.ai/berriai/litellm:v1.83.14-stable
     ports:
-      - "4000:4000"
+      # 仅绑定本机回环：用户预算在网关上，但 Master Key 不应暴露到公网
+      - "127.0.0.1:4000:4000"
     volumes:
       - ./config.yaml:/app/config.yaml
       - ./callbacks.py:/app/callbacks.py

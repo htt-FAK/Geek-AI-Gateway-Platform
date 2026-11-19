@@ -1,70 +1,70 @@
 import type { Metadata } from "next";
-import {
-  DM_Sans,
-  DM_Serif_Display,
-  Fraunces,
-  IBM_Plex_Mono,
-  Inter,
-  JetBrains_Mono,
-  Newsreader,
-  Poppins,
-} from "next/font/google";
+import localFont from "next/font/local";
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import "./skins.css";
 
-const display = DM_Serif_Display({
+// 字体本地化（latin 子集 woff2 在 src/fonts/，由 scripts/fetch-local-fonts.mjs 下载）。
+// 原 next/font/google 在构建期拉 fonts.googleapis.com，国内网络常被断连导致构建失败。
+const display = localFont({
+  src: "../fonts/dm-serif-display-400.woff2",
   variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["400"],
+  weight: "400",
   display: "swap",
-  adjustFontFallback: true,
 });
 
-const mono = IBM_Plex_Mono({
+const mono = localFont({
+  src: [
+    { path: "../fonts/ibm-plex-mono-400.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/ibm-plex-mono-500.woff2", weight: "500", style: "normal" },
+  ],
   variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
 });
 
-const inter = Inter({
+const inter = localFont({
+  src: "../fonts/inter-100-900.woff2",
   variable: "--font-inter",
-  subsets: ["latin"],
+  weight: "100 900",
   display: "swap",
 });
 
-const jb = JetBrains_Mono({
+const jb = localFont({
+  src: [
+    { path: "../fonts/jetbrains-mono-400.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/jetbrains-mono-500.woff2", weight: "500", style: "normal" },
+  ],
   variable: "--font-jb",
-  subsets: ["latin"],
-  weight: ["400", "500"],
   display: "swap",
 });
 
-const dm = DM_Sans({
+const dm = localFont({
+  src: "../fonts/dm-sans-100-1000.woff2",
   variable: "--font-dm",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "100 1000",
   display: "swap",
 });
 
-const poppins = Poppins({
+const poppins = localFont({
+  src: [
+    { path: "../fonts/poppins-400.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/poppins-500.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/poppins-600.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
   display: "swap",
 });
 
-const fraunces = Fraunces({
+const fraunces = localFont({
+  src: "../fonts/fraunces-400-700.woff2",
   variable: "--font-fraunces",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700",
   display: "swap",
 });
 
-const newsreader = Newsreader({
+const newsreader = localFont({
+  src: "../fonts/newsreader-400-600.woff2",
   variable: "--font-newsreader",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: "400 600",
   display: "swap",
 });
 

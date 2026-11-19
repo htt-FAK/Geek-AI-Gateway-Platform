@@ -398,60 +398,37 @@ export function ModelCallChartPanel({
   );
 }
 
-/** Empty chrome used by admin usage skeleton (no live series). */
-export function EmptyChartPanel({
-  title,
-  totalLabel,
-  toggles,
-  activeToggle,
-  onToggle,
+/** 账户余额面板：余额 = 累计充值 − 累计花费（网关直连花费也计入）。 */
+export function BalancePanel({
+  balance,
 }: {
-  title: string;
-  totalLabel: string;
-  toggles: string[];
-  activeToggle: string;
-  onToggle: (t: string) => void;
-}) {
-  return (
-    <PanelChrome
-      title={title}
-      totalLabel={totalLabel}
-      toggles={toggles}
-      activeToggle={activeToggle}
-      onToggle={onToggle}
-    >
-      <ChartEmpty />
-    </PanelChrome>
-  );
-}
-
-export function BudgetColumns({
-  budget,
-}: {
-  budget: {
-    dailyUsed: number;
-    weeklyUsed: number;
-    monthlyUsed: number;
-    dailyLimit: number;
-    weeklyLimit: number;
-    monthlyLimit: number;
+  balance: {
+    unlimited: boolean;
+    grantedCny: number;
+    spendCny: number;
+    balanceCny: number | null;
   };
 }) {
-  const cols = [
-    { label: "日限额", used: budget.dailyUsed, limit: budget.dailyLimit },
-    { label: "周限额", used: budget.weeklyUsed, limit: budget.weeklyLimit },
-    { label: "月限额", used: budget.monthlyUsed, limit: budget.monthlyLimit },
-  ];
+  const pct =
+    !balance.unlimited && balance.grantedCny > 0
+      ? Math.min(100, (balance.spendCny / balance.grantedCny) * 100)
+      : 0;
   return (
     <div className="panel grid grid-cols-1 divide-y divide-[var(--border-subtle)] md:grid-cols-3 md:divide-x md:divide-y-0">
-      {cols.map((c) => {
-        const pct = c.limit > 0 ? Math.min(100, (c.used / c.limit) * 100) : 0;
-        return (
-          <div key={c.label} className="p-5">
-            <div className="text-sm text-[var(--text-secondary)]">{c.label}</div>
-            <div className="mt-2 tabular text-lg font-semibold text-[var(--accent-primary)]">
-              {pct.toFixed(1)}%
-            </div>
+      <div className="p-5">
+        <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+          账户余额
+          {balance.unlimited ? (
+            <span className="rounded-[var(--radius-sm)] bg-[var(--accent-muted)] px-1.5 py-0.5 text-[11px] text-[var(--accent-primary)]">
+              不限额
+            </span>
+          ) : null}
+        </div>
+        <div className="mt-2 tabular text-2xl font-semibold text-[var(--accent-primary)]">
+          {balance.unlimited ? "∞" : `¥${(balance.balanceCny ?? 0).toFixed(2)}`}
+        </div>
+        {!balance.unlimited ? (
+          <>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--bg-surface)]">
               <div
                 className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-200"
@@ -459,11 +436,23 @@ export function BudgetColumns({
               />
             </div>
             <div className="mt-2 tabular text-xs text-[var(--text-tertiary)]">
-              ¥{c.used.toFixed(2)} / ¥{c.limit.toFixed(2)}
+              已用 {pct.toFixed(1)}% · 余额耗尽将暂停调用
             </div>
-          </div>
-        );
-      })}
+          </>
+        ) : (
+          <div className="mt-3 text-xs text-[var(--text-tertiary)]">测试账号 · 不受余额限制</div>
+        )}
+      </div>
+      <div className="p-5">
+        <div className="text-sm text-[var(--text-secondary)]">累计充值</div>
+        <div className="mt-2 tabular text-lg font-semibold">¥{balance.grantedCny.toFixed(2)}</div>
+        <div className="mt-2 text-xs text-[var(--text-tertiary)]">管理员充值入口：用户管理</div>
+      </div>
+      <div className="p-5">
+        <div className="text-sm text-[var(--text-secondary)]">累计花费</div>
+        <div className="mt-2 tabular text-lg font-semibold">¥{balance.spendCny.toFixed(4)}</div>
+        <div className="mt-2 text-xs text-[var(--text-tertiary)]">含控制台与 API 直连</div>
+      </div>
     </div>
   );
 }

@@ -13,13 +13,11 @@ export type MePayload = {
   gatewayUrl: string;
   canRevealKey: boolean;
   canRegenerateKey: boolean;
-  budget: {
-    dailyUsed: number;
-    weeklyUsed: number;
-    monthlyUsed: number;
-    dailyLimit: number;
-    weeklyLimit: number;
-    monthlyLimit: number;
+  balance: {
+    unlimited: boolean;
+    grantedCny: number;
+    spendCny: number;
+    balanceCny: number | null;
   };
 };
 

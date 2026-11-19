@@ -6,6 +6,9 @@ from typing import Any, Optional
 
 from litellm.integrations.custom_logger import CustomLogger
 
+import prisma_engine_compat  # noqa: F401  side-effect: Windows 引擎存活探测/重连兼容
+import rerank_compat  # noqa: F401  side-effect: 修复硅基流动 rerank 的 document: null
+import usage_breakdown_compat  # noqa: F401  side-effect: MiMo 截断思考 breakdown 超 completion 的超收
 from deepseek_peak import billable_cost, is_deepseek_model, is_peak, to_shanghai
 
 
@@ -23,7 +26,8 @@ class DeepSeekPeakPricingLogger(CustomLogger):
         sl = kwargs.get("standard_logging_object")
         if base is None and isinstance(sl, dict):
             base = sl.get("response_cost")
-        if base is None:
+        if base is None or float(base) <= 0:
+            # 0 成本（限时免费）模型不打峰时标记
             return
 
         adjusted = billable_cost(float(base), str(model), moment)

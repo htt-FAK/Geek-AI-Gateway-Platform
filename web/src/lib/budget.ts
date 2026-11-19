@@ -1,84 +1,67 @@
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
-import { fetchKeySpendLastDays } from "@/lib/litellm";
+import { fetchUserSpend } from "@/lib/litellm";
 
-export async function getAppSpendSince(userId: string, since: Date): Promise<number> {
+/** 本地 SpendEvent 全量合计（网关离线 / 应用代持时的回退口径）。 */
+export async function getAppSpendTotal(userId: string): Promise<number> {
   const agg = await prisma.spendEvent.aggregate({
-    where: { userId, createdAt: { gte: since } },
+    where: { userId },
     _sum: { costCny: true },
   });
   return agg._sum.costCny ?? 0;
 }
 
-/** Start of current calendar month in Asia/Shanghai, as a Date (UTC instant). */
-export function startOfMonthShanghai(now = new Date()): Date {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-  const y = Number(parts.find((p) => p.type === "year")?.value);
-  const m = Number(parts.find((p) => p.type === "month")?.value);
-  // Shanghai is UTC+8 year-round: month start 00:00 CST = previous day 16:00 UTC
-  return new Date(Date.UTC(y, m - 1, 1, -8, 0, 0));
-}
-
-export type BudgetUsage = {
-  dailyUsed: number;
-  weeklyUsed: number;
-  monthlyUsed: number;
-  dailyLimit: number;
-  weeklyLimit: number;
-  monthlyLimit: number;
+export type BalanceInfo = {
+  unlimited: boolean;
+  grantedCny: number;
+  spendCny: number;
+  /** 不限额时为 null（无上限） */
+  balanceCny: number | null;
 };
 
-export async function getBudgetUsage(params: {
+/**
+ * 余额 = 累计充值 − 累计花费。
+ * 花费优先取网关用户级 spend（覆盖控制台 + Virtual Key 直连两条路径）；
+ * 网关离线或应用代持时回退本地 SpendEvent 合计。
+ */
+export async function getBalance(params: {
   userId: string;
+  litellmUserId: string | null;
   litellmKeyToken: string | null;
-}): Promise<BudgetUsage> {
-  const { dailyBudgetCny, weeklyBudgetCny, monthlyBudgetCny } = env();
-  const now = Date.now();
-  const dayAgo = new Date(now - 24 * 60 * 60 * 1000);
-  const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
-  const monthStart = startOfMonthShanghai(new Date(now));
+}): Promise<BalanceInfo> {
+  const user = await prisma.user.findUnique({
+    where: { id: params.userId },
+    select: { balanceGrantedCny: true, balanceUnlimited: true },
+  });
+  const grantedCny = user?.balanceGrantedCny ?? 0;
+  const unlimited = user?.balanceUnlimited ?? false;
 
-  const appDaily = await getAppSpendSince(params.userId, dayAgo);
-  const appWeekly = await getAppSpendSince(params.userId, weekAgo);
-  const appMonthly = await getAppSpendSince(params.userId, monthStart);
-
-  let gwDaily = 0;
-  let gwWeekly = 0;
-  if (params.litellmKeyToken && !params.litellmKeyToken.startsWith("__app_enforced__:")) {
-    gwDaily = await fetchKeySpendLastDays(params.litellmKeyToken, 1);
-    gwWeekly = await fetchKeySpendLastDays(params.litellmKeyToken, 7);
+  let spendCny = 0;
+  const isAppEnforced =
+    !params.litellmKeyToken || params.litellmKeyToken.startsWith("__app_enforced__:");
+  if (!isAppEnforced && params.litellmUserId) {
+    const gwSpend = await fetchUserSpend(params.litellmUserId);
+    spendCny = gwSpend ?? (await getAppSpendTotal(params.userId));
+  } else {
+    spendCny = await getAppSpendTotal(params.userId);
   }
 
   return {
-    dailyUsed: Math.max(appDaily, gwDaily),
-    weeklyUsed: Math.max(appWeekly, gwWeekly),
-    monthlyUsed: appMonthly,
-    dailyLimit: dailyBudgetCny,
-    weeklyLimit: weeklyBudgetCny,
-    monthlyLimit: monthlyBudgetCny,
+    unlimited,
+    grantedCny,
+    spendCny,
+    balanceCny: unlimited ? null : Math.max(0, grantedCny - spendCny),
   };
 }
 
-export async function assertWithinBudget(params: {
+/** 余额门：不限额账户直接放行；余额耗尽抛 BudgetError（路由侧转 402）。 */
+export async function assertHasBalance(params: {
   userId: string;
+  litellmUserId: string | null;
   litellmKeyToken: string | null;
 }): Promise<void> {
-  const usage = await getBudgetUsage(params);
-  const isAppEnforced = !params.litellmKeyToken || params.litellmKeyToken.startsWith("__app_enforced__:");
-
-  if (isAppEnforced && usage.dailyUsed >= usage.dailyLimit) {
-    throw new BudgetError(`日限额已用尽（¥${usage.dailyLimit}/天）`);
-  }
-  if (usage.weeklyUsed >= usage.weeklyLimit) {
-    throw new BudgetError(`周限额已用尽（¥${usage.weeklyLimit}/周）`);
-  }
-  if (usage.monthlyUsed >= usage.monthlyLimit) {
-    throw new BudgetError(`月限额已用尽（¥${usage.monthlyLimit}/月）`);
+  const balance = await getBalance(params);
+  if (!balance.unlimited && (balance.balanceCny ?? 0) <= 0) {
+    throw new BudgetError("余额不足，请联系管理员充值");
   }
 }
 

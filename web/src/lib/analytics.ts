@@ -11,6 +11,7 @@ export type AnalyticsEvent = {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
+  userId?: string | null;
 };
 
 export type SeriesPoint = {
@@ -162,6 +163,7 @@ function fromSpendLogs(rows: NormalizedSpendLog[]): AnalyticsEvent[] {
     promptTokens: r.promptTokens,
     completionTokens: r.completionTokens,
     totalTokens: r.totalTokens,
+    userId: r.userId,
   }));
 }
 
@@ -180,10 +182,11 @@ export async function buildUserAnalytics(params: {
 
   if (usableVk) {
     try {
-      const logs = await fetchKeySpendLogs(litellmKeyToken, from, to);
-      if (logs.length > 0) {
+      const page = await fetchKeySpendLogs(litellmKeyToken, from, to);
+      // page === null 是网关查询失败（≠ 没有流量）：回退本地口径并用 mixed_fallback 标注
+      if (page && page.logs.length > 0) {
         return {
-          ...aggregateEvents(fromSpendLogs(logs), from, to, granularity),
+          ...aggregateEvents(fromSpendLogs(page.logs), from, to, granularity),
           source: "litellm",
         };
       }

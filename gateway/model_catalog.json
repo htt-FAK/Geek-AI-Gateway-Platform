@@ -7,27 +7,30 @@
   },
   "sources": {
     "deepseek": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
-    "mimo": "https://platform.xiaomimimo.com/static/docs/price/pay-as-you-go.md",
-    "mimo_ultraspeed": "https://mimo.mi.com/models/en-US/mimo-v2.5-pro-ultraspeed"
+    "mimo": "https://mimo.mi.com/models/en-US/mimo-v2.6-pro",
+    "xfyun": "https://maas.xfyun.cn/",
+    "siliconflow": "https://docs.siliconflow.cn/"
   },
   "deepseek_peak_pricing": {
     "timezone": "Asia/Shanghai",
     "multiplier": 2.0,
+    "days": "mon-fri",
+    "exclude": "cn_public_holidays",
     "windows": [
       { "start": "09:00", "end": "12:00" },
       { "start": "14:00", "end": "18:00" }
     ],
-    "note": "Applies to all DeepSeek billable items; base rates in models[] are off-peak CNY"
+    "note": "Peak = off-peak x2, weekdays only (Beijing time); weekends and Chinese public holidays are off-peak all day. Base rates in models[] are off-peak CNY. Holiday calendar maintained in deepseek_peak.py PUBLIC_HOLIDAYS."
   },
   "models": [
     {
-      "id": "deepseek-v4-flash",
+      "id": "deepseek-flash",
       "provider": "deepseek",
-      "modality": "text",
+      "modality": "text+vision",
       "pricing_cny": {
         "cache_hit_per_million": 0.02,
         "input_miss_per_million": 1.0,
-        "output_per_million": 2.0
+        "output_per_million": 4.0
       }
     },
     {
@@ -35,15 +38,15 @@
       "provider": "deepseek",
       "modality": "text",
       "pricing_cny": {
-        "cache_hit_per_million": 0.025,
-        "input_miss_per_million": 3.0,
-        "output_per_million": 6.0
+        "cache_hit_per_million": 0.15,
+        "input_miss_per_million": 4.5,
+        "output_per_million": 13.5
       }
     },
     {
-      "id": "mimo-v2.5-pro",
+      "id": "mimo-v2.6-pro",
       "provider": "mimo",
-      "modality": "text",
+      "modality": "omni",
       "pricing_cny": {
         "cache_hit_per_million": 0.025,
         "input_miss_per_million": 3.0,
@@ -51,23 +54,70 @@
       }
     },
     {
-      "id": "mimo-v2.5-pro-ultraspeed",
-      "provider": "mimo",
-      "modality": "text",
-      "pricing_cny": {
-        "cache_hit_per_million": 0.075,
-        "input_miss_per_million": 9.0,
-        "output_per_million": 18.0
-      }
-    },
-    {
-      "id": "mimo-v2.5",
+      "id": "mimo-v2.6-flash",
       "provider": "mimo",
       "modality": "omni",
       "pricing_cny": {
         "cache_hit_per_million": 0.02,
         "input_miss_per_million": 1.0,
         "output_per_million": 2.0
+      }
+    },
+    {
+      "id": "xing4.0-29b",
+      "provider": "siliconflow",
+      "modality": "text",
+      "pricing_cny": {
+        "note": "limited_time_free"
+      }
+    },
+    {
+      "id": "qwen3.5-4b",
+      "provider": "siliconflow",
+      "modality": "text+vision",
+      "pricing_cny": {
+        "note": "limited_time_free"
+      }
+    },
+    {
+      "id": "deepseek-ocr",
+      "provider": "siliconflow",
+      "modality": "text+vision",
+      "pricing_cny": {
+        "note": "limited_time_free"
+      }
+    },
+    {
+      "id": "bge-m3",
+      "provider": "siliconflow",
+      "modality": "embedding",
+      "pricing_cny": {
+        "note": "limited_time_free"
+      }
+    },
+    {
+      "id": "bge-large-zh-v1.5",
+      "provider": "siliconflow",
+      "modality": "embedding",
+      "pricing_cny": {
+        "note": "limited_time_free"
+      }
+    },
+    {
+      "id": "bge-reranker-v2-m3",
+      "provider": "siliconflow",
+      "modality": "rerank",
+      "pricing_cny": {
+        "note": "limited_time_free"
+      }
+    },
+    {
+      "id": "spark-x2.6",
+      "provider": "xfyun",
+      "modality": "text",
+      "pricing_cny": {
+        "note": "limited_time_free",
+        "delist": "2026-11-28"
       }
     },
     {

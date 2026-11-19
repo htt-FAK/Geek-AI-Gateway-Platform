@@ -4,11 +4,10 @@
  */
 
 const MODELS = [
-  "deepseek-v4-flash",
+  "deepseek-flash",
   "deepseek-v4-pro",
-  "mimo-v2.5-pro",
-  "mimo-v2.5-pro-ultraspeed",
-  "mimo-v2.5",
+  "mimo-v2.6-pro",
+  "mimo-v2.6-flash",
   "mimo-v2.5-asr",
   "mimo-v2.5-tts",
   "mimo-v2.5-tts-voiceclone",
@@ -17,7 +16,7 @@ const MODELS = [
 
 function isThinkingUnsupported(model) {
   const id = model.toLowerCase();
-  if (id === "deepseek-v4-flash") return true;
+  if (id === "deepseek-flash") return true;
   if (id.includes("-asr")) return true;
   if (id.includes("-tts")) return true;
   return false;
@@ -50,7 +49,7 @@ function check(cond, msg) {
 
 for (const model of MODELS) {
   const kind = profileKind(model);
-  if (model === "deepseek-v4-flash" || model.includes("-asr") || model.includes("-tts")) {
+  if (model === "deepseek-flash" || model.includes("-asr") || model.includes("-tts")) {
     check(kind === "none", `${model} must be none`);
     check(Object.keys(toRequest(kind, "on")).length === 0, `${model} must send no thinking fields`);
     continue;

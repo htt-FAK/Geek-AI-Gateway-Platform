@@ -12,14 +12,14 @@ The playground SHALL expose a discrete thinking-depth stepper in the composer to
 - **THEN** the chat request includes `thinking.type=enabled` and `reasoning_effort=max`
 
 #### Scenario: MiMo two-stop slider
-- **WHEN** the user selects `mimo-v2.5-pro` and sets thinking depth to 开启 then sends
+- **WHEN** the user selects `mimo-v2.6-pro` and sets thinking depth to 开启 then sends
 - **THEN** the chat request includes `thinking.type=enabled` and MUST NOT require a `reasoning_effort` value for correctness
 
 ### Requirement: Hide thinking depth for unsupported models
-When the selected model is `deepseek-v4-flash`, any ASR model, or any TTS model, the playground SHALL hide the thinking-depth control and MUST NOT send thinking-related fields on the next chat request.
+When the selected model is `deepseek-flash`, any ASR model, or any TTS model, the playground SHALL hide the thinking-depth control and MUST NOT send thinking-related fields on the next chat request.
 
 #### Scenario: Flash hides slider
-- **WHEN** the user selects `deepseek-v4-flash`
+- **WHEN** the user selects `deepseek-flash`
 - **THEN** the thinking-depth stepper is not visible in the composer
 
 #### Scenario: ASR hides slider

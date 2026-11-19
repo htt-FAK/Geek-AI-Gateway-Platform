@@ -43,7 +43,7 @@
 
 <p align="center">
   <img src="docs/images/02-dashboard.png" alt="用量看板" width="860" /><br/>
-  <sub>用量看板 · 日 / 周 / 月限额与 Token 趋势</sub>
+  <sub>用量看板 · 账户余额与 Token 趋势</sub>
 </p>
 
 <br/>
@@ -116,11 +116,14 @@
 
 ## Features
 
-- **统一网关** — OpenAI 兼容 `/v1`；DeepSeek / MiMo；峰时计费可配  
-- **控制台** — 手机号登录、预算、用量曲线、密钥轮换、模型文档  
+- **统一网关** — OpenAI 兼容 `/v1`；DeepSeek / MiMo；峰时计费可配（工作日峰时 ×2，周末 / 节假日错峰）  
+- **控制台** — 手机号登录、预算、用量曲线、模型文档  
+- **多密钥管理** — 阿里云式 API Key 面板：创建 / 查看 / 复制 / 编辑 / 删除，描述 / 有效期 / 按 Key 选模型 / 预算  
+- **模型广场** — 卡片网格 + 详情页（价格 / 限流与上下文 / 能力矩阵 / 调用示例）  
+- **模型榜单** — 模型 × 思考档位的智能 / 速度 / 延迟 / 价格对比（Artificial Analysis 公开数据）  
 - **调试台** — 流式输出、思考深度、附件、cURL / SDK 示例  
 - **多皮肤** — 8 套整站气质；侧栏几何统一；进入页品牌钉死  
-- **一键运维** — `deploy/` Compose + `scripts/deploy.sh` / `test.sh`
+- **一键运维** — `deploy/` Compose + `scripts/deploy.sh` / `test.sh` / `local-postgres.sh`
 
 <div align="center">
 
@@ -154,6 +157,21 @@ npm run dev
 
 打开 http://localhost:3000/login
 
+**多密钥管理（可选）**：需要 LiteLLM 密钥库（Postgres）。无 Docker 时可用免安装二进制：
+
+```bash
+# 下载 PostgreSQL 16 windows-x64-binaries zip，解压到纯英文路径（中文路径会导致 initdb 失败）
+# 默认 C:/Users/Public/aigw-pgsql，可用 PGROOT 覆盖
+./scripts/local-postgres.sh init     # 初始化 + 启动 + 建库（仅监听 127.0.0.1）
+./scripts/local-postgres.sh status   # start / stop 同理
+# gateway/.env 设 DATABASE_URL=postgresql://litellm@127.0.0.1:5432/litellm 后重启网关
+# 首次需 pip install prisma 并 python -m prisma generate --schema <litellm/proxy/schema.prisma>
+```
+
+DB 在线时控制台「密钥」页支持创建多把 Key（描述 / 有效期 / 按 Key 选模型 / 预算）；
+明文在创建时加密留存本地（`ApiKeyLocal` 表），支持随时查看 / 复制。
+IP 白名单为 LiteLLM 企业版功能，本地免费版不提供。
+
 </details>
 
 <details>
@@ -168,6 +186,21 @@ chmod +x scripts/*.sh deploy/web-entrypoint.sh
 
 </details>
 
+<details>
+<summary><b>Windows 生产纳管（PM2 进程守护）</b></summary>
+
+```bash
+npm install -g pm2
+cd web && npm run build && cd ..   # 生产构建（勿与 npm run dev 同时跑）
+./scripts/pm2-up.sh                # Postgres → 网关 :4000 → Web :3000，kill 自动拉起
+./scripts/pm2-boot-install.sh      # 开机自启（登录触发，无需管理员）
+pm2 status && pm2 logs             # 状态 / 日志（logs/pm2-*.log）
+```
+
+完整运维口径（健康检查、计费对账、踩坑、备份、年度维护）见 [`docs/运维手册.md`](docs/运维手册.md)。
+
+</details>
+
 ---
 
 ## Models
@@ -176,11 +209,10 @@ chmod +x scripts/*.sh deploy/web-entrypoint.sh
 
 | Provider | Model | 说明 |
 |:--------:|:-----:|:----:|
-| DeepSeek | `deepseek-v4-flash` | 更快更省 |
+| DeepSeek | `deepseek-flash` | 更快更省 · 图像理解 |
 | DeepSeek | `deepseek-v4-pro` | 旗舰 · 思考档 |
-| MiMo | `mimo-v2.5-pro` | 文本旗舰 |
-| MiMo | `mimo-v2.5-pro-ultraspeed` | 高速档 |
-| MiMo | `mimo-v2.5` | 全模态 |
+| MiMo | `mimo-v2.6-pro` | 全模态旗舰 · 思考档 |
+| MiMo | `mimo-v2.6-flash` | 更快更省 |
 | MiMo | `mimo-v2.5-asr` / `*-tts*` | 语音 |
 
 </div>
@@ -189,7 +221,7 @@ chmod +x scripts/*.sh deploy/web-entrypoint.sh
 curl "$GATEWAY/v1/chat/completions" \
   -H "Authorization: Bearer $AI_GATEWAY_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"Hello"}]}'
+  -d '{"model":"deepseek-flash","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
 控制台 **模型 → 文档** 可查看每个模型的官方说明与完整示例。
@@ -225,6 +257,7 @@ docs/     交接 · README 截图
 
 | 文档 | 路径 |
 |:----:|:----:|
+| 运维手册 | [`docs/运维手册.md`](docs/运维手册.md) |
 | 后续工单 | [`docs/后续工单-生产就绪.md`](docs/后续工单-生产就绪.md) |
 | 交接 | [`docs/实现交接-手机号登录与网关.md`](docs/实现交接-手机号登录与网关.md) |
 | 开发 | [`AI网关平台-开发文档.md`](AI网关平台-开发文档.md) |

@@ -12,6 +12,7 @@ const NAV = [
   { href: "/playground", label: "调试台", icon: "playground" },
   { href: "/dashboard", label: "看板", icon: "dashboard" },
   { href: "/models", label: "模型", icon: "models" },
+  { href: "/leaderboard", label: "榜单", icon: "leaderboard" },
   { href: "/keys", label: "密钥", icon: "keys" },
 ] as const;
 
@@ -62,6 +63,16 @@ function NavIcon({ id, size = 20 }: { id: NavIconId; size?: number }) {
           <path d="M10.2 10.2 15 15" />
           <path d="M15 15h4.5v2.5H15z" />
           <path d="M15 17.5v2" />
+        </svg>
+      );
+    case "leaderboard":
+      return (
+        <svg {...common}>
+          <path d="M8 21h8" />
+          <path d="M12 17v4" />
+          <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+          <path d="M7 5H4.5v1.5A3 3 0 0 0 7 9.5" />
+          <path d="M17 5h2.5v1.5a3 3 0 0 1-2.5 3" />
         </svg>
       );
   }

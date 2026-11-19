@@ -27,13 +27,17 @@ rand_b64() {
   openssl rand -base64 "$1" | tr -d '\n'
 }
 
+rand_url() {
+  openssl rand -base64 "$1" | tr -d '\n=' | tr '+/' '-_'
+}
+
 set_if_placeholder() {
   local key="$1"
   local value="$2"
   local current
   current="$(grep -E "^${key}=" "$ENV_FILE" | head -n1 | cut -d= -f2- || true)"
   case "$current" in
-    ""|sk-change-me*|replace-with*|admin-change-me*|MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=)
+    ""|sk-change-me*|replace-with*|admin-change-me*|ChangeMe123|MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=)
       if grep -qE "^${key}=" "$ENV_FILE"; then
         # portable in-place replace
         awk -v k="$key" -v v="$value" 'BEGIN{FS=OFS="="} $1==k{$0=k"="v} {print}' "$ENV_FILE" >"$ENV_FILE.tmp"
@@ -50,6 +54,8 @@ set_if_placeholder "LITELLM_MASTER_KEY" "sk-$(rand_hex 24)"
 set_if_placeholder "ADMIN_TOKEN" "admin-$(rand_hex 16)"
 set_if_placeholder "AUTH_SECRET" "$(rand_hex 32)"
 set_if_placeholder "CREDENTIALS_ENCRYPTION_KEY" "$(rand_b64 32)"
+# 默认用户密码同样强随机（首登强制改密兜底，但弱默认密码仍有撞库窗口）
+set_if_placeholder "DEFAULT_USER_PASSWORD" "$(rand_url 18)"
 
 echo ""
 echo "Review upstream keys in $ENV_FILE:"

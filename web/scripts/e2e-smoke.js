@@ -1,5 +1,5 @@
 /**
- * Smoke: import -> change password -> chat -> budget gate
+ * Smoke: import -> topup -> change password -> chat -> balance gate
  * Loads web/.env; does not print secrets.
  */
 const fs = require("fs");
@@ -52,6 +52,15 @@ async function main() {
   });
   console.log(imp.status, JSON.stringify(imp.json));
 
+  console.log("1b) topup ¥10 (balance system: new accounts start at ¥0)");
+  const topup = await req("/api/admin/users/topup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-admin-token": ADMIN },
+    body: JSON.stringify({ phone: PHONE, amountCny: 10, note: "smoke" }),
+  });
+  console.log(topup.status, JSON.stringify(topup.json));
+  if (!topup.json.ok) throw new Error("topup failed");
+
   console.log("2) login default");
   const login = await req("/api/auth/login", {
     method: "POST",
@@ -76,7 +85,7 @@ async function main() {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookie },
     body: JSON.stringify({
-      model: "deepseek-v4-flash",
+      model: "deepseek-flash",
       stream: false,
       max_tokens: 16,
       messages: [{ role: "user", content: "回复一个字：好" }],
@@ -84,39 +93,33 @@ async function main() {
   });
   console.log(chat.status, chat.json.error || chat.json.choices?.[0]?.message?.content?.slice(0, 80) || JSON.stringify(chat.json).slice(0, 200));
 
-  console.log("5) me budget");
+  console.log("5) me balance");
   const me = await req("/api/me", { headers: { Cookie: cookie } });
-  console.log(me.status, JSON.stringify(me.json.budget), me.json.keyMode);
+  console.log(me.status, JSON.stringify(me.json.balance), me.json.keyMode);
 
-  console.log("6) weekly gate (inject spend)");
+  console.log("6) balance gate (zero out granted)");
   const { PrismaLibSql } = require("@prisma/adapter-libsql");
   const { PrismaClient } = require("@prisma/client");
   const dbUrl = `file:${path.resolve(__dirname, "..", "dev.db")}`;
   const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: dbUrl }) });
   const user = await prisma.user.findUnique({ where: { phone: PHONE } });
   if (!user) throw new Error("user missing");
-  await prisma.spendEvent.deleteMany({ where: { userId: user.id } });
-  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-  await prisma.spendEvent.create({
-    data: {
-      userId: user.id,
-      costCny: 200,
-      model: "deepseek-v4-flash",
-      createdAt: threeDaysAgo,
-    },
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { balanceGrantedCny: 0 },
   });
   const blocked = await req("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookie },
     body: JSON.stringify({
-      model: "deepseek-v4-flash",
+      model: "deepseek-flash",
       stream: false,
       messages: [{ role: "user", content: "hi" }],
     }),
   });
   console.log(blocked.status, JSON.stringify(blocked.json));
-  if (blocked.status !== 402 || !String(blocked.json.error || "").includes("周限额")) {
-    throw new Error("expected 402 weekly gate");
+  if (blocked.status !== 402 || !String(blocked.json.error || "").includes("余额不足")) {
+    throw new Error("expected 402 balance gate");
   }
   await prisma["$disconnect"]();
   console.log("SMOKE_OK");

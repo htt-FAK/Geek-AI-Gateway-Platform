@@ -1,3 +1,10 @@
+import { createHash } from "crypto";
+
+/** LiteLLM 以 sha256(key) 作为 token 哈希。 */
+export function hashKey(key: string): string {
+  return createHash("sha256").update(key).digest("hex");
+}
+
 /** Mask API key for list/me responses — never return full plaintext here. */
 export function maskApiKey(token: string | null | undefined): string | null {
   if (!token) return null;

@@ -8,12 +8,15 @@
  *   export LITELLM_MASTER_KEY=...
  *   export ADMIN_TOKEN=...
  *   export DEFAULT_USER_PASSWORD=...
- *   export ALLOW_TEST_HOOKS=true   # web 进程也要开，才能测周限额注入
  *   export REQUIRE_VIRTUAL_KEY=true  # Docker+Postgres 部署后应设 true
+ *   export SKIP_LIVE_LLM=true        # 跳过真实模型调用（余额闸门用充值驱动，无需真烧钱）
  *   node web/scripts/server-e2e.mjs
  *
  * 或从 web 目录: npm run test:server
  * 会自动尝试加载 web/.env 与 gateway/.env（不覆盖已有环境变量）
+ *
+ * 计费口径：余额 = 累计充值 − 累计花费（网关用户级 max_budget = balanceGrantedCny）。
+ * 余额闸门通过「新用户 0 余额 → 402 → 管理员充值 → chat 成功」驱动，不再注入测试花费。
  */
 
 import fs from "node:fs";
@@ -47,7 +50,7 @@ const GW = (process.env.GATEWAY_BASE_URL || "http://127.0.0.1:4000").replace(/\/
 const MASTER = process.env.LITELLM_MASTER_KEY;
 const ADMIN = process.env.ADMIN_TOKEN;
 const DEFAULT_PWD = process.env.DEFAULT_USER_PASSWORD;
-const MODEL = process.env.TEST_MODEL || "deepseek-v4-flash";
+const MODEL = process.env.TEST_MODEL || "deepseek-flash";
 const REQUIRE_VK = process.env.REQUIRE_VIRTUAL_KEY === "true";
 const SKIP_LLM = process.env.SKIP_LIVE_LLM === "true";
 const PHONE = process.env.TEST_PHONE || `138${String(Date.now()).slice(-8)}`;
@@ -166,8 +169,8 @@ async function main() {
         method: "POST",
         headers: { Authorization: `Bearer ${MASTER}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: `phone:e2e-daily-${PHONE}`,
-          key_alias: `e2e-daily-${PHONE}`,
+          user_id: `phone:e2e-budget-${PHONE}`,
+          key_alias: `e2e-budget-${PHONE}`,
           models: [MODEL],
           max_budget: 0.000001,
           budget_duration: "24h",
@@ -185,15 +188,15 @@ async function main() {
           }),
         });
         assert(
-          "gateway 日限额硬拦截（极低 max_budget）",
+          "gateway 预算硬拦截（极低 max_budget 直连被拒）",
           blocked.status === 400 || blocked.status === 402 || blocked.status === 429 || blocked.status >= 500,
           `status=${blocked.status} ${String(blocked.text).slice(0, 160)}`,
         );
       } else {
-        fail("gateway 日限额硬拦截（极低 max_budget）", `无法发卡 status=${tiny.status}`);
+        fail("gateway 预算硬拦截（极低 max_budget 直连被拒）", `无法发卡 status=${tiny.status}`);
       }
     } else if (!vkOk) {
-      ok("gateway 日限额硬拦截（跳过）", "无 Virtual Key / DB，跳过");
+      ok("gateway 预算硬拦截（跳过）", "无 Virtual Key / DB，跳过");
     }
   }
 
@@ -291,12 +294,26 @@ async function main() {
     cookie = cookieJar(login2.setCookie);
   }
 
-  // ---------- D. /me + Key 模式 ----------
-  console.log("\n[D] 会话与 Key 模式");
+  // ---------- D. /me + 余额字段 ----------
+  console.log("\n[D] 会话与余额字段");
   {
     const me = await http(WEB, "/api/me", { headers: { Cookie: cookie } });
     assert("/api/me 200", me.status === 200, `status=${me.status}`);
-    assert("budget 字段齐全", me.json.budget?.dailyLimit > 0 && me.json.budget?.weeklyLimit > 0, JSON.stringify(me.json.budget));
+    const bal = me.json.balance;
+    assert(
+      "balance 字段齐全（grantedCny/spendCny/balanceCny/unlimited）",
+      bal &&
+        typeof bal.grantedCny === "number" &&
+        typeof bal.spendCny === "number" &&
+        (bal.balanceCny === null || typeof bal.balanceCny === "number") &&
+        typeof bal.unlimited === "boolean",
+      JSON.stringify(bal),
+    );
+    assert(
+      "新用户初始余额 0",
+      bal && bal.grantedCny === 0 && (bal.balanceCny === 0 || bal.balanceCny === null),
+      JSON.stringify(bal),
+    );
     assert("models 非空", Array.isArray(me.json.models) && me.json.models.includes(MODEL), String(me.json.models?.length));
     if (REQUIRE_VK) {
       assert("keyMode=virtual_key", me.json.keyMode === "virtual_key", `keyMode=${me.json.keyMode}`);
@@ -305,82 +322,92 @@ async function main() {
     }
   }
 
-  // ---------- E. 对话 ----------
-  console.log("\n[E] Playground 对话代理");
-  if (SKIP_LLM) {
-    ok("跳过真实 LLM 调用", "SKIP_LIVE_LLM=true");
-  } else {
-    const chat = await http(WEB, "/api/chat", {
+  // ---------- E. 余额闸门 + 充值后对话 ----------
+  console.log("\n[E] 余额闸门与对话代理");
+  {
+    // 新用户余额 0：/api/chat 必须 402，且文案含「余额不足」
+    const blocked = await http(WEB, "/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: cookie },
       body: JSON.stringify({
         model: MODEL,
         stream: false,
-        max_tokens: 16,
-        messages: [{ role: "user", content: "只回复一个字：好" }],
+        messages: [{ role: "user", content: "hi" }],
       }),
     });
     assert(
-      "非流式对话",
-      chat.status === 200 &&
-        (Boolean(chat.json.choices?.[0]?.message?.content) ||
-          Boolean(chat.json.choices?.[0]?.message) ||
-          chat.json.object === "chat.completion"),
-      `status=${chat.status} ${String(chat.text).slice(0, 180)}`,
+      "零余额 chat → 402 余额不足",
+      blocked.status === 402 && String(blocked.json.error || "").includes("余额不足"),
+      `status=${blocked.status} ${JSON.stringify(blocked.json)}`,
     );
 
-    const stream = await http(WEB, "/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Cookie: cookie },
-      body: JSON.stringify({
-        model: MODEL,
-        stream: true,
-        max_tokens: 16,
-        messages: [{ role: "user", content: "只回复一个字：好" }],
-      }),
-    });
-    assert(
-      "流式对话",
-      stream.status === 200 && (stream.text.includes("data:") || stream.text.includes("choices")),
-      `status=${stream.status} ${stream.text.slice(0, 120)}`,
-    );
-
-    const me2 = await http(WEB, "/api/me", { headers: { Cookie: cookie } });
-    ok("对话后额度展示", `dailyUsed=${me2.json.budget?.dailyUsed} weeklyUsed=${me2.json.budget?.weeklyUsed}`);
-  }
-
-  // ---------- F. 周限额（测试钩子） ----------
-  console.log("\n[F] 周限额闸门");
-  {
-    const inject = await http(WEB, "/api/admin/test/spend", {
+    // 管理员充值 ¥10：网关用户级 max_budget 同步成功才能 200
+    const topup = await http(WEB, "/api/admin/users/topup", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-admin-token": ADMIN },
-      body: JSON.stringify({ phone: PHONE, costCny: 200, daysAgo: 3, clearExisting: true }),
+      body: JSON.stringify({ phone: PHONE, amountCny: 10, note: "e2e" }),
     });
-    if (inject.status === 403) {
-      fail("周限额注入", "web 未开启 ALLOW_TEST_HOOKS=true，无法测周限额");
+    assert(
+      "充值 200 且网关预算已同步",
+      topup.status === 200 && topup.json.ok === true && topup.json.gwSynced === true,
+      `status=${topup.status} ${JSON.stringify(topup.json)}`,
+    );
+    assert(
+      "充值后累计充值到账",
+      topup.status === 200 && topup.json.balanceGrantedCny === 10,
+      JSON.stringify(topup.json),
+    );
+
+    const me = await http(WEB, "/api/me", { headers: { Cookie: cookie } });
+    assert(
+      "充值后 /api/me 余额可用",
+      me.json.balance?.grantedCny === 10 && (me.json.balance?.balanceCny ?? 0) > 0,
+      JSON.stringify(me.json.balance),
+    );
+
+    if (SKIP_LLM) {
+      ok("跳过真实 LLM 调用", "SKIP_LIVE_LLM=true");
     } else {
-      assert("注入近 7 日 spend=200", inject.status === 200 && inject.json.ok === true, JSON.stringify(inject.json));
-      const blocked = await http(WEB, "/api/chat", {
+      const chat = await http(WEB, "/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", Cookie: cookie },
         body: JSON.stringify({
           model: MODEL,
           stream: false,
-          messages: [{ role: "user", content: "hi" }],
+          max_tokens: 16,
+          messages: [{ role: "user", content: "只回复一个字：好" }],
         }),
       });
       assert(
-        "周限额 → 402",
-        blocked.status === 402 && String(blocked.json.error || "").includes("周限额"),
-        `status=${blocked.status} ${JSON.stringify(blocked.json)}`,
+        "非流式对话",
+        chat.status === 200 &&
+          (Boolean(chat.json.choices?.[0]?.message?.content) ||
+            Boolean(chat.json.choices?.[0]?.message) ||
+            chat.json.object === "chat.completion"),
+        `status=${chat.status} ${String(chat.text).slice(0, 180)}`,
       );
 
-      const cleared = await http(WEB, `/api/admin/test/spend?phone=${PHONE}`, {
-        method: "DELETE",
-        headers: { "x-admin-token": ADMIN },
+      const stream = await http(WEB, "/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Cookie: cookie },
+        body: JSON.stringify({
+          model: MODEL,
+          stream: true,
+          max_tokens: 16,
+          messages: [{ role: "user", content: "只回复一个字：好" }],
+        }),
       });
-      assert("清理测试 spend", cleared.status === 200, JSON.stringify(cleared.json));
+      assert(
+        "流式对话",
+        stream.status === 200 && (stream.text.includes("data:") || stream.text.includes("choices")),
+        `status=${stream.status} ${stream.text.slice(0, 120)}`,
+      );
+
+      const me2 = await http(WEB, "/api/me", { headers: { Cookie: cookie } });
+      ok(
+        "对话后余额展示",
+        `grantedCny=${me2.json.balance?.grantedCny} spendCny=${me2.json.balance?.spendCny} balanceCny=${me2.json.balance?.balanceCny}`,
+      );
     }
   }
 

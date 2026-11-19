@@ -1,9 +1,15 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { EmptyChartPanel, KpiRow } from "@/components/charts";
+import {
+  ConsumptionChartPanel,
+  KpiRow,
+  ModelCallChartPanel,
+  type SeriesPoint,
+} from "@/components/charts";
 
 type UsagePayload = {
+  source: "litellm" | "litellm_truncated" | "spend_event";
   kpis: {
     totalRequests: number;
     totalAmountCny: number;
@@ -11,6 +17,8 @@ type UsagePayload = {
     avgRpm: number;
     avgTpm: number;
   };
+  consumptionSeries: SeriesPoint[];
+  modelInvocationSeries: SeriesPoint[];
   members: Array<{
     phone?: string;
     spendCny?: number;
@@ -23,8 +31,10 @@ export default function AdminUsagePage() {
   const [adminToken, setAdminToken] = useState("");
   const [data, setData] = useState<UsagePayload | null>(null);
   const [error, setError] = useState("");
-  const [consumeToggle, setConsumeToggle] = useState("柱状图");
-  const [modelToggle, setModelToggle] = useState("调用趋势");
+  const [consumeToggle, setConsumeToggle] = useState<"柱状图" | "面积图">("柱状图");
+  const [modelToggle, setModelToggle] = useState<"调用趋势" | "调用次数分布" | "调用次数排行">(
+    "调用趋势",
+  );
 
   async function load(e?: FormEvent) {
     e?.preventDefault();
@@ -47,6 +57,8 @@ export default function AdminUsagePage() {
     }
     setData(json);
   }
+
+  const hasData = data !== null;
 
   return (
     <main className="min-h-screen bg-[var(--bg-base)] px-6 py-8 text-[var(--text-primary)]">
@@ -76,74 +88,98 @@ export default function AdminUsagePage() {
             加载
           </button>
         </form>
-        {error ? <p className="text-sm text-[var(--status-error)]">{error}</p> : null}
+        {error ? (
+          <p className="text-sm text-[var(--status-error)]" role="alert">
+            {error}
+          </p>
+        ) : null}
 
-        <KpiRow
-          items={[
-            { label: "总数", value: String(data?.kpis.totalRequests ?? 0), hint: "统计计数" },
-            {
-              label: "总额度",
-              value: `¥${data?.kpis.totalAmountCny ?? 0}`,
-              hint: "统计金额",
-            },
-            { label: "总 TOKEN 数", value: String(data?.kpis.totalTokens ?? 0), hint: "统计 Token 数" },
-            { label: "平均 RPM", value: String(data?.kpis.avgRpm ?? 0), hint: "每分钟请求数" },
-            { label: "平均 TPM", value: String(data?.kpis.avgTpm ?? 0), hint: "每分钟 Token 数" },
-          ]}
-        />
+        {/*
+          加载失败（接口 503 / source=error）时不渲染任何 0 值面板，
+          只显示上面的错误提示，避免「看起来像没流量」。
+        */}
+        {hasData && data.source === "litellm_truncated" ? (
+          <p className="text-xs text-[var(--status-warning)]">
+            日志量过大，仅统计最近 5000 条（source=litellm_truncated），数字可能偏小。
+          </p>
+        ) : null}
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <EmptyChartPanel
-            title="消耗分布"
-            totalLabel="总计: ¥0"
-            toggles={["柱状图", "面积图"]}
-            activeToggle={consumeToggle}
-            onToggle={setConsumeToggle}
-          />
-          <EmptyChartPanel
-            title="模型调用分析"
-            totalLabel="总计: 0"
-            toggles={["调用趋势", "调用次数分布", "调用次数排行"]}
-            activeToggle={modelToggle}
-            onToggle={setModelToggle}
-          />
-        </div>
+        {hasData ? (
+          <>
+            <KpiRow
+              items={[
+                { label: "总数", value: String(data.kpis.totalRequests), hint: "统计计数" },
+                {
+                  label: "总额度",
+                  value: `¥${data.kpis.totalAmountCny.toFixed(4)}`,
+                  hint: "统计金额",
+                },
+                {
+                  label: "总 TOKEN 数",
+                  value: String(data.kpis.totalTokens),
+                  hint: "统计 Token 数",
+                },
+                { label: "平均 RPM", value: data.kpis.avgRpm.toFixed(2), hint: "每分钟请求数" },
+                {
+                  label: "平均 TPM",
+                  value: String(Math.round(data.kpis.avgTpm)),
+                  hint: "每分钟 Token 数",
+                },
+              ]}
+            />
 
-        <section className="panel overflow-hidden">
-          <div className="border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium">
-            成员排行
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-[13px] text-[var(--text-tertiary)]">
-                <tr>
-                  <th className="px-4 py-3 font-normal">手机号</th>
-                  <th className="px-4 py-3 font-normal">费用</th>
-                  <th className="px-4 py-3 font-normal">请求</th>
-                  <th className="px-4 py-3 font-normal">Token</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data?.members?.length ?? 0) === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-10 text-center text-[var(--text-tertiary)]">
-                      暂无成员用量数据
-                    </td>
-                  </tr>
-                ) : (
-                  data!.members.map((m, i) => (
-                    <tr key={i} className="border-t border-[var(--border-subtle)]">
-                      <td className="px-4 py-3 mono">{m.phone}</td>
-                      <td className="px-4 py-3 tabular">¥{(m.spendCny ?? 0).toFixed(2)}</td>
-                      <td className="px-4 py-3 tabular">{m.requests ?? 0}</td>
-                      <td className="px-4 py-3 tabular">{m.tokens ?? 0}</td>
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <ConsumptionChartPanel
+                series={data.consumptionSeries}
+                mode={consumeToggle}
+                onModeChange={setConsumeToggle}
+                totalSpendCny={data.kpis.totalAmountCny}
+              />
+              <ModelCallChartPanel
+                series={data.modelInvocationSeries}
+                mode={modelToggle}
+                onModeChange={setModelToggle}
+                totalCount={data.kpis.totalRequests}
+              />
+            </div>
+
+            <section className="panel overflow-hidden">
+              <div className="border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium">
+                成员排行
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="text-[13px] text-[var(--text-tertiary)]">
+                    <tr>
+                      <th className="px-4 py-3 font-normal">手机号</th>
+                      <th className="px-4 py-3 font-normal">费用</th>
+                      <th className="px-4 py-3 font-normal">请求</th>
+                      <th className="px-4 py-3 font-normal">Token</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                  </thead>
+                  <tbody>
+                    {data.members.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-10 text-center text-[var(--text-tertiary)]">
+                          暂无成员用量数据
+                        </td>
+                      </tr>
+                    ) : (
+                      data.members.map((m, i) => (
+                        <tr key={i} className="border-t border-[var(--border-subtle)]">
+                          <td className="px-4 py-3 mono">{m.phone}</td>
+                          <td className="px-4 py-3 tabular">¥{(m.spendCny ?? 0).toFixed(2)}</td>
+                          <td className="px-4 py-3 tabular">{m.requests ?? 0}</td>
+                          <td className="px-4 py-3 tabular">{m.tokens ?? 0}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
+        ) : null}
       </div>
     </main>
   );

@@ -7,6 +7,8 @@ type AdminUser = {
   disabled: boolean;
   mustChangePassword: boolean;
   keyMode: "virtual_key" | "app_enforced" | "none";
+  balanceGrantedCny: number;
+  balanceUnlimited: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -106,7 +108,7 @@ export default function AdminUsersPage() {
         <div>
           <h2 className="text-lg font-medium">导入用户</h2>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            每行一个手机号。将创建账号、默认密码，并尝试签发 Virtual Key（日 ¥50 / 周 ¥200 / 月 ¥400）。
+            每行一个手机号。将创建账号、默认密码，并尝试签发 Virtual Key（初始余额 ¥0，充值后可用）。
           </p>
         </div>
         <label className="block space-y-1.5">
@@ -172,13 +174,14 @@ export default function AdminUsersPage() {
                 <th className="py-2 pr-3">手机号</th>
                 <th className="py-2 pr-3">状态</th>
                 <th className="py-2 pr-3">Key</th>
+                <th className="py-2 pr-3">累计充值</th>
                 <th className="py-2">操作</th>
               </tr>
             </thead>
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-4 muted">
+                  <td colSpan={5} className="py-4 muted">
                     暂无数据，填写 Token 后点「刷新用户列表」
                   </td>
                 </tr>
@@ -191,7 +194,44 @@ export default function AdminUsersPage() {
                       {u.mustChangePassword ? " · 待改密" : ""}
                     </td>
                     <td className="py-2 pr-3 mono">{u.keyMode}</td>
+                    <td className="py-2 pr-3 tabular whitespace-nowrap">
+                      ¥{u.balanceGrantedCny.toFixed(2)}
+                      {u.balanceUnlimited ? " · 不限额" : ""}
+                    </td>
                     <td className="py-2 space-x-2 whitespace-nowrap">
+                      <button
+                        className="btn"
+                        type="button"
+                        onClick={() => {
+                          const amt = prompt(`给 ${u.phone} 充值金额（¥）`, "50");
+                          if (amt === null) return;
+                          const n = Number(amt);
+                          if (!Number.isFinite(n) || n <= 0) {
+                            setActionMsg("充值金额需为正数");
+                            return;
+                          }
+                          void runAction(
+                            "/api/admin/users/topup",
+                            { phone: u.phone, amountCny: n },
+                            `已充值 ¥${n} → ${u.phone}`,
+                          );
+                        }}
+                      >
+                        充值
+                      </button>
+                      <button
+                        className="btn"
+                        type="button"
+                        onClick={() =>
+                          runAction(
+                            "/api/admin/users/topup",
+                            { phone: u.phone, unlimited: !u.balanceUnlimited },
+                            u.balanceUnlimited ? `已取消不限额 ${u.phone}` : `已设为不限额 ${u.phone}`,
+                          )
+                        }
+                      >
+                        {u.balanceUnlimited ? "取消不限额" : "不限额"}
+                      </button>
                       <button
                         className="btn"
                         type="button"

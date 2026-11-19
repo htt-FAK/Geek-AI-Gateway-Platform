@@ -303,7 +303,7 @@
 
 | Model ID | 说明（文档一句话） |
 |----------|-------------------|
-| `deepseek-v4-flash` | 更快、更省的 V4 文本模型 |
+| `deepseek-flash` | 更快、更省的 V4 文本模型 |
 | `deepseek-v4-pro` | 更强的 V4 旗舰文本模型 |
 
 > 官方曾用 `deepseek-chat` / `deepseek-reasoner` 等旧名；**本网关文档与示例默认只用上表 V4 ID**（与 [DeepSeek 现网文档](https://api-docs.deepseek.com/zh-cn/) 对齐）。
@@ -395,7 +395,7 @@
 |-------|-------|
 | base_url (OpenAI SDK) | `{{GATEWAY_BASE_URL}}/v1` |
 | api_key | 控制台创建的网关密钥 |
-| 推荐试跑 model | `deepseek-v4-flash` 或 `MiMo-V2.5-Pro` |
+| 推荐试跑 model | `deepseek-flash` 或 `MiMo-V2.5-Pro` |
 
 **curl 示例骨架**
 
@@ -442,7 +442,7 @@ const client = new OpenAI({
 });
 
 const completion = await client.chat.completions.create({
-  model: "deepseek-v4-flash",
+  model: "deepseek-flash",
   messages: [{ role: "user", content: "Hello" }],
 });
 console.log(completion.choices[0].message.content);

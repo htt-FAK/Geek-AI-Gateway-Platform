@@ -58,9 +58,8 @@ export async function middleware(req: NextRequest) {
     if (!mustChange && pathname === "/change-password") {
       return NextResponse.redirect(new URL("/playground", req.url));
     }
-    if (!mustChange && (pathname === "/login" || pathname === "/")) {
-      return NextResponse.redirect(new URL("/playground", req.url));
-    }
+    // 注意：/ 与 /login 在 PUBLIC 集合里提前返回，页面自己判断会话并跳转；
+    // 这里不需要（也走不到）对这两个路径的重定向。
     return NextResponse.next();
   } catch {
     if (pathname.startsWith("/api/")) {

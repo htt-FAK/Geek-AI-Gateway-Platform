@@ -17,9 +17,41 @@ model User {
   litellmKeyTokenEnc String?
   litellmKeyId       String?
   keyRevealedAt      DateTime?
+  /// 累计充值额度（余额 = 累计充值 − 累计花费）
+  balanceGrantedCny  Float    @default(0)
+  /// 不限额（测试账号）；网关侧 max_budget 置 null
+  balanceUnlimited   Boolean  @default(false)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   spendEvents        SpendEvent[]
+  apiKeys            ApiKeyLocal[]
+  topUps             BalanceTopUp[]
+}
+
+/// 管理员充值流水（审计用）
+model BalanceTopUp {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountCny Float
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// 本地留存的密钥明文副本（AES-256-GCM 加密）。
+/// LiteLLM 只存哈希、明文仅在创建时返回一次，故创建时在此留存以支持随时查看/复制。
+model ApiKeyLocal {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  litellmToken String   @unique
+  keyName      String
+  keyEnc       String
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
 }
 
 model SpendEvent {
@@ -28,6 +60,8 @@ model SpendEvent {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   costCny          Float
   model            String
+  /// 产生该笔消费的密钥（LiteLLM key_name）；应用代持 / 旧数据为 null
+  keyName          String?
   promptTokens     Int      @default(0)
   completionTokens Int      @default(0)
   totalTokens      Int      @default(0)

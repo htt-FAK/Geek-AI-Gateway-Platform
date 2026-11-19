@@ -19,12 +19,18 @@ services:
   litellm:
     image: docker.litellm.ai/berriai/litellm:v1.83.14-stable
     ports:
-      - "4000:4000"
+      # 默认仅本机可访问：用户预算在网关上，但 Master Key 不应暴露到公网；
+      # 确需对外暴露时设 GATEWAY_BIND=0.0.0.0（并自行加防火墙/反代鉴权）
+      - "${GATEWAY_BIND:-127.0.0.1}:4000:4000"
     volumes:
       - ../gateway/config.yaml:/app/config.yaml
       - ../gateway/callbacks.py:/app/callbacks.py
       - ../gateway/deepseek_peak.py:/app/deepseek_peak.py
       - ../gateway/model_catalog.json:/app/model_catalog.json
+      # callbacks.py 依赖的兼容补丁（缺一个都会 ImportError 起不来）
+      - ../gateway/rerank_compat.py:/app/rerank_compat.py
+      - ../gateway/prisma_engine_compat.py:/app/prisma_engine_compat.py
+      - ../gateway/usage_breakdown_compat.py:/app/usage_breakdown_compat.py
     env_file:
       - .env
     environment:
@@ -50,7 +56,11 @@ services:
       context: ..
       dockerfile: deploy/web.Dockerfile
     ports:
-      - "3000:3000"
+      # ⚠ 生产 NODE_ENV=production 时会话 Cookie 带 Secure：浏览器只在 HTTPS 或
+      # 本机 localhost 上发送。用局域网/公网 IP 的 http://…:3000 访问会登不进去
+      # （Cookie 不被带上，反复跳登录页）。对外服务必须前置反代终止 HTTPS；
+      # 反代与 Web 同机时建议 WEB_BIND=127.0.0.1，不要把 3000 裸暴露到公网。
+      - "${WEB_BIND:-127.0.0.1}:3000:3000"
     env_file:
       - .env
     environment:
@@ -62,14 +72,22 @@ services:
       AUTH_SECRET: ${AUTH_SECRET}
       CREDENTIALS_ENCRYPTION_KEY: ${CREDENTIALS_ENCRYPTION_KEY}
       ADMIN_TOKEN: ${ADMIN_TOKEN}
-      DAILY_BUDGET_CNY: ${DAILY_BUDGET_CNY:-50}
-      WEEKLY_BUDGET_CNY: ${WEEKLY_BUDGET_CNY:-200}
       ALLOW_TEST_HOOKS: ${ALLOW_TEST_HOOKS:-false}
     volumes:
       - web_data:/data
     depends_on:
       litellm:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
 volumes:

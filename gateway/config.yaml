@@ -1,18 +1,18 @@
 model_list:
   # ---------- DeepSeek ----------
-  - model_name: deepseek-v4-flash
+  - model_name: deepseek-flash
     litellm_params:
-      model: deepseek/deepseek-v4-flash
+      model: deepseek/deepseek-flash
       api_key: os.environ/DEEPSEEK_API_KEY
     model_info:
       currency: CNY
       mode: chat
       input_cost_per_token: 0.000001
-      output_cost_per_token: 0.000002
+      output_cost_per_token: 0.000004
       cache_read_input_token_cost: 0.00000002
       input_cost_per_million_cny: 1.0
       cache_hit_cost_per_million_cny: 0.02
-      output_cost_per_million_cny: 2.0
+      output_cost_per_million_cny: 4.0
 
   - model_name: deepseek-v4-pro
     litellm_params:
@@ -21,17 +21,17 @@ model_list:
     model_info:
       currency: CNY
       mode: chat
-      input_cost_per_token: 0.000003
-      output_cost_per_token: 0.000006
-      cache_read_input_token_cost: 0.000000025
-      input_cost_per_million_cny: 3.0
-      cache_hit_cost_per_million_cny: 0.025
-      output_cost_per_million_cny: 6.0
+      input_cost_per_token: 0.0000045
+      output_cost_per_token: 0.0000135
+      cache_read_input_token_cost: 0.00000015
+      input_cost_per_million_cny: 4.5
+      cache_hit_cost_per_million_cny: 0.15
+      output_cost_per_million_cny: 13.5
 
   # ---------- MiMo text ----------
-  - model_name: mimo-v2.5-pro
+  - model_name: mimo-v2.6-pro
     litellm_params:
-      model: openai/mimo-v2.5-pro
+      model: openai/mimo-v2.6-pro
       api_base: https://api.xiaomimimo.com/v1
       api_key: os.environ/MIMO_API_KEY
     model_info:
@@ -44,25 +44,10 @@ model_list:
       cache_hit_cost_per_million_cny: 0.025
       output_cost_per_million_cny: 6.0
 
-  - model_name: mimo-v2.5-pro-ultraspeed
+  # ---------- MiMo flash ----------
+  - model_name: mimo-v2.6-flash
     litellm_params:
-      model: openai/mimo-v2.5-pro-ultraspeed
-      api_base: https://api.xiaomimimo.com/v1
-      api_key: os.environ/MIMO_API_KEY
-    model_info:
-      currency: CNY
-      mode: chat
-      input_cost_per_token: 0.000009
-      output_cost_per_token: 0.000018
-      cache_read_input_token_cost: 0.000000075
-      input_cost_per_million_cny: 9.0
-      cache_hit_cost_per_million_cny: 0.075
-      output_cost_per_million_cny: 18.0
-
-  # ---------- MiMo omni ----------
-  - model_name: mimo-v2.5
-    litellm_params:
-      model: openai/mimo-v2.5
+      model: openai/mimo-v2.6-flash
       api_base: https://api.xiaomimimo.com/v1
       api_key: os.environ/MIMO_API_KEY
     model_info:
@@ -74,6 +59,92 @@ model_list:
       input_cost_per_million_cny: 1.0
       cache_hit_cost_per_million_cny: 0.02
       output_cost_per_million_cny: 2.0
+
+  # ---------- 硅基流动（OpenAI 兼容，全部限时免费 ¥0） ----------
+  # reranker 走 jina_ai 兼容变换（硅基流动 /v1/rerank 与 Jina 格式一致）。
+  - model_name: xing4.0-29b
+    litellm_params:
+      model: openai/XingChenAGI/Xing4.0-29B
+      api_base: https://api.siliconflow.cn/v1
+      api_key: os.environ/SILICONFLOW_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      pricing_note: limited_time_free
+
+  - model_name: qwen3.5-4b
+    litellm_params:
+      model: openai/Qwen/Qwen3.5-4B
+      api_base: https://api.siliconflow.cn/v1
+      api_key: os.environ/SILICONFLOW_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      pricing_note: limited_time_free
+
+  - model_name: deepseek-ocr
+    litellm_params:
+      model: openai/deepseek-ai/DeepSeek-OCR
+      api_base: https://api.siliconflow.cn/v1
+      api_key: os.environ/SILICONFLOW_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      pricing_note: limited_time_free
+
+  - model_name: bge-m3
+    litellm_params:
+      model: openai/BAAI/bge-m3
+      api_base: https://api.siliconflow.cn/v1
+      api_key: os.environ/SILICONFLOW_API_KEY
+    model_info:
+      currency: CNY
+      mode: embedding
+      input_cost_per_token: 0
+      pricing_note: limited_time_free
+
+  - model_name: bge-large-zh-v1.5
+    litellm_params:
+      model: openai/BAAI/bge-large-zh-v1.5
+      api_base: https://api.siliconflow.cn/v1
+      api_key: os.environ/SILICONFLOW_API_KEY
+    model_info:
+      currency: CNY
+      mode: embedding
+      input_cost_per_token: 0
+      pricing_note: limited_time_free
+
+  - model_name: bge-reranker-v2-m3
+    litellm_params:
+      model: jina_ai/BAAI/bge-reranker-v2-m3
+      api_base: https://api.siliconflow.cn/v1
+      api_key: os.environ/SILICONFLOW_API_KEY
+    model_info:
+      currency: CNY
+      mode: rerank
+      input_cost_per_token: 0
+      pricing_note: limited_time_free
+
+  # ---------- 讯飞星火（星辰 MaaS，OpenAI 兼容） ----------
+  # 上游限时免费，官方 2026-11-28 下架该模型，到期需同步下线或替换。
+  # spark-x2.6-4b：key 无该服务订单（11200），用户已放弃接入，勿再接。
+  - model_name: spark-x2.6
+    litellm_params:
+      model: openai/spark-x2.6
+      api_base: https://maas-api.cn-huabei-1.xf-yun.com/v2
+      api_key: os.environ/XFYUN_MAAS_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      pricing_note: limited_time_free
 
   # ---------- MiMo speech ----------
   - model_name: mimo-v2.5-asr
