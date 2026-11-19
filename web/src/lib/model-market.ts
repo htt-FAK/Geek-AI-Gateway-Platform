@@ -476,4 +476,16 @@ export function priceLine(m: MarketModel): string {
   return m.peakPricing ? `${base}（峰时 ×2）` : base;
 }
 
+/** 是否免费模型（统一判定：note 含「免费」，或 token 价输入/输出均为 0）。 */
+export function isFreeModel(m: MarketModel): boolean {
+  if (m.pricing.kind === "note") return /免费/.test(m.pricing.note);
+  return m.pricing.inputPerM === 0 && m.pricing.outputPerM === 0;
+}
+
+/** 免费角标文案（限时免费 / 免费）。 */
+export function freeLabel(m: MarketModel): string {
+  if (m.pricing.kind === "note" && /限时免费/.test(m.pricing.note)) return "限时免费";
+  return "免费";
+}
+
 export { DS_PRICING };

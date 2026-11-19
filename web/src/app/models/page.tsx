@@ -7,6 +7,8 @@ import { ModelDocsDialog } from "@/components/model-docs-dialog";
 import { envPublicGateway } from "@/lib/public-env";
 import {
   MARKET_MODELS,
+  freeLabel,
+  isFreeModel,
   priceLine,
   providerLabel,
   providerLogo,
@@ -59,11 +61,18 @@ export default function ModelsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((m) => (
           <article key={m.id} className="panel group relative flex flex-col p-5 transition-colors hover:border-[var(--border-active)]">
-            {m.recommended ? (
-              <span className="absolute right-4 top-4 rounded-full bg-gradient-to-r from-[var(--brand-deepseek)] to-[#8296ff] px-2.5 py-0.5 text-[11px] font-medium leading-5 text-white shadow-sm">
-                推荐
-              </span>
-            ) : null}
+            <div className="absolute right-4 top-4 flex flex-col items-end gap-1">
+              {m.recommended ? (
+                <span className="rounded-full bg-gradient-to-r from-[var(--brand-deepseek)] to-[#8296ff] px-2.5 py-0.5 text-[11px] font-medium leading-5 text-white shadow-sm">
+                  推荐
+                </span>
+              ) : null}
+              {isFreeModel(m) ? (
+                <span className="rounded-full bg-gradient-to-r from-[#15803d] to-[#22c55e] px-2.5 py-0.5 text-[11px] font-semibold leading-5 text-white shadow-sm">
+                  {freeLabel(m)}
+                </span>
+              ) : null}
+            </div>
             <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -77,7 +86,7 @@ export default function ModelsPage() {
               {m.id}
             </h2>
             <div className="mt-2 flex flex-wrap gap-1">
-              {m.tags.map((t) => (
+              {m.tags.filter((t) => !/免费/.test(t)).map((t) => (
                 <span
                   key={t}
                   className="rounded-[var(--radius-sm)] bg-[var(--accent-muted)] px-1.5 py-0.5 text-[11px] text-[var(--accent-primary)]"
@@ -88,7 +97,7 @@ export default function ModelsPage() {
             </div>
             <p className="mt-3 line-clamp-2 flex-1 text-sm text-[var(--text-secondary)]">{m.tagline}</p>
             <div className="mt-4 space-y-1 border-t border-[var(--border-subtle)] pt-3 text-[13px]">
-              <p className="tabular">{priceLine(m)}</p>
+              <p className={`tabular ${isFreeModel(m) ? "font-semibold text-[#16a34a]" : ""}`}>{priceLine(m)}</p>
               {m.peakPricing ? (
                 <p className="text-[var(--status-warning)]">
                   峰时：工作日 09–12、14–18 ×2 · 节假日错峰
