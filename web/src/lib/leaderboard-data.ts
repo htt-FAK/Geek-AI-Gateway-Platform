@@ -4,9 +4,12 @@
  * 版本与网关一致：DeepSeek V4.1 Flash 1017 / V4 Pro 0813、MiMo V2.6 系列。
  * 速度 / 延迟采集自 AA 模型页；价格列为本网关官方 CNY 价。
  * 每任务成本保留美元原值（散点图对数轴用）与人民币折算（1 USD = 6.68 CNY，2026-11-18）。
- * ⚠ 2026-11-19：AA 指数改版（新口径范围约 40–61，旧 v5.0.1 为 12–32）。百炼 7 模型已上榜
- * （价格/规格真实，智能指数 null 待新口径数据）；存量行仍为旧口径，全量刷新需新口径数据源，
- * 刷新前勿把新旧口径数值直接比较。更新方式：编辑本文件并更新 LEADERBOARD_FETCHED_AT。
+ * ⚠ 口径混排提示：存量 DeepSeek/MiMo 行为 2026-11-18 旧 v5.0.1 口径（12–32）；
+ * 2026-11-19 从 AA /models 页 flight 数据解析出新口径智能指数＋输出速度，已填入
+ * qwen4-max(42.9)/kimi-k3.1-pro(46.5)/glm-5.3(31.7)。AA 指数已改版，新旧口径勿直接比较。
+ * 局限：/models 页仅「图表精选」模型有智能指数，其余（qwen3.8-flash/glm-5.3-flash/
+ * minimax-m3.1-flash/step-5-preview 等）仍 null；每任务成本该页全为 null，散点图 X 轴待
+ * AA leaderboard 页数据补全。更新方式：编辑本文件并更新 LEADERBOARD_FETCHED_AT。
  */
 
 export type LeaderboardRow = {
@@ -29,7 +32,7 @@ export type LeaderboardRow = {
   note?: string;
 };
 
-export const LEADERBOARD_FETCHED_AT = "2026-11-18";
+export const LEADERBOARD_FETCHED_AT = "2026-11-19";
 export const USD_CNY_RATE = 6.68;
 
 const AA_LEADERBOARD = "https://artificialanalysis.ai/zh/leaderboards/models";
@@ -176,8 +179,8 @@ export const LEADERBOARD_ROWS: LeaderboardRow[] = [
     model: "qwen4-max",
     variantId: "default",
     variantLabel: "默认",
-    intelligence: null,
-    speedTokS: null,
+    intelligence: 42.9,
+    speedTokS: 57,
     ttftS: null,
     costPerTaskUsd: null,
     costPerTaskCny: null,
@@ -186,8 +189,8 @@ export const LEADERBOARD_ROWS: LeaderboardRow[] = [
     context: "1M",
     maxOutput: "128K / 256K（思考）",
     source: AA_LEADERBOARD,
-    sourceLabel: "AA 评测（待补）",
-    note: "百炼旗舰；AA 新口径数据待补（截图仅标注 Qwen3.8 系列，未含 Qwen4-Max）。",
+    sourceLabel: "AA 评测",
+    note: "AA Intelligence Index 42.9（xhigh 档，2026-11-19 /models 页数据）；输出 57 tok/s。每任务成本 AA 未提供，散点图暂不显示。",
   },
   {
     model: "qwen3.8-flash",
@@ -210,8 +213,8 @@ export const LEADERBOARD_ROWS: LeaderboardRow[] = [
     model: "kimi-k3.1-pro",
     variantId: "default",
     variantLabel: "默认",
-    intelligence: null,
-    speedTokS: null,
+    intelligence: 46.5,
+    speedTokS: 31,
     ttftS: null,
     costPerTaskUsd: null,
     costPerTaskCny: null,
@@ -220,8 +223,8 @@ export const LEADERBOARD_ROWS: LeaderboardRow[] = [
     context: "1M",
     maxOutput: "以百炼模型页为准",
     source: AA_LEADERBOARD,
-    sourceLabel: "AA 评测（待补）",
-    note: "思考默认开启；AA 新图有 Kimi K3 (max) 约 59.7（坐标估读，未采入）。",
+    sourceLabel: "AA 评测",
+    note: "AA Intelligence Index 46.5（2026-11-19 /models 页数据）；输出 31 tok/s，思考默认开启。每任务成本 AA 未提供。",
   },
   {
     model: "glm-5.3-flash",
@@ -244,8 +247,8 @@ export const LEADERBOARD_ROWS: LeaderboardRow[] = [
     model: "glm-5.3",
     variantId: "default",
     variantLabel: "默认",
-    intelligence: null,
-    speedTokS: null,
+    intelligence: 31.7,
+    speedTokS: 81,
     ttftS: null,
     costPerTaskUsd: null,
     costPerTaskCny: null,
@@ -254,8 +257,8 @@ export const LEADERBOARD_ROWS: LeaderboardRow[] = [
     context: "1M",
     maxOutput: "以百炼模型页为准",
     source: AA_LEADERBOARD,
-    sourceLabel: "AA 评测（待补）",
-    note: "仅思考模式；AA 新图有 GLM-5.3 (max) 约 55.7（坐标估读，未采入）。",
+    sourceLabel: "AA 评测",
+    note: "AA Intelligence Index 31.7（Max 档，2026-11-19 /models 页数据）；输出 81 tok/s，仅思考模式。每任务成本 AA 未提供。",
   },
   {
     model: "minimax-m3.1-flash",
