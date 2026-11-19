@@ -17,7 +17,12 @@ services:
     restart: unless-stopped
 
   litellm:
-    image: docker.litellm.ai/berriai/litellm:v1.83.14-stable
+    # 自建镜像与本机运行时同版本（1.91.1）；官方 v1.83 镜像会让计费补丁失效。
+    # 国内构建走腾讯云 pip 镜像 + npmmirror prisma 引擎镜像（见 litellm.Dockerfile）。
+    build:
+      context: ..
+      dockerfile: deploy/litellm.Dockerfile
+    image: geek-litellm:1.91.1
     ports:
       # 默认仅本机可访问：用户预算在网关上，但 Master Key 不应暴露到公网；
       # 确需对外暴露时设 GATEWAY_BIND=0.0.0.0（并自行加防火墙/反代鉴权）

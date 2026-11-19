@@ -1,0 +1,17 @@
+# Caddy 反向代理示例（自动申请/续期 Let's Encrypt 证书，最省事的 HTTPS 方案）。
+# 前提：域名已解析到服务器公网 IP，安全组放行 80/443；国内地域域名需完成 ICP 备案。
+# 用法：复制到 /etc/caddy/Caddyfile（apt 安装 caddy 后），替换域名与邮箱，systemctl reload caddy。
+#
+# 为什么必须 HTTPS：Web 生产模式会话 Cookie 带 Secure，浏览器只在 HTTPS 或本机 localhost
+# 发送；用 http://公网IP:3000 访问会登不进去（反复跳登录页）。
+
+your-domain.example.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:3000
+}
+
+# 网关 :4000 不对公网暴露（compose 默认绑 127.0.0.1）。
+# 若确需对外提供 OpenAI 兼容 API（用户 SDK 直连），单独加一段并自行加鉴权/限流：
+# api.example.com {
+# 	reverse_proxy 127.0.0.1:4000
+# }

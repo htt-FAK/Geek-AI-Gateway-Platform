@@ -184,6 +184,8 @@ chmod +x scripts/*.sh deploy/web-entrypoint.sh
 ./scripts/deploy.sh && ./scripts/test.sh
 ```
 
+腾讯云 CVM/轻量完整流程（地域备案、HTTPS 反代、国内镜像源、数据迁移、备份）见 [`docs/部署-腾讯云.md`](docs/部署-腾讯云.md)。
+
 </details>
 
 <details>
@@ -258,6 +260,7 @@ docs/     交接 · README 截图
 | 文档 | 路径 |
 |:----:|:----:|
 | 运维手册 | [`docs/运维手册.md`](docs/运维手册.md) |
+| 腾讯云部署 | [`docs/部署-腾讯云.md`](docs/部署-腾讯云.md) |
 | 后续工单 | [`docs/后续工单-生产就绪.md`](docs/后续工单-生产就绪.md) |
 | 交接 | [`docs/实现交接-手机号登录与网关.md`](docs/实现交接-手机号登录与网关.md) |
 | 开发 | [`AI网关平台-开发文档.md`](AI网关平台-开发文档.md) |

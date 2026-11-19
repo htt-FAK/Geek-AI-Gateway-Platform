@@ -1,10 +1,12 @@
 # Multi-stage Next.js (Prisma + libSQL) for ai-gateway-platform web
+# 国内构建：--build-arg NPM_REGISTRY=https://registry.npmmirror.com（默认已是）
 FROM node:20-bookworm-slim AS deps
+ARG NPM_REGISTRY=https://registry.npmmirror.com
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 COPY web/package.json web/package-lock.json ./
-RUN npm ci
+RUN npm ci --registry=${NPM_REGISTRY}
 
 FROM node:20-bookworm-slim AS builder
 WORKDIR /app
@@ -15,6 +17,8 @@ COPY web/ ./
 ENV NEXT_TELEMETRY_DISABLED=1
 # Prisma generate needs a placeholder URL at build time
 ENV DATABASE_URL="file:./dev.db"
+# prisma 引擎二进制走 npmmirror（官方 binaries.prisma.sh 国内常被断连）
+ENV PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma
 RUN npx prisma generate && npm run build
 
 FROM node:20-bookworm-slim AS runner
