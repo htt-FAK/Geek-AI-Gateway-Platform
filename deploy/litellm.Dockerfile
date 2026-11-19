@@ -7,9 +7,13 @@ FROM python:3.10-slim-bookworm
 ARG PIP_INDEX=https://mirrors.tencent.com/pypi/simple
 ENV PIP_INDEX_URL=${PIP_INDEX} \
     PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma \
+    NODEENV_NODE_MIRROR=https://npmmirror.com/mirrors/node \
+    npm_config_registry=https://registry.npmmirror.com \
     PYTHONUNBUFFERED=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+# libatomic1：prisma-python 内置 node 运行必需（slim 镜像默认缺）
+RUN sed -i 's|deb.debian.org|mirrors.tencent.com|g' /etc/apt/sources.list.d/debian.sources \
+  && apt-get update && apt-get install -y --no-install-recommends ca-certificates libatomic1 \
   && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir "litellm[proxy]==1.91.1" prisma
