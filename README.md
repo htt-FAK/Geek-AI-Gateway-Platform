@@ -32,7 +32,7 @@
 
 ## Product
 
-把「接入 → 鉴权 → 计费 → 观测 → 试用」收成一条链路：每人一把 Virtual Key，看板看用量，调试台试模型，模型页直接看调用文档。
+把「接入 → 鉴权 → 计费 → 观测 → 试用」收成一条链路：按需发 Virtual Key，看板看用量，调试台试模型，模型页直接看调用文档。管理员用手机号即可管成员和余额。
 
 <p align="center">
   <img src="docs/images/01-login.png" alt="进入页" width="860" /><br/>
@@ -116,11 +116,12 @@
 
 ## Features
 
-- **统一网关** — OpenAI 兼容 `/v1`；DeepSeek / MiMo；峰时计费可配（工作日峰时 ×2，周末 / 节假日错峰）  
+- **统一网关** — OpenAI 兼容 `/v1`；DeepSeek、小米 MiMo、阿里云百炼（千问 / Kimi / 智谱 / MiniMax / 阶跃）、硅基流动、讯飞星火。DeepSeek 峰时计费可配（工作日峰时 ×2，周末 / 节假日错峰）  
 - **控制台** — 手机号登录、预算、用量曲线、模型文档  
-- **多密钥管理** — 阿里云式 API Key 面板：创建 / 查看 / 复制 / 编辑 / 删除，描述 / 有效期 / 按 Key 选模型 / 预算  
-- **模型广场** — 卡片网格 + 详情页（价格 / 限流与上下文 / 能力矩阵 / 调用示例）  
-- **模型榜单** — 模型 × 思考档位的智能 / 速度 / 延迟 / 价格对比（Artificial Analysis 公开数据）  
+- **成员管理** — 角色管理员用手机号登录即可导入、充值、禁用、重发密钥；成员用量覆盖全部账号，看累计充值、剩余余额和本期 Token（与 `ADMIN_TOKEN` 并行）  
+- **多密钥管理** — 阿里云式 API Key 面板：创建 / 查看 / 复制 / 编辑 / 删除，描述 / 有效期 / 按 Key 选模型 / 预算。新账号默认没有 Key  
+- **模型广场** — 按厂商和用途（文本 / 语音 / 知识库向量）筛选；卡片带免费标识；详情页含价格、限流与上下文、能力矩阵、调用示例  
+- **模型榜单** — 模型 × 思考档位的智能 / 速度 / 延迟 / 价格对比（Artificial Analysis 公开数据，含千问、Kimi、GLM）  
 - **调试台** — 流式输出、思考深度、附件、cURL / SDK 示例  
 - **多皮肤** — 8 套整站气质；侧栏几何统一；进入页品牌钉死  
 - **一键运维** — `deploy/` Compose + `scripts/deploy.sh` / `test.sh` / `local-postgres.sh`
@@ -168,8 +169,8 @@ npm run dev
 # 首次需 pip install prisma 并 python -m prisma generate --schema <litellm/proxy/schema.prisma>
 ```
 
-DB 在线时控制台「密钥」页支持创建多把 Key（描述 / 有效期 / 按 Key 选模型 / 预算）；
-明文在创建时加密留存本地（`ApiKeyLocal` 表），支持随时查看 / 复制。
+DB 在线时控制台「密钥」页支持创建多把 Key（描述 / 有效期 / 按 Key 选模型 / 预算）。
+新账号默认不发 Key。明文在创建时加密留存本地（`ApiKeyLocal` 表），支持随时查看 / 复制。
 IP 白名单为 LiteLLM 企业版功能，本地免费版不提供。
 
 </details>
@@ -209,13 +210,18 @@ pm2 status && pm2 logs             # 状态 / 日志（logs/pm2-*.log）
 
 <div align="center">
 
-| Provider | Model | 说明 |
-|:--------:|:-----:|:----:|
-| DeepSeek | `deepseek-flash` | 更快更省 · 图像理解 |
+| 渠道 | Model | 说明 |
+|:----:|:-----:|:----:|
+| DeepSeek | `deepseek-flash` | 更快更省 · 图像理解 · 峰时 ×2 |
 | DeepSeek | `deepseek-v4-pro` | 旗舰 · 思考档 |
-| MiMo | `mimo-v2.6-pro` | 全模态旗舰 · 思考档 |
-| MiMo | `mimo-v2.6-flash` | 更快更省 |
-| MiMo | `mimo-v2.5-asr` / `*-tts*` | 语音 |
+| 小米 MiMo | `mimo-v2.6-pro` / `*-flash` | 全模态 · 思考档 |
+| 小米 MiMo | `mimo-v2.5-asr` / `*-tts*` | 语音识别 / 合成 |
+| 阿里云百炼 | `qwen4-max` / `qwen3.8-flash` | 千问 · 图像 / 视频 |
+| 阿里云百炼 | `kimi-k3.1-pro` | 月之暗面 · 默认思考 |
+| 阿里云百炼 | `glm-5.3` / `glm-5.3-flash` | 智谱 |
+| 阿里云百炼 | `minimax-m3.1-flash` / `step-5-preview` | MiniMax · 阶跃 |
+| 硅基流动 | `xing4.0-29b` / `qwen3.5-4b` / `bge-*` | 星辰、OCR、向量与重排 · 限时免费 |
+| 讯飞星火 | `spark-x2.6` | 限时免费 |
 
 </div>
 
@@ -226,7 +232,7 @@ curl "$GATEWAY/v1/chat/completions" \
   -d '{"model":"deepseek-flash","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-控制台 **模型 → 文档** 可查看每个模型的官方说明与完整示例。
+价格与 `gateway/model_catalog.json` 一致（人民币 / 百万 token）。控制台 **模型** 可按厂商、用途筛选，点进卡片看官方说明与完整示例。限时免费模型在卡片上单独标出。
 
 ---
 
@@ -237,8 +243,8 @@ Browser ──session──► Next.js Web (BFF)
                           │
                           ▼
                     LiteLLM Proxy :4000/v1
-                     ┌────┴────┐
-                DeepSeek     MiMo
+            ┌──────────┼───────────┬──────────┐
+       DeepSeek     MiMo        百炼      硅基流动 / 讯飞
 ```
 
 ```text
