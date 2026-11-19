@@ -8,11 +8,13 @@ export function KeyRevealDialog({
   onOpenChange,
   apiKey,
   title,
+  description,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   apiKey: string | null;
   title: string;
+  description?: string;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -21,7 +23,8 @@ export function KeyRevealDialog({
         <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 shadow-[var(--panel-shadow,0_8px_24px_rgba(0,0,0,0.35))]">
           <Dialog.Title className="text-lg font-medium">{title}</Dialog.Title>
           <Dialog.Description className="mt-2 text-sm text-[var(--status-warning)]">
-            请立即复制并妥善保存。关闭后列表默认仍以星号隐藏中间；可用「显示 / 复制」再次取用。
+            {description ??
+              "请立即复制并妥善保存。关闭后列表默认仍以星号隐藏中间；可用「显示 / 复制」再次取用。"}
           </Dialog.Description>
           <pre className="mono mt-4 break-all rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 text-sm">
             {apiKey}

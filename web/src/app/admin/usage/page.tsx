@@ -1,15 +1,19 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ConsumptionChartPanel,
   KpiRow,
   ModelCallChartPanel,
   type SeriesPoint,
 } from "@/components/charts";
+import { AdminConsole, Badge } from "@/components/admin-console";
 
 type UsagePayload = {
   source: "litellm" | "litellm_truncated" | "spend_event";
+  from: string;
+  to: string;
+  granularity: string;
   kpis: {
     totalRequests: number;
     totalAmountCny: number;
@@ -21,6 +25,7 @@ type UsagePayload = {
   modelInvocationSeries: SeriesPoint[];
   members: Array<{
     phone?: string;
+    name?: string | null;
     spendCny?: number;
     requests?: number;
     tokens?: number;
@@ -30,198 +35,243 @@ type UsagePayload = {
   }>;
 };
 
+type QuickRange = 1 | 7 | 30;
+
+const RANGE_LABEL: Record<QuickRange, string> = { 1: "今天", 7: "近 7 天", 30: "近 30 天" };
+
+function formatNum(n: number, digits = 0): string {
+  if (!Number.isFinite(n)) return "—";
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
 export default function AdminUsagePage() {
-  const [adminToken, setAdminToken] = useState("");
-  const [sessionAdmin, setSessionAdmin] = useState(false);
+  return (
+    <AdminConsole
+      active="usage"
+      title="成员用量"
+      subtitle="全员视角 · 费用、调用与余额一览"
+    >
+      {(token) => <UsageConsole token={token} />}
+    </AdminConsole>
+  );
+}
+
+function UsageConsole({ token }: { token: string }) {
   const [data, setData] = useState<UsagePayload | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [quickDays, setQuickDays] = useState<QuickRange>(7);
+  const [search, setSearch] = useState("");
   const [consumeToggle, setConsumeToggle] = useState<"柱状图" | "面积图">("柱状图");
   const [modelToggle, setModelToggle] = useState<"调用趋势" | "调用次数分布" | "调用次数排行">(
     "调用趋势",
   );
 
-  async function load(e?: FormEvent) {
-    e?.preventDefault();
+  const load = useCallback(async () => {
+    setLoading(true);
     setError("");
-    const token = adminToken || sessionStorage.getItem("admin_token") || "";
-    if (!token && !sessionAdmin) {
-      setError("请填写 Admin Token，或以管理员身份登录");
-      return;
-    }
-    if (token) {
-      sessionStorage.setItem("admin_token", token);
-      setAdminToken(token);
-    }
-    const res = await fetch("/api/admin/usage", {
-      headers: { "x-admin-token": token },
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      setError(json.error ?? "加载失败");
+    try {
+      const to = new Date();
+      const from = new Date(to.getTime() - quickDays * 24 * 60 * 60 * 1000);
+      const granularity = quickDays >= 30 ? "day" : "hour";
+      const qs = new URLSearchParams({
+        from: from.toISOString(),
+        to: to.toISOString(),
+        granularity,
+      });
+      const res = await fetch(`/api/admin/usage?${qs.toString()}`, {
+        headers: { "x-admin-token": token },
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "加载失败");
+        setData(null);
+        return;
+      }
+      setData(json);
+    } catch {
+      setError("网络错误，加载失败");
       setData(null);
-      return;
+    } finally {
+      setLoading(false);
     }
-    setData(json);
-  }
+  }, [token, quickDays]);
 
-  // 已登录管理员凭会话自动加载，无需 Token
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const meRes = await fetch("/api/me");
-        if (!meRes.ok) return;
-        const me = await meRes.json();
-        if (!alive || me.role !== "admin") return;
-        setSessionAdmin(true);
-        const res = await fetch("/api/admin/usage", { headers: { "x-admin-token": "" } });
-        if (!res.ok) return;
-        const json = await res.json();
-        if (alive) setData(json);
-      } catch { /* 未登录走 Token 模式 */ }
-    })();
-    return () => { alive = false; };
-  }, []);
+    void load();
+  }, [load]);
 
-  const hasData = data !== null;
+  const members = useMemo(() => {
+    const list = data?.members ?? [];
+    const q = search.trim();
+    if (!q) return list;
+    return list.filter((m) => (m.phone ?? "").includes(q) || (m.name ?? "").includes(q));
+  }, [data, search]);
+
+  const sourceLabel =
+    data?.source === "litellm" || data?.source === "litellm_truncated"
+      ? "网关日志"
+      : data?.source === "spend_event"
+        ? "应用记账"
+        : "";
 
   return (
-    <main className="min-h-screen bg-[var(--bg-base)] px-6 py-8 text-[var(--text-primary)]">
-      <div className="mx-auto max-w-console space-y-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="font-display text-2xl font-semibold">全员用量</h1>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">Admin Token 门 · 全体成员视角</p>
-          </div>
-          <a href="/admin/users" className="text-sm text-[var(--accent-primary)] hover:underline">
-            用户管理
-          </a>
-        </div>
-
-        {sessionAdmin ? (
-          <p className="text-sm" style={{ color: "var(--accent-primary)" }}>
-            管理员会话（凭登录身份查看全员用量，无需 Token）
-          </p>
-        ) : (
-          <form onSubmit={(e) => void load(e)} className="panel flex flex-wrap items-end gap-3 p-4">
-            <label className="min-w-[240px] flex-1 space-y-1">
-              <span className="text-sm text-[var(--text-secondary)]">Admin Token</span>
-              <input
-                className="field"
-                type="password"
-                value={adminToken}
-                onChange={(e) => setAdminToken(e.target.value)}
-                placeholder="x-admin-token"
-              />
-            </label>
-            <button className="btn" type="submit">
-              加载
+    <div className="space-y-5">
+      {/* 工具条：时间范围 + 数据来源 + 刷新 */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-0.5">
+          {([1, 7, 30] as QuickRange[]).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setQuickDays(d)}
+              className={`rounded-md px-3 py-1.5 text-[13px] transition-colors ${
+                quickDays === d
+                  ? "bg-[var(--accent-muted)] font-medium text-[var(--accent-primary)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              {RANGE_LABEL[d]}
             </button>
-          </form>
-        )}
-        {error ? (
+          ))}
+        </div>
+        <div className="flex items-center gap-3 text-[13px] text-[var(--text-tertiary)]">
+          {sourceLabel ? <span>数据来源：{sourceLabel}{loading ? " · 刷新中…" : ""}</span> : null}
+          <button
+            type="button"
+            className="btn btn-ghost py-1.5 text-[13px]"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            刷新
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="panel flex flex-wrap items-center justify-between gap-3 p-5">
           <p className="text-sm text-[var(--status-error)]" role="alert">
             {error}
           </p>
-        ) : null}
+          <button type="button" className="btn btn-ghost py-1.5 text-[13px]" onClick={() => void load()}>
+            重试
+          </button>
+        </div>
+      ) : null}
 
-        {/*
-          加载失败（接口 503 / source=error）时不渲染任何 0 值面板，
-          只显示上面的错误提示，避免「看起来像没流量」。
-        */}
-        {hasData && data.source === "litellm_truncated" ? (
-          <p className="text-xs text-[var(--status-warning)]">
-            日志量过大，仅统计最近 5000 条（source=litellm_truncated），数字可能偏小。
-          </p>
-        ) : null}
+      {/*
+        加载失败（接口 503 / source=error）时不渲染任何 0 值面板，
+        只显示上面的错误提示，避免「看起来像没流量」。
+      */}
+      {data?.source === "litellm_truncated" ? (
+        <p className="text-xs text-[var(--status-warning)]">
+          日志量过大，仅统计最近 5000 条（source=litellm_truncated），数字可能偏小。
+        </p>
+      ) : null}
 
-        {hasData ? (
-          <>
-            <KpiRow
-              items={[
-                { label: "总数", value: String(data.kpis.totalRequests), hint: "统计计数" },
-                {
-                  label: "总额度",
-                  value: `¥${data.kpis.totalAmountCny.toFixed(4)}`,
-                  hint: "统计金额",
-                },
-                {
-                  label: "总 TOKEN 数",
-                  value: String(data.kpis.totalTokens),
-                  hint: "统计 Token 数",
-                },
-                { label: "平均 RPM", value: data.kpis.avgRpm.toFixed(2), hint: "每分钟请求数" },
-                {
-                  label: "平均 TPM",
-                  value: String(Math.round(data.kpis.avgTpm)),
-                  hint: "每分钟 Token 数",
-                },
-              ]}
+      {loading && !data ? (
+        <div className="panel p-8 text-sm text-[var(--text-tertiary)]">加载中…</div>
+      ) : data ? (
+        <>
+          <KpiRow
+            items={[
+              { label: "总请求", value: formatNum(data.kpis.totalRequests), hint: `${RANGE_LABEL[quickDays]}请求数` },
+              {
+                label: "总费用",
+                value: `¥${formatNum(data.kpis.totalAmountCny, 4)}`,
+                hint: `${RANGE_LABEL[quickDays]}消费金额`,
+              },
+              {
+                label: "总 Token",
+                value: formatNum(data.kpis.totalTokens),
+                hint: `${RANGE_LABEL[quickDays]}Token 数`,
+              },
+              { label: "平均 RPM", value: formatNum(data.kpis.avgRpm, 2), hint: "每分钟请求数" },
+              {
+                label: "平均 TPM",
+                value: formatNum(Math.round(data.kpis.avgTpm)),
+                hint: "每分钟 Token 数",
+              },
+            ]}
+          />
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <ConsumptionChartPanel
+              series={data.consumptionSeries}
+              mode={consumeToggle}
+              onModeChange={setConsumeToggle}
+              totalSpendCny={data.kpis.totalAmountCny}
             />
+            <ModelCallChartPanel
+              series={data.modelInvocationSeries}
+              mode={modelToggle}
+              onModeChange={setModelToggle}
+              totalCount={data.kpis.totalRequests}
+            />
+          </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <ConsumptionChartPanel
-                series={data.consumptionSeries}
-                mode={consumeToggle}
-                onModeChange={setConsumeToggle}
-                totalSpendCny={data.kpis.totalAmountCny}
-              />
-              <ModelCallChartPanel
-                series={data.modelInvocationSeries}
-                mode={modelToggle}
-                onModeChange={setModelToggle}
-                totalCount={data.kpis.totalRequests}
+          <section className="panel overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-4 py-3">
+              <span className="text-sm font-medium">成员明细</span>
+              <input
+                className="field w-44 py-1 text-[13px]"
+                placeholder="搜索手机号"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-
-            <section className="panel overflow-hidden">
-              <div className="border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium">
-                成员排行
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="text-[13px] text-[var(--text-tertiary)]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-[13px] text-[var(--text-tertiary)]">
+                  <tr>
+                    <th className="px-4 py-3 font-normal">手机号</th>
+                    <th className="px-4 py-3 font-normal">姓名</th>
+                    <th className="px-4 py-3 font-normal">累计充值</th>
+                    <th className="px-4 py-3 font-normal">剩余余额</th>
+                    <th className="px-4 py-3 font-normal">本期费用</th>
+                    <th className="px-4 py-3 font-normal">请求</th>
+                    <th className="px-4 py-3 font-normal">Token</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.length === 0 ? (
                     <tr>
-                      <th className="px-4 py-3 font-normal">手机号</th>
-                      <th className="px-4 py-3 font-normal">累计充值</th>
-                      <th className="px-4 py-3 font-normal">剩余余额</th>
-                      <th className="px-4 py-3 font-normal">本期费用</th>
-                      <th className="px-4 py-3 font-normal">请求</th>
-                      <th className="px-4 py-3 font-normal">Token</th>
+                      <td colSpan={7} className="px-4 py-10 text-center text-[var(--text-tertiary)]">
+                        {(data.members.length ?? 0) === 0 ? "暂无成员" : "没有匹配的手机号或姓名"}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {data.members.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-10 text-center text-[var(--text-tertiary)]">
-                          暂无成员
+                  ) : (
+                    members.map((m, i) => (
+                      <tr key={m.phone ?? i} className="border-t border-[var(--border-subtle)]">
+                        <td className="mono px-4 py-3">{m.phone}</td>
+                        <td className="px-4 py-3">{m.name ?? <span className="text-[var(--text-tertiary)]">—</span>}</td>
+                        <td className="tabular px-4 py-3">¥{(m.grantedCny ?? 0).toFixed(2)}</td>
+                        <td className="tabular px-4 py-3">
+                          {m.unlimited ? (
+                            <Badge tone="accent">不限额</Badge>
+                          ) : (m.remainingCny ?? 0) <= 0 ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              ¥0.00 <Badge tone="err">余额用尽</Badge>
+                            </span>
+                          ) : (
+                            <>¥{(m.remainingCny ?? 0).toFixed(2)}</>
+                          )}
                         </td>
+                        <td className="tabular px-4 py-3">¥{(m.spendCny ?? 0).toFixed(2)}</td>
+                        <td className="tabular px-4 py-3">{formatNum(m.requests ?? 0)}</td>
+                        <td className="tabular px-4 py-3">{formatNum(m.tokens ?? 0)}</td>
                       </tr>
-                    ) : (
-                      data.members.map((m, i) => (
-                        <tr key={i} className="border-t border-[var(--border-subtle)]">
-                          <td className="px-4 py-3 mono">{m.phone}</td>
-                          <td className="px-4 py-3 tabular">¥{(m.grantedCny ?? 0).toFixed(2)}</td>
-                          <td className="px-4 py-3 tabular">
-                            {m.unlimited ? (
-                              <span className="text-[var(--accent-primary)]">不限额</span>
-                            ) : (
-                              <>¥{(m.remainingCny ?? 0).toFixed(2)}</>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 tabular">¥{(m.spendCny ?? 0).toFixed(2)}</td>
-                          <td className="px-4 py-3 tabular">{m.requests ?? 0}</td>
-                          <td className="px-4 py-3 tabular">{m.tokens ?? 0}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </>
-        ) : null}
-      </div>
-    </main>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      ) : null}
+    </div>
   );
 }

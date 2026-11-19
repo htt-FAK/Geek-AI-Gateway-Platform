@@ -12,6 +12,7 @@ export async function GET(req: Request) {
     select: {
       id: true,
       phone: true,
+      name: true,
       disabled: true,
       role: true,
       mustChangePassword: true,
@@ -36,6 +37,7 @@ export async function GET(req: Request) {
       }
       return {
         phone: u.phone,
+        name: u.name,
         disabled: u.disabled,
         role: u.role,
         mustChangePassword: u.mustChangePassword,

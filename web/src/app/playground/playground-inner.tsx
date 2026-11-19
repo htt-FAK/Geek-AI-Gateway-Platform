@@ -28,9 +28,11 @@ type ContentPart =
 const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** 调试台只做文本对话：ASR/TTS 语音模型不进下拉（网关 API 侧仍可调用）。 */
+/** 调试台只做文本对话：ASR/TTS 语音与嵌入/重排序模型不进下拉（网关 API 侧仍可调用）。 */
 function isChatModel(m: string): boolean {
-  return !m.includes("-asr") && !m.includes("-tts");
+  if (m.includes("-asr") || m.includes("-tts")) return false;
+  if (/^bge-|rerank|embed/i.test(m)) return false;
+  return true;
 }
 
 export default function PlaygroundInner() {

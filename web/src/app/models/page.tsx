@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { BrandBadge } from "@/components/brand-badge";
 import { ConsolePage, useMe } from "@/components/console";
 import { ModelDocsDialog } from "@/components/model-docs-dialog";
 import { envPublicGateway } from "@/lib/public-env";
@@ -9,14 +10,26 @@ import {
   MARKET_MODELS,
   freeLabel,
   isFreeModel,
+  modelBrand,
   priceLine,
-  providerLabel,
-  providerLogo,
-  type MarketProvider,
 } from "@/lib/model-market";
 
-type Filter = "all" | MarketProvider;
+type Filter = "all" | string;
 type Category = "all" | "text" | "voice" | "vector";
+
+/** 品牌筛选（按模型自家厂商，而非托管平台）。 */
+const BRAND_FILTERS: [Filter, string][] = [
+  ["all", "全部"],
+  ["deepseek", "DeepSeek"],
+  ["mimo", "小米 MiMo"],
+  ["qwen", "千问 Qwen"],
+  ["kimi", "Kimi"],
+  ["glm", "智谱 GLM"],
+  ["minimax", "MiniMax"],
+  ["step", "阶跃星辰"],
+  ["xfyun", "讯飞星火"],
+  ["siliconflow", "硅基流动"],
+];
 
 /** 按用途分类：文本模型(chat) / 语音模型(asr+tts) / 知识库向量(embedding+rerank)。 */
 function categoryOf(endpoint: string): Exclude<Category, "all"> {
@@ -42,7 +55,7 @@ export default function ModelsPage() {
   const cards = MARKET_MODELS.filter(
     (m) =>
       mounted.includes(m.id) &&
-      (filter === "all" || m.provider === filter) &&
+      (filter === "all" || modelBrand(m.id).key === filter) &&
       (category === "all" || categoryOf(m.endpoint) === category),
   );
 
@@ -69,16 +82,7 @@ export default function ModelsPage() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        {(
-          [
-            ["all", "全部"],
-            ["deepseek", "DeepSeek"],
-            ["mimo", "小米 MiMo"],
-            ["bailian", "阿里云百炼"],
-            ["xfyun", "讯飞星火"],
-            ["siliconflow", "硅基流动"],
-          ] as [Filter, string][]
-        ).map(([key, label]) => (
+        {BRAND_FILTERS.map(([key, label]) => (
           <button
             key={key}
             type="button"
@@ -105,15 +109,7 @@ export default function ModelsPage() {
                 </span>
               ) : null}
             </div>
-            <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={providerLogo(m.provider)}
-                alt={providerLabel(m.provider)}
-                className="h-4 w-4 object-contain"
-              />
-              {providerLabel(m.provider)}
-            </div>
+            <BrandBadge id={m.id} />
             <h2 className="mono mt-2 truncate text-[15px] font-medium" title={m.id}>
               {m.id}
             </h2>
@@ -149,13 +145,16 @@ export default function ModelsPage() {
               <Link href={`/models/${encodeURIComponent(m.id)}`} className="btn btn-secondary px-3 py-1.5 text-[13px]">
                 详情
               </Link>
-              <button
-                type="button"
-                className="btn btn-ghost px-3 py-1.5 text-[13px]"
-                onClick={() => setDocsModel(m.id)}
-              >
-                文档
-              </button>
+              {/* 嵌入 / 重排序模型不弹文档对话框，调用示例见详情页 */}
+              {m.endpoint !== "embedding" && m.endpoint !== "rerank" ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost px-3 py-1.5 text-[13px]"
+                  onClick={() => setDocsModel(m.id)}
+                >
+                  文档
+                </button>
+              ) : null}
             </div>
           </article>
         ))}

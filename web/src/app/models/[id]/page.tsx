@@ -3,14 +3,10 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { BrandBadge } from "@/components/brand-badge";
 import { ConsolePage, useMe } from "@/components/console";
 import { buildModelCallSnippets, getModelDoc } from "@/lib/model-docs";
-import {
-  getMarketModel,
-  PEAK_PRICING_NOTE,
-  providerLabel,
-  providerLogo,
-} from "@/lib/model-market";
+import { getMarketModel, PEAK_PRICING_NOTE } from "@/lib/model-market";
 import { envPublicGateway } from "@/lib/public-env";
 
 export default function ModelDetailPage() {
@@ -68,15 +64,7 @@ export default function ModelDetailPage() {
 
       <div className="mt-3 mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={providerLogo(market.provider)}
-              alt={providerLabel(market.provider)}
-              className="h-5 w-5 object-contain"
-            />
-            {providerLabel(market.provider)}
-          </div>
+          <BrandBadge id={market.id} size="md" />
           <h1 className="mono mt-1 text-2xl font-semibold tracking-tight">{market.id}</h1>
           <div className="mt-2 flex flex-wrap gap-1">
             {market.tags.map((t) => (

@@ -6,8 +6,13 @@ import { env } from "@/lib/env";
 import { ensureLitellmUser } from "@/lib/litellm";
 import { hashPassword, normalizePhone } from "@/lib/password";
 
+const contactSchema = z.object({
+  phone: z.string().min(1),
+  name: z.string().max(50).optional(),
+});
 const bodySchema = z.object({
-  phones: z.array(z.string()).min(1),
+  phones: z.array(z.string()).optional(),
+  contacts: z.array(contactSchema).optional(),
 });
 
 export async function POST(req: Request) {
@@ -18,21 +23,36 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "参数无效" }, { status: 400 });
   }
+  const entries = [
+    ...(parsed.data.contacts ?? []),
+    ...(parsed.data.phones ?? []).map((p) => ({ phone: p, name: undefined as string | undefined })),
+  ];
+  if (entries.length === 0) {
+    return NextResponse.json({ error: "缺少手机号" }, { status: 400 });
+  }
 
   const defaultHash = await hashPassword(env().defaultUserPassword);
   const created: string[] = [];
   const skipped: string[] = [];
+  const renamed: string[] = [];
   const errors: Array<{ phone: string; error: string }> = [];
 
-  for (const raw of parsed.data.phones) {
-    const phone = normalizePhone(raw);
+  for (const entry of entries) {
+    const phone = normalizePhone(entry.phone);
     if (!phone) {
-      errors.push({ phone: raw, error: "手机号格式无效" });
+      errors.push({ phone: entry.phone, error: "手机号格式无效" });
       continue;
     }
+    const name = entry.name?.trim() || undefined;
     const existing = await prisma.user.findUnique({ where: { phone } });
     if (existing) {
-      skipped.push(phone);
+      // 已有账号：只补/更新姓名，绝不动余额、Key、密码
+      if (name && existing.name !== name) {
+        await prisma.user.update({ where: { id: existing.id }, data: { name } });
+        renamed.push(phone);
+      } else {
+        skipped.push(phone);
+      }
       continue;
     }
     try {
@@ -42,6 +62,7 @@ export async function POST(req: Request) {
       await prisma.user.create({
         data: {
           phone,
+          name: name ?? null,
           passwordHash: defaultHash,
           mustChangePassword: true,
           litellmUserId: issued.userId,
@@ -55,5 +76,5 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ created, skipped, errors });
+  return NextResponse.json({ created, skipped, renamed, errors });
 }

@@ -2,6 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { useMemo, useState } from "react";
+import { BrandBadge } from "@/components/brand-badge";
 import { buildModelCallSnippets, getModelDoc } from "@/lib/model-docs";
 
 type Props = {
@@ -51,6 +52,11 @@ export function ModelDocsDialog({ model, gatewayUrl, open, onOpenChange }: Props
           <Dialog.Description className="mt-1 text-sm text-[var(--text-secondary)]">
             经本网关调用的方式，以及官方能力说明。
           </Dialog.Description>
+          {model ? (
+            <div className="mt-2">
+              <BrandBadge id={model} />
+            </div>
+          ) : null}
 
           {doc && snippets ? (
             <div className="mt-4 min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">

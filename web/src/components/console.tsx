@@ -6,6 +6,7 @@ import { AppShell } from "@/components/shell";
 
 export type MePayload = {
   phone: string;
+  role?: string;
   models: string[];
   keyMode: string;
   keyMasked: string | null;

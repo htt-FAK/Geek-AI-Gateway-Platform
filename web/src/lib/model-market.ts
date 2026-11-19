@@ -1,5 +1,5 @@
 /**
- * 模型广场数据（阿里云百炼式卡片 / 详情页用）。
+ * 模型广场数据（卡片 / 详情页用）。
  * 价格与 gateway/model_catalog.json 保持一致（CNY / 百万 token）；
  * 规格与能力来自 DeepSeek / MiMo / 讯飞 / 硅基流动官网（采集于 2026-11-18/19）。
  * 改价时请同步 gateway/config.yaml 与 gateway/model_catalog.json。
@@ -59,8 +59,12 @@ const MIMO_FLASH = "https://mimo.mi.com/models/en-US/mimo-v2.6-flash";
 const MIMO_PRICING = "https://mimo.mi.com/docs/price/pay-as-you-go";
 const XFYUN_MAAS = "https://maas.xfyun.cn/";
 const SILICONFLOW_DOCS = "https://docs.siliconflow.cn/";
-const BAILIAN_MODELS = "https://help.aliyun.com/zh/model-studio/text-generation-model";
-const BAILIAN_PRICING = "https://help.aliyun.com/zh/model-studio/billing-for-model-studio";
+// 官方链接一律指向模型自家厂商官网（不展示托管平台）。
+const QWEN_HOME = "https://qwen.ai/";
+const KIMI_HOME = "https://www.kimi.com/";
+const ZHIPU_HOME = "https://www.zhipu.ai/";
+const MINIMAX_HOME = "https://www.minimax.io/";
+const STEPFUN_HOME = "https://www.stepfun.com/";
 
 export const MARKET_MODELS: MarketModel[] = [
   {
@@ -308,7 +312,7 @@ export const MARKET_MODELS: MarketModel[] = [
     capabilities: NO_CAPS,
     officialUrl: MIMO_PRICING,
   },
-  // ---------- 阿里云百炼（2026-11-19 接入，价格为百炼华北2原价） ----------
+  // ---------- 千问 / Kimi / 智谱 / MiniMax / 阶跃（2026-11-19 接入，价格为官方原价） ----------
   {
     id: "qwen4-max",
     provider: "bailian",
@@ -322,8 +326,8 @@ export const MARKET_MODELS: MarketModel[] = [
     context: "1M",
     maxOutput: "128K（非思考）/ 256K（思考+输出）",
     capabilities: { ...NO_CAPS, thinking: true, toolCall: true, webSearch: true, structuredOutput: true, contextCache: true, vision: true },
-    officialUrl: BAILIAN_MODELS,
-    versionNote: "百炼官方价：输入 ¥10/M、输出 ¥30/M、缓存命中 ¥0.5/M（显式缓存创建另计）。单图 ≤16M 像素、视频 ≤2 小时/2GB。",
+    officialUrl: QWEN_HOME,
+    versionNote: "官方价：输入 ¥10/M、输出 ¥30/M、缓存命中 ¥0.5/M（显式缓存创建另计）。单图 ≤16M 像素、视频 ≤2 小时/2GB。",
   },
   {
     id: "qwen3.8-flash",
@@ -339,7 +343,7 @@ export const MARKET_MODELS: MarketModel[] = [
     rpm: 30000,
     tpm: "5M",
     capabilities: { ...NO_CAPS, thinking: true, toolCall: true, webSearch: true, structuredOutput: true, contextCache: true, vision: true },
-    officialUrl: BAILIAN_MODELS,
+    officialUrl: QWEN_HOME,
   },
   {
     id: "kimi-k3.1-pro",
@@ -351,10 +355,10 @@ export const MARKET_MODELS: MarketModel[] = [
     modalityOut: ["文本"],
     pricing: { kind: "tokens", inputPerM: 13, outputPerM: 68, cacheHitPerM: 1.3 },
     context: "1M",
-    maxOutput: "以百炼模型页为准",
+    maxOutput: "以官方模型页为准",
     capabilities: { ...NO_CAPS, thinking: true, toolCall: true, structuredOutput: true, contextCache: true },
-    officialUrl: "https://help.aliyun.com/zh/model-studio/kimi-k3-1-pro",
-    versionNote: "思考默认开启；结构化输出支持 JSON Mode。百炼自营与月之暗面自营（kimi/kimi-k3.1-pro）同价。",
+    officialUrl: KIMI_HOME,
+    versionNote: "思考默认开启；结构化输出支持 JSON Mode。与月之暗面自营（kimi/kimi-k3.1-pro）同价。",
   },
   {
     id: "glm-5.3-flash",
@@ -365,13 +369,13 @@ export const MARKET_MODELS: MarketModel[] = [
     modalityIn: ["文本"],
     modalityOut: ["文本"],
     pricing: { kind: "tokens", inputPerM: 0.8, outputPerM: 2.8, cacheHitPerM: 0.08 },
-    context: "以百炼模型页为准",
-    maxOutput: "以百炼模型页为准",
+    context: "以官方模型页为准",
+    maxOutput: "以官方模型页为准",
     rpm: 500,
     tpm: "10M",
     capabilities: { ...NO_CAPS, thinking: true, contextCache: true },
-    officialUrl: BAILIAN_PRICING,
-    versionNote: "智谱自营托管（模型代码 ZHIPU/GLM-5.3-Flash），价格取自百炼模型广场。",
+    officialUrl: ZHIPU_HOME,
+    versionNote: "模型代码 ZHIPU/GLM-5.3-Flash。",
   },
   {
     id: "glm-5.3",
@@ -383,12 +387,12 @@ export const MARKET_MODELS: MarketModel[] = [
     modalityOut: ["文本"],
     pricing: { kind: "tokens", inputPerM: 8, outputPerM: 28, cacheHitPerM: 2 },
     context: "1M",
-    maxOutput: "以百炼模型页为准",
+    maxOutput: "以官方模型页为准",
     rpm: 500,
     tpm: "5M",
     capabilities: { ...NO_CAPS, thinking: true, contextCache: true },
-    officialUrl: BAILIAN_PRICING,
-    versionNote: "智谱自营托管（模型代码 ZHIPU/GLM-5.3），仅思考模式；缓存命中 ¥2/M 取自百炼模型广场。",
+    officialUrl: ZHIPU_HOME,
+    versionNote: "模型代码 ZHIPU/GLM-5.3，仅思考模式；缓存命中 ¥2/M。",
   },
   {
     id: "minimax-m3.1-flash",
@@ -400,9 +404,9 @@ export const MARKET_MODELS: MarketModel[] = [
     modalityOut: ["文本"],
     pricing: { kind: "tokens", inputPerM: 1, outputPerM: 4, cacheHitPerM: 1 },
     context: "1M",
-    maxOutput: "以百炼模型页为准",
+    maxOutput: "以官方模型页为准",
     capabilities: { ...NO_CAPS, contextCache: true },
-    officialUrl: BAILIAN_PRICING,
+    officialUrl: MINIMAX_HOME,
     versionNote: "模型代码 MiniMax/MiniMax-M3.1-Flash。官方仅标「缓存享有折扣」未公布单价，网关暂按输入价计缓存命中，公布后同步。",
   },
   {
@@ -415,9 +419,9 @@ export const MARKET_MODELS: MarketModel[] = [
     modalityOut: ["文本"],
     pricing: { kind: "tokens", inputPerM: 7, outputPerM: 20, cacheHitPerM: 0 },
     context: "1M",
-    maxOutput: "以百炼模型页为准",
+    maxOutput: "以官方模型页为准",
     capabilities: { ...NO_CAPS, thinking: true },
-    officialUrl: BAILIAN_PRICING,
+    officialUrl: STEPFUN_HOME,
     versionNote: "模型代码 stepfun/step-5-preview。官方未提供缓存价（无上下文缓存折扣）。",
   },
 ];
@@ -463,6 +467,37 @@ export function providerLogo(p: MarketProvider): string {
         : p === "bailian"
           ? "/brands/bailian.svg"
           : "/brands/mimo.png";
+}
+
+/**
+ * 模型自家品牌（卡片 / 详情页 / 文档弹窗展示用）：
+ * 展示模型厂商而非托管平台——百炼只是接入渠道，Kimi 归月之暗面、GLM 归智谱等。
+ * logo 为 null 时用品牌色首字母块。
+ */
+export type ModelBrand = { key: string; label: string; logo: string | null; color: string };
+
+export function modelBrand(id: string): ModelBrand {
+  if (id.startsWith("deepseek"))
+    return { key: "deepseek", label: "DeepSeek", logo: "/brands/deepseek.ico", color: "var(--brand-deepseek)" };
+  if (id.startsWith("mimo"))
+    return { key: "mimo", label: "小米 MiMo", logo: "/brands/mimo.png", color: "var(--brand-mimo)" };
+  if (id.startsWith("spark"))
+    return { key: "xfyun", label: "讯飞星火", logo: "/brands/xfyun.ico", color: "var(--brand-xfyun)" };
+  if (id.startsWith("qwen"))
+    return { key: "qwen", label: "千问 Qwen", logo: "/brands/qwen.svg", color: "#f59e0b" };
+  if (id.startsWith("kimi"))
+    return { key: "kimi", label: "Kimi · 月之暗面", logo: "/brands/kimi.svg", color: "#a78bfa" };
+  if (id.startsWith("glm"))
+    return { key: "glm", label: "智谱 GLM", logo: "/brands/glm.svg", color: "#38bdf8" };
+  if (id.startsWith("minimax"))
+    return { key: "minimax", label: "MiniMax", logo: "/brands/minimax.svg", color: "#f472b6" };
+  if (id.startsWith("step"))
+    return { key: "step", label: "阶跃星辰 Step", logo: "/brands/step.svg", color: "#2dd4bf" };
+  if (id.startsWith("xing"))
+    return { key: "siliconflow", label: "TeleAI 星辰", logo: null, color: "var(--brand-siliconflow)" };
+  if (id.startsWith("bge"))
+    return { key: "siliconflow", label: "BAAI 智源", logo: null, color: "var(--brand-siliconflow)" };
+  return { key: "siliconflow", label: "硅基流动", logo: "/brands/siliconflow.png", color: "var(--brand-siliconflow)" };
 }
 
 /** 峰时计费口径（与 gateway/deepseek_peak.py 一致：峰时 = 空闲价 ×2，回调自动计价）。 */

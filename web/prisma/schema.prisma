@@ -9,6 +9,8 @@ datasource db {
 model User {
   id                 String   @id @default(cuid())
   phone              String   @unique
+  /// 姓名（通讯录导入，管理页展示）
+  name               String?
   passwordHash       String
   mustChangePassword Boolean  @default(true)
   disabled           Boolean  @default(false)
@@ -28,6 +30,8 @@ model User {
   spendEvents        SpendEvent[]
   apiKeys            ApiKeyLocal[]
   topUps             BalanceTopUp[]
+  conversations      Conversation[]
+  memories           UserMemory[]
 }
 
 /// 管理员充值流水（审计用）
@@ -67,7 +71,79 @@ model SpendEvent {
   promptTokens     Int      @default(0)
   completionTokens Int      @default(0)
   totalTokens      Int      @default(0)
+  /// chat 对话 / summary 滚动摘要 / memory 长期记忆抽取；旧数据为 null，视作 chat
+  kind             String?
   createdAt        DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// 调试台会话。正文只属于本人，管理端不提供查阅。
+model Conversation {
+  id                      String   @id @default(cuid())
+  userId                  String
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                   String   @default("新对话")
+  model                   String
+  systemPrompt            String   @default("")
+  temperature             Float    @default(0.7)
+  maxTokens               Int      @default(1024)
+  stream                  Boolean  @default(true)
+  /// off / standard / max / on；模型不支持思考时为 null
+  thinkingStop            String?
+  /// active 可继续 / error 上一轮失败 / aborted 上一轮被停止
+  status                  String   @default("active")
+  /// 滑出最近窗口的滚动摘要
+  summary                 String   @default("")
+  /// 摘要已覆盖到的消息；此 id 及更早的消息不再以原文送入模型
+  summaryThroughMessageId String?
+  promptTokens            Int      @default(0)
+  completionTokens        Int      @default(0)
+  totalTokens             Int      @default(0)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  messages                Message[]
+  memories                UserMemory[]
+
+  @@index([userId, updatedAt])
+}
+
+/// 会话中的一条消息。图片落在磁盘，这里只存相对路径 JSON。
+model Message {
+  id               String       @id @default(cuid())
+  conversationId   String
+  conversation     Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role             String
+  content          String
+  reasoningContent String       @default("")
+  /// complete / aborted / error
+  status           String       @default("complete")
+  seq              Int
+  imagePaths       String       @default("[]")
+  promptTokens     Int          @default(0)
+  completionTokens Int          @default(0)
+  totalTokens      Int          @default(0)
+  costCny          Float        @default(0)
+  createdAt        DateTime     @default(now())
+
+  @@unique([conversationId, seq])
+  @@index([conversationId, seq])
+}
+
+/// 跨会话的长期事实。删除会话只解开来源，不删记忆。
+model UserMemory {
+  id                   String        @id @default(cuid())
+  userId               String
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content              String
+  contentHash          String
+  sourceConversationId String?
+  sourceConversation   Conversation? @relation(fields: [sourceConversationId], references: [id], onDelete: SetNull)
+  /// active 会注入上下文 / dropped 用户删除或被合并淘汰
+  status               String        @default("active")
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@unique([userId, contentHash])
+  @@index([userId, status])
 }

@@ -67,7 +67,7 @@ export async function GET(req: Request) {
 
   // 成员表：按网关 user_id / 本地 userId 分组，join 手机号
   const users = await prisma.user.findMany({
-    select: { id: true, phone: true, litellmUserId: true, balanceGrantedCny: true, balanceUnlimited: true },
+    select: { id: true, phone: true, name: true, litellmUserId: true, balanceGrantedCny: true, balanceUnlimited: true },
   });
   const phoneByGwId = new Map(users.filter((u) => u.litellmUserId).map((u) => [u.litellmUserId!, u.phone]));
   const phoneById = new Map(users.map((u) => [u.id, u.phone]));
@@ -96,6 +96,7 @@ export async function GET(req: Request) {
       const usedTotal = lifetimeByPhone.get(u.phone) ?? 0;
       return {
         phone: u.phone,
+        name: u.name,
         spendCny: s.spendCny,
         requests: s.requests,
         tokens: s.tokens,

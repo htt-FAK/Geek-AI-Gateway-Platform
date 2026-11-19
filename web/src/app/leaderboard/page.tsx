@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
+  Label,
   LabelList,
   Line,
   ReferenceArea,
@@ -26,8 +27,10 @@ import {
   paretoFrontier,
   shortName,
   sortRows,
+  vendorOf,
   type LeaderboardRow,
   type MetricKey,
+  type VendorId,
 } from "@/lib/leaderboard-data";
 
 const fmt = (v: number | null, suffix = ""): string => (v === null ? "—" : `${v}${suffix}`);
@@ -37,6 +40,13 @@ const DISPLAY_NAME: Record<string, string> = {
   "deepseek-flash": "DeepSeek Flash",
   "mimo-v2.6-pro": "MiMo V2.6 Pro",
   "mimo-v2.6-flash": "MiMo V2.6 Flash",
+  "qwen4-max": "Qwen4 Max",
+  "qwen3.8-flash": "Qwen3.8 Flash",
+  "kimi-k3.1-pro": "Kimi K3.1 Pro",
+  "glm-5.3": "GLM-5.3",
+  "glm-5.3-flash": "GLM-5.3 Flash",
+  "minimax-m3.1-flash": "MiniMax M3.1 Flash",
+  "step-5-preview": "Step 5 Preview",
 };
 
 const BRAND_LOGO: Record<string, string> = {
@@ -44,12 +54,43 @@ const BRAND_LOGO: Record<string, string> = {
   mimo: "/brands/mimo.png",
 };
 
+/** 厂商配色（对齐 AA 截图图例；蓝/橙系做区分度偏移，避免同色难辨）。 */
+const VENDOR: Record<VendorId, { label: string; color: string }> = {
+  deepseek: { label: "DeepSeek", color: "var(--brand-deepseek)" },
+  mimo: { label: "小米 MiMo", color: "var(--brand-mimo)" },
+  alibaba: { label: "阿里 Qwen", color: "#f59e0b" },
+  zai: { label: "智谱 GLM", color: "#38bdf8" },
+  kimi: { label: "Kimi", color: "#a78bfa" },
+  minimax: { label: "MiniMax", color: "#f472b6" },
+  stepfun: { label: "阶跃 Step", color: "#2dd4bf" },
+};
+
 const VARIANT_COLOR: Record<string, string> = {
   max: "var(--chart-3)",
   standard: "var(--chart-1)",
+  low: "var(--chart-5)",
   off: "var(--text-tertiary)",
   on: "var(--chart-2)",
   default: "var(--chart-4)",
+};
+
+/**
+ * 散点标签相对圆点的偏移（复刻 AA 原图：右侧为主，拥挤处改放左/上/下避免压字）。
+ * key 为 shortName() 的结果；anchor 为 text-anchor；dy 为基线偏移。
+ */
+type LabelPlacement = { dx: number; dy: number; anchor: "start" | "middle" | "end" };
+const LABEL_RIGHT: LabelPlacement = { dx: 9, dy: 4, anchor: "start" };
+const LABEL_POS: Record<string, LabelPlacement> = {
+  // $0.47–$0.6 高密度簇：左/上/右/下四向错开
+  "DS Flash·标准": { dx: -9, dy: 4, anchor: "end" },
+  "MiniMax·默认": { dx: 0, dy: -11, anchor: "middle" },
+  "Qwen3.8 Flash·默认": { dx: 9, dy: 4, anchor: "start" },
+  "GLM Flash·默认": { dx: 7, dy: 16, anchor: "start" },
+  "MiMo Pro·开启": { dx: 2, dy: -11, anchor: "middle" },
+  // $1.6 / $1.8 同高度：左侧标签向右排，GLM 反向
+  "GLM-5.3·低": { dx: -9, dy: 4, anchor: "end" },
+  // 最右点：标签放左侧，避免越出绘图区
+  "GLM-5.3·极深": { dx: -9, dy: 4, anchor: "end" },
 };
 
 const tooltipStyle = {
@@ -62,7 +103,7 @@ const tooltipStyle = {
   padding: "8px 12px",
 };
 
-type ScatterPoint = { x: number; y: number; label: string; vendor: "deepseek" | "mimo"; cny: number };
+type ScatterPoint = { x: number; y: number; label: string; vendor: VendorId; cny: number };
 
 export default function LeaderboardPage() {
   const { me } = useMe();
@@ -82,12 +123,19 @@ export default function LeaderboardPage() {
       LEADERBOARD_ROWS.filter((r) => r.costPerTaskUsd !== null && r.intelligence !== null).map((r) => ({
         x: r.costPerTaskUsd as number,
         y: r.intelligence as number,
-        label: `${DISPLAY_NAME[r.model] ?? r.model}·${r.variantLabel}`,
-        vendor: r.model.startsWith("deepseek") ? "deepseek" : "mimo",
+        label: shortName(r),
+        vendor: vendorOf(r.model),
         cny: r.costPerTaskCny as number,
       })),
     [],
   );
+
+  const vendorsPresent = useMemo(
+    () => [...new Set(LEADERBOARD_ROWS.map((r) => vendorOf(r.model)))],
+    [],
+  );
+
+  const modelCount = useMemo(() => new Set(LEADERBOARD_ROWS.map((r) => r.model)).size, []);
 
   const paretoData = useMemo(
     () =>
@@ -111,7 +159,7 @@ export default function LeaderboardPage() {
       <div className="mb-6">
         <h1 className="font-display text-2xl font-semibold tracking-tight">模型榜单</h1>
         <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
-          4 个聊天模型 × 思考档位 · 数据来自 AA 评测（智能指数 v5.0.1，版本与网关一致）· 采集于 {LEADERBOARD_FETCHED_AT}
+          {modelCount} 个聊天模型 × 思考档位 · 数据来自 AA 评测（Intelligence Index，版本与网关一致）· 采集于 {LEADERBOARD_FETCHED_AT}
         </p>
       </div>
 
@@ -161,33 +209,31 @@ export default function LeaderboardPage() {
             <span className="w-5 border-t-2 border-dotted border-[var(--text-primary)]" />
             帕累托前沿
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--brand-mimo)" }} />
-            小米 MiMo
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--brand-deepseek)" }} />
-            DeepSeek
-          </span>
+          {vendorsPresent.map((v) => (
+            <span key={v} className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: VENDOR[v].color }} />
+              {VENDOR[v].label}
+            </span>
+          ))}
         </div>
 
         <div className="mt-4 h-[460px]">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart margin={{ left: 28, right: 150, top: 20, bottom: 28 }}>
+            <ComposedChart margin={{ left: 28, right: 56, top: 20, bottom: 34 }}>
               <ReferenceArea
-                x1={0.12}
-                x2={0.53}
-                y1={22.5}
-                y2={35}
+                x1={0.1}
+                x2={0.7}
+                y1={27.5}
+                y2={50}
                 fill="color-mix(in srgb, var(--status-success) 14%, transparent)"
                 fillOpacity={1}
                 strokeOpacity={0}
               />
               <ReferenceArea
-                x1={0.53}
-                x2={2.5}
-                y1={10}
-                y2={22.5}
+                x1={0.7}
+                x2={5.3}
+                y1={5}
+                y2={27.5}
                 fill="var(--bg-hover)"
                 fillOpacity={0.55}
                 strokeOpacity={0}
@@ -196,24 +242,43 @@ export default function LeaderboardPage() {
                 dataKey="x"
                 type="number"
                 scale="log"
-                domain={[0.12, 2.5]}
-                ticks={[0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2]}
+                domain={[0.1, 5.3]}
+                ticks={[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5]}
                 tickFormatter={(v: number) => `$${v}`}
                 axisLine={{ stroke: "var(--chart-axis)" }}
                 tickLine={{ stroke: "var(--chart-axis)" }}
                 tick={{ fill: "var(--text-secondary)", fontSize: 12 }}
-                label={{ value: "单任务成本（美元，对数刻度）", position: "insideBottom", offset: -16, fill: "var(--text-secondary)", fontSize: 13 }}
+                label={{ value: "单任务成本（美元，对数刻度）", position: "insideBottom", offset: -22, fill: "var(--text-secondary)", fontSize: 13 }}
               />
               <YAxis
                 dataKey="y"
                 type="number"
-                domain={[10, 35]}
-                ticks={[10, 15, 20, 25, 30, 35]}
+                domain={[5, 50]}
+                ticks={[5, 10, 15, 20, 25, 30, 35, 40, 45, 50]}
                 axisLine={{ stroke: "var(--chart-axis)" }}
                 tickLine={{ stroke: "var(--chart-axis)" }}
                 tick={{ fill: "var(--text-secondary)", fontSize: 12 }}
-                label={{ value: "Artificial Analysis Intelligence Index", angle: -90, position: "insideLeft", offset: -8, fill: "var(--text-secondary)", fontSize: 13 }}
-              />
+              >
+                <Label
+                  content={(props: { viewBox?: unknown }) => {
+                    const vb = (props.viewBox ?? {}) as { x?: number; y?: number; height?: number };
+                    const cx = Number(vb.x ?? 0) - 62;
+                    const cy = Number(vb.y ?? 0) + Number(vb.height ?? 0) / 2;
+                    return (
+                      <text
+                        x={cx}
+                        y={cy}
+                        transform={`rotate(-90 ${cx} ${cy})`}
+                        textAnchor="middle"
+                        fill="var(--text-secondary)"
+                        fontSize={13}
+                      >
+                        Artificial Analysis Intelligence Index
+                      </text>
+                    );
+                  }}
+                />
+              </YAxis>
               <Tooltip
                 cursor={{ strokeDasharray: "3 3", stroke: "var(--border-active)" }}
                 contentStyle={tooltipStyle}
@@ -245,18 +310,30 @@ export default function LeaderboardPage() {
                 data={scatterData}
                 dataKey="y"
                 shape={(props: { cx?: number; cy?: number; fill?: string }) => (
-                  <circle cx={props.cx} cy={props.cy} r={7} fill={props.fill} />
+                  <circle cx={props.cx} cy={props.cy} r={5.5} fill={props.fill} />
                 )}
                 isAnimationActive={false}
               >
                 {scatterData.map((p, i) => (
-                  <Cell key={i} fill={p.vendor === "deepseek" ? "var(--brand-deepseek)" : "var(--brand-mimo)"} />
+                  <Cell key={i} fill={VENDOR[p.vendor].color} />
                 ))}
                 <LabelList
                   dataKey="label"
-                  position="right"
-                  offset={12}
-                  style={{ fill: "var(--text-primary)", fontSize: 12 }}
+                  content={(props: { x?: number | string; y?: number | string; value?: string | number }) => {
+                    const place = LABEL_POS[String(props.value ?? "")] ?? LABEL_RIGHT;
+                    return (
+                      <text
+                        x={Number(props.x ?? 0) + place.dx}
+                        y={Number(props.y ?? 0) + place.dy}
+                        textAnchor={place.anchor}
+                        fill="var(--text-primary)"
+                        fontSize={12}
+                        style={{ pointerEvents: "none" }}
+                      >
+                        {props.value}
+                      </text>
+                    );
+                  }}
                 />
               </Scatter>
             </ComposedChart>
@@ -337,10 +414,10 @@ export default function LeaderboardPage() {
 
       <section className="panel mt-5 p-6">
         <h2 className="text-sm font-medium">智能指数对比</h2>
-        <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">AA 智能指数 v5.0.1 · 分数越高越聪明</p>
-        <div className="mt-5 h-[300px]">
+        <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">AA Intelligence Index · 分数越高越聪明</p>
+        <div className="mt-5 h-[460px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={barData} layout="vertical" margin={{ left: 12, right: 36, top: 8, bottom: 8 }} barCategoryGap="32%">
+            <BarChart data={barData} layout="vertical" margin={{ left: 12, right: 36, top: 8, bottom: 8 }} barCategoryGap="28%">
               <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" horizontal={false} />
               <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: "var(--text-tertiary)", fontSize: 12 }} />
               <YAxis
@@ -352,16 +429,17 @@ export default function LeaderboardPage() {
                 tick={{ fill: "var(--text-secondary)", fontSize: 12 }}
               />
               <Tooltip cursor={{ fill: "var(--bg-hover)" }} contentStyle={tooltipStyle} />
-              <Bar dataKey="value" name="智能指数" fill="var(--accent-primary)" radius={[4, 4, 4, 4]} barSize={20} />
+              <Bar dataKey="value" name="智能指数" fill="var(--accent-primary)" radius={[4, 4, 4, 4]} barSize={16} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </section>
 
       <p className="mt-5 text-xs leading-relaxed text-[var(--text-tertiary)]">
-        名词解释：AA = Artificial Analysis，第三方大模型评测机构；智能指数 = 其综合智能评分（Intelligence Index v5.0.1）；
+        名词解释：AA = Artificial Analysis，第三方大模型评测机构；智能指数 = 其综合智能评分（Intelligence Index）；
         每任务成本 = 跑完一个评测任务的平均花费；首Token延迟 = 发出请求到收到第一个回答字元的等待时间；输出速度 = 每秒生成的 token 数。
-        思考档位与调试台一致（DeepSeek Pro / Flash 关闭/标准/极深，MiMo 关闭/开启；Flash 档位控制台暂不暴露，榜单为评测数据）。
+        思考档位与调试台一致（DeepSeek Pro / Flash 关闭/标准/极深，MiMo 关闭/开启；Flash 与 GLM 档位控制台暂不暴露，榜单为评测数据）。
+        标「截图估读」的行：指数 / 成本按 {LEADERBOARD_FETCHED_AT} AA 散点截图估读（成本约 ±15%），精确值待 AA 公布；— 表示 AA 暂未提供。
         价格列为本网关官方人民币定价（每百万 token，DeepSeek 峰时另计）。
         更新数据：编辑 web/src/lib/leaderboard-data.ts 并刷新采集日期。
       </p>
@@ -369,18 +447,26 @@ export default function LeaderboardPage() {
   );
 }
 
-/** 官网 logo 头像 + 展示名 + mono ID。 */
+/** 官网 logo 头像（DS/MiMo）或厂商色首字母块 + 展示名 + mono ID。 */
 function ModelCell({ r }: { r: LeaderboardRow }) {
-  const isDs = r.model.startsWith("deepseek");
-  const brand = isDs ? "var(--brand-deepseek)" : "var(--brand-mimo)";
+  const vendor = vendorOf(r.model);
+  const brand = VENDOR[vendor].color;
+  const logo = BRAND_LOGO[vendor];
+  const displayName = DISPLAY_NAME[r.model] ?? r.model;
   return (
     <span className="flex items-center gap-3">
       <span
         className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)]"
         style={{ background: `color-mix(in srgb, ${brand} 12%, transparent)` }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={BRAND_LOGO[isDs ? "deepseek" : "mimo"]} alt={isDs ? "DeepSeek" : "MiMo"} className="h-6 w-6 object-contain" />
+        {logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logo} alt={VENDOR[vendor].label} className="h-6 w-6 object-contain" />
+        ) : (
+          <span className="text-[15px] font-semibold" style={{ color: brand }}>
+            {displayName.slice(0, 1)}
+          </span>
+        )}
       </span>
       <span className="min-w-0">
         <span className="block truncate text-[13px] font-medium">{DISPLAY_NAME[r.model] ?? r.model}</span>
