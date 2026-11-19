@@ -3,7 +3,10 @@ FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
-COPY web/package.json web/package-lock.json ./
+COPY web/package.json web/package-lock.json web/prisma.config.ts ./
+COPY web/prisma ./prisma
+# postinstall runs `prisma generate`, which needs the schema before packages finish installing
+ENV DATABASE_URL="file:./dev.db"
 RUN npm ci
 
 FROM node:20-bookworm-slim AS builder
