@@ -6,12 +6,17 @@
 # 发送；用 http://公网IP:3000 访问会登不进去（反复跳登录页）。
 
 your-domain.example.com {
-	encode gzip
-	reverse_proxy 127.0.0.1:3000
+	# OpenAI 兼容 API：只暴露 /v1；/key /user /spend 等管理端点仍留在回环。
+	handle /v1/* {
+		reverse_proxy 127.0.0.1:4000
+	}
+
+	handle {
+		encode gzip
+		reverse_proxy 127.0.0.1:3000
+	}
 }
 
-# 网关 :4000 不对公网暴露（compose 默认绑 127.0.0.1）。
-# 若确需对外提供 OpenAI 兼容 API（用户 SDK 直连），单独加一段并自行加鉴权/限流：
-# api.example.com {
-# 	reverse_proxy 127.0.0.1:4000
-# }
+# 对外 API 地址：https://your-domain.example.com/v1
+# 在 deploy/.env 设 PUBLIC_GATEWAY_BASE_URL=https://your-domain.example.com
+# 网关 :4000 本身仍绑 127.0.0.1，只通过上面的 /v1 反代对外。

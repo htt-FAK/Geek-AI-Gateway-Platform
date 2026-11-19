@@ -7,7 +7,27 @@ import { getGatewayModels } from "@/lib/gateway-models";
 import { isAppEnforcedKey, maskApiKey, resolveKeyMode } from "@/lib/keys";
 import { syncUserBudget } from "@/lib/litellm";
 
-export async function GET() {
+/**
+ * 对外 API 基地址。优先 PUBLIC_GATEWAY_BASE_URL；没配时，只有配置里是
+ * Docker 内部服务名（http://litellm:4000）才用浏览器访问的 Host 推导，
+ * 本机直连（127.0.0.1:4000）保持原样。
+ */
+function publicGatewayBase(req: Request): string {
+  const explicit = process.env.PUBLIC_GATEWAY_BASE_URL?.trim();
+  if (explicit) return explicit.replace(/\/+$/, "").replace(/\/v1$/i, "");
+  const configured = env().publicGatewayBaseUrl;
+  if (!/^https?:\/\/litellm(:|\/|$)/i.test(configured)) return configured;
+  const proto = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const host = (req.headers.get("x-forwarded-host") || req.headers.get("host") || "")
+    .split(",")[0]
+    .trim();
+  if (!proto || !host || /^(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(host)) {
+    return configured;
+  }
+  return `${proto}://${host}`;
+}
+
+export async function GET(req: Request) {
   try {
     const { user } = await requireUser();
     const token = user.litellmKeyTokenEnc ? decryptSecret(user.litellmKeyTokenEnc) : null;
@@ -34,7 +54,7 @@ export async function GET() {
       keyMode,
       keyMasked: maskApiKey(token),
       keyRevealedAt: user.keyRevealedAt?.toISOString() ?? null,
-      gatewayUrl: `${env().publicGatewayBaseUrl}/v1`,
+      gatewayUrl: `${publicGatewayBase(req)}/v1`,
       canRevealKey: keyMode === "virtual_key" && !isAppEnforcedKey(token),
       canRegenerateKey: keyMode === "virtual_key",
     });

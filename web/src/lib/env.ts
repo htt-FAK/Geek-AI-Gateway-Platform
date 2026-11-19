@@ -17,8 +17,12 @@ export function env() {
     credentialsEncryptionKey: requireEnv("CREDENTIALS_ENCRYPTION_KEY"),
     adminToken: requireEnv("ADMIN_TOKEN"),
     docsBaseUrl: (process.env.DOCS_BASE_URL ?? "").replace(/\/$/, ""),
-    publicGatewayBaseUrl: (process.env.PUBLIC_GATEWAY_BASE_URL ?? process.env.GATEWAY_BASE_URL ?? "http://127.0.0.1:4000")
-      .replace(/\/$/, "")
+    publicGatewayBaseUrl: (
+      process.env.PUBLIC_GATEWAY_BASE_URL?.trim() ||
+      process.env.GATEWAY_BASE_URL?.trim() ||
+      "http://127.0.0.1:4000"
+    )
+      .replace(/\/+$/, "")
       .replace(/\/v1$/i, ""),
   };
 }

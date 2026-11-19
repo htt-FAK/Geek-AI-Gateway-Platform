@@ -128,10 +128,12 @@
 
 <div align="center">
 
-| 入口 | 地址 |
-|:----:|:----:|
-| Web | `http://<host>:3000` |
-| API | `http://<host>:4000/v1` |
+| 入口 | 本机 | 线上（HTTPS 反代） |
+|:----:|:----:|:----:|
+| Web | `http://localhost:3000` | `https://<host>` |
+| API | `http://localhost:4000/v1` | `https://<host>/v1` |
+
+线上只把 OpenAI 兼容的 `/v1` 反代到网关，`/key`、`/user`、`/spend` 等管理端点仍只绑回环。`litellm` 只是 Compose 内部服务名，不会出现在对外地址里。
 
 </div>
 
