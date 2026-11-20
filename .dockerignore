@@ -1,8 +1,14 @@
 node_modules
 web/node_modules
 web/.next
+web/.next-dev
+web/data
 web/dev.db
 web/dev.db-journal
+web/tsconfig.tsbuildinfo
+logs
+backup
+*.tar.gz
 .git
 **/.env
 !**/.env.example
