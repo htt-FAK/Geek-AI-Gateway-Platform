@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
-import { hashPassword, normalizePhone } from "@/lib/password";
+import { generateInitialPassword, hashPassword, normalizePhone } from "@/lib/password";
 
 const bodySchema = z.object({
   phone: z.string().min(1),
@@ -27,11 +26,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "用户不存在" }, { status: 404 });
   }
 
-  const passwordHash = await hashPassword(env().defaultUserPassword);
+  // 一次性随机密码（不再重置为共享默认密码）：仅本次响应返回，供管理员分发。
+  const initialPassword = generateInitialPassword();
   const updated = await prisma.user.update({
     where: { id: user.id },
     data: {
-      passwordHash,
+      passwordHash: await hashPassword(initialPassword),
       mustChangePassword: true,
       passwordVersion: { increment: 1 },
     },
@@ -42,5 +42,6 @@ export async function POST(req: Request) {
     phone: updated.phone,
     mustChangePassword: updated.mustChangePassword,
     passwordVersion: updated.passwordVersion,
+    initialPassword,
   });
 }

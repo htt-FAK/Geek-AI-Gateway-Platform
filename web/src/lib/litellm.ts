@@ -28,7 +28,9 @@ export function isGatewayDbDownBody(text: string): boolean {
     t.includes("no database") ||
     t.includes("database not connected") ||
     t.includes("not connected to db") ||
-    t.includes("connect proxy to database")
+    t.includes("connect proxy to database") ||
+    // PG 停机时管理端点（/key/list 等）的实测报错：引擎连不上库
+    t.includes("all connection attempts failed")
   );
 }
 
@@ -41,11 +43,17 @@ export async function ensureLitellmUserAndKey(
   const userId = `phone:${phone}`;
 
   // 用户级终身预算 = 余额上限（不设 budget_duration → 永不重置，全部 Key 共享）
+  const { gatewayUserRpmLimit, gatewayUserTpmLimit } = env();
   const userRes = await gatewayFetch("/user/new", {
     method: "POST",
     body: JSON.stringify({
       user_id: userId,
+      // litellm 默认随 /user/new 附赠一把无别名 Key（auto_create_key=True）：
+      // 它不落本地副本、不受轮换吊销管辖，却能花同一份预算——必须关掉，Key 只走 /key/generate。
+      auto_create_key: false,
       max_budget: budget ? (budget.unlimited ? null : budget.grantedCny) : undefined,
+      rpm_limit: gatewayUserRpmLimit,
+      ...(gatewayUserTpmLimit !== undefined ? { tpm_limit: gatewayUserTpmLimit } : {}),
     }),
   });
   let gatewayDbDown = false;
@@ -110,11 +118,16 @@ export async function ensureLitellmUser(
   budget?: { grantedCny: number; unlimited: boolean },
 ): Promise<{ userId: string }> {
   const userId = `phone:${phone}`;
+  const { gatewayUserRpmLimit, gatewayUserTpmLimit } = env();
   const userRes = await gatewayFetch("/user/new", {
     method: "POST",
     body: JSON.stringify({
       user_id: userId,
+      // 同 ensureLitellmUserAndKey：禁止 /user/new 附赠孤儿 Key（导入账号只建用户，不发 Key）
+      auto_create_key: false,
       max_budget: budget ? (budget.unlimited ? null : budget.grantedCny) : undefined,
+      rpm_limit: gatewayUserRpmLimit,
+      ...(gatewayUserTpmLimit !== undefined ? { tpm_limit: gatewayUserTpmLimit } : {}),
     }),
   });
   if (!userRes.ok) {
@@ -287,18 +300,21 @@ async function fetchSpendLogsPaged(query: URLSearchParams): Promise<SpendLogsPag
   return { logs, truncated };
 }
 
-/** Fetch per-request spend logs for a virtual key in [start, end]. */
-export async function fetchKeySpendLogs(
-  apiKey: string,
+/**
+ * 按网关 user_id 拉 [start, end] 的逐条花费日志——覆盖该用户全部 Key（控制台 + 直连），
+ * 与 getBalance 的用户级 spend 同一口径。只拿主 Key 的 api_key 过滤会漏掉其它 Key 的直连。
+ */
+export async function fetchUserSpendLogs(
+  litellmUserId: string,
   start: Date,
   end: Date,
 ): Promise<SpendLogsPage | null> {
-  if (!apiKey || apiKey.startsWith("__app_enforced__:")) {
+  if (!litellmUserId) {
     return { logs: [], truncated: false };
   }
   // end_date 解析为当天 00:00 UTC，按上海日历日 +1 天才能含当天
   const qs = new URLSearchParams({
-    api_key: apiKey,
+    user_id: litellmUserId,
     start_date: shanghaiDateKey(start),
     end_date: shanghaiDateKey(new Date(end.getTime() + 86400000)),
   });
@@ -320,23 +336,52 @@ export async function fetchUserSpend(litellmUserId: string): Promise<number | nu
   }
 }
 
-/** 把本地余额推平到网关用户级 max_budget（终身、全 Key 共享）。 */
+/**
+ * 把本地余额推平到网关用户级 max_budget（终身、全 Key 共享），
+ * 同时带上用户级 rpm/tpm 限额（覆盖该用户全部 Key 含直连，存量用户经此自动获得限额）。
+ * 调用方必须持有 withUserLock 或处于互斥流程内，避免旧快照盖掉充值后的新预算。
+ */
 export async function syncUserBudget(
   litellmUserId: string,
   grantedCny: number,
   unlimited: boolean,
 ): Promise<boolean> {
+  const { gatewayUserRpmLimit, gatewayUserTpmLimit } = env();
   try {
     const res = await gatewayFetch("/user/update", {
       method: "POST",
       body: JSON.stringify({
         user_id: litellmUserId,
         max_budget: unlimited ? null : grantedCny,
+        rpm_limit: gatewayUserRpmLimit,
+        ...(gatewayUserTpmLimit !== undefined ? { tpm_limit: gatewayUserTpmLimit } : {}),
       }),
     });
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+/**
+ * 读网关用户当前 max_budget（number；null=不限额）。查询失败返回 undefined。
+ * 充值回滚用：仅当网关仍等于本次写入值时才推回旧值，避免盖掉并发新充值。
+ */
+export async function fetchUserMaxBudget(
+  litellmUserId: string,
+): Promise<{ ok: true; maxBudget: number | null } | { ok: false }> {
+  try {
+    const qs = new URLSearchParams({ user_id: litellmUserId });
+    const res = await gatewayFetch(`/user/info?${qs.toString()}`);
+    if (!res.ok) return { ok: false };
+    const data = (await res.json()) as Record<string, unknown>;
+    const info = asRecord(data.user_info) ?? data;
+    const raw = info.max_budget;
+    if (raw === null || raw === undefined) return { ok: true, maxBudget: null };
+    const n = Number(raw);
+    return Number.isFinite(n) ? { ok: true, maxBudget: n } : { ok: false };
+  } catch {
+    return { ok: false };
   }
 }
 
@@ -459,24 +504,45 @@ function normalizeKeyInfo(raw: unknown): GatewayKeyInfo | null {
   };
 }
 
-/** 列出某网关用户的全部密钥（不含明文）。DB 未连接时抛 GatewayDbError。 */
+/** /key/list 单页上限与页数上限：超出宁可抛错（封禁/轮换必须失败 closed），不可静默截断。 */
+const KEY_LIST_PAGE_SIZE = 100;
+const KEY_LIST_MAX_PAGES = 50;
+
+/**
+ * 列出某网关用户的全部密钥（不含明文），按 total_pages 翻页拉完。
+ * DB 未连接时抛 GatewayDbError；超过页数上限抛错（绝不返回不完整的列表）。
+ */
 export async function listGatewayKeys(userId: string): Promise<GatewayKeyInfo[]> {
-  const qs = new URLSearchParams({
-    user_id: userId,
-    page: "1",
-    page_size: "100",
-    return_full_object: "true",
-  });
-  const res = await gatewayFetch(`/key/list?${qs.toString()}`);
-  const text = await res.text();
-  if (!res.ok) {
-    if (isDbDown(text)) throw new GatewayDbError();
-    throw new Error(`key/list 失败：${res.status} ${text.slice(0, 200)}`);
+  const out: GatewayKeyInfo[] = [];
+  let page = 1;
+  while (true) {
+    const qs = new URLSearchParams({
+      user_id: userId,
+      page: String(page),
+      page_size: String(KEY_LIST_PAGE_SIZE),
+      return_full_object: "true",
+    });
+    const res = await gatewayFetch(`/key/list?${qs.toString()}`);
+    const text = await res.text();
+    if (!res.ok) {
+      if (isDbDown(text)) throw new GatewayDbError();
+      throw new Error(`key/list 失败：${res.status} ${text.slice(0, 200)}`);
+    }
+    const data = JSON.parse(text) as unknown;
+    const obj = asRecord(data);
+    const arr = Array.isArray(data) ? data : Array.isArray(obj?.keys) ? obj.keys : [];
+    for (const raw of arr) {
+      const k = normalizeKeyInfo(raw);
+      if (k) out.push(k);
+    }
+    const totalPages = Number(obj?.total_pages ?? 1);
+    if (!Number.isFinite(totalPages) || totalPages <= page) break;
+    if (page >= KEY_LIST_MAX_PAGES) {
+      throw new Error(`key/list 超过 ${KEY_LIST_MAX_PAGES} 页上限，密钥列表不完整`);
+    }
+    page += 1;
   }
-  const data = JSON.parse(text) as unknown;
-  const obj = asRecord(data);
-  const arr = Array.isArray(data) ? data : Array.isArray(obj?.keys) ? obj.keys : [];
-  return arr.map(normalizeKeyInfo).filter((k): k is GatewayKeyInfo => k !== null);
+  return out;
 }
 
 /** 用 key_name 或完整 key 取回完整明文 key（master key 权限）。 */
@@ -547,11 +613,13 @@ export async function updateGatewayKey(
   }
 }
 
-/** 删除密钥（best-effort 批量）。 */
+/** 删除密钥（批量，可传完整 Key 或哈希 token）。「No keys found」= 已不存在，视为成功。 */
 export async function deleteGatewayKeys(fullKeys: string[]): Promise<void> {
+  if (fullKeys.length === 0) return;
   const res = await gatewayFetch("/key/delete", { method: "POST", body: JSON.stringify({ keys: fullKeys }) });
   const text = await res.text();
   if (!res.ok) {
+    if (text.includes("No keys found")) return;
     if (isDbDown(text)) throw new GatewayDbError();
     throw new Error(`key/delete 失败：${res.status} ${text.slice(0, 200)}`);
   }

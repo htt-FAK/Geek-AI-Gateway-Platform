@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { packContext, messagesToSummarize, MEMORY_BLOCK_LEAD, SUMMARY_BLOCK_LEAD } from "./context-pack.ts";
 import {
   applyMemoryOps,
+  diffRemovedRows,
   isRejectedMemory,
   memoryHash,
   parseMemoryOps,
@@ -123,6 +124,47 @@ describe("long-term memory", () => {
     assert.equal(next.length, 40);
     assert.equal(next.some((item) => item.content === "偏好编号0"), false);
     assert.equal(next.some((item) => item.content === "偏好编号40"), true);
+  });
+
+  it("evicts only rows explicitly removed by ops, never the whole table", () => {
+    const item = (id: string, content: string, createdAt: number) => ({
+      id,
+      content,
+      hash: memoryHash(content),
+      createdAt,
+      updatedAt: createdAt,
+    });
+    const current = [item("m1", "叫小张", 1), item("m2", "喜欢中文", 2)];
+    // drop 只命中匹配行，无关行不进淘汰集
+    const next = applyMemoryOps(current, [{ op: "drop", match: "叫小张" }], 10);
+    const removed = diffRemovedRows(current, next);
+    assert.deepEqual(removed.map((r) => r.id), ["m1"]);
+    assert.equal(removed[0].updatedAt, 1); // 携带快照时间戳，供写入侧 CAS
+    // 空 ops / 纯 add 不产生淘汰；另一会话新写的行不在快照里，天然不受影响
+    const added = applyMemoryOps(current, [{ op: "add", content: "在做网关项目" }], 10);
+    assert.deepEqual(diffRemovedRows(current, added), []);
+    assert.deepEqual(diffRemovedRows(current, applyMemoryOps(current, [], 10)), []);
+    // update 保留原 id，不算移除
+    const updated = applyMemoryOps(
+      current,
+      [{ op: "update", match: "喜欢中文", content: "喜欢中文回答" }],
+      10,
+    );
+    assert.deepEqual(diffRemovedRows(current, updated), []);
+  });
+
+  it("cap trimming yields explicit removed ids for existing rows", () => {
+    const current = Array.from({ length: 40 }, (_, i) => ({
+      id: `m${i}`,
+      content: `偏好编号${i}`,
+      hash: memoryHash(`偏好编号${i}`),
+      createdAt: i + 1,
+      updatedAt: i + 1,
+    }));
+    const next = applyMemoryOps(current, [{ op: "add", content: "新偏好" }], 100);
+    assert.equal(next.length, 40);
+    const removed = diffRemovedRows(current, next);
+    assert.deepEqual(removed.map((r) => r.id), ["m0"]); // 只明确移除最旧一条
   });
 
   it("parses a fenced JSON payload and redacts keys in summaries", () => {

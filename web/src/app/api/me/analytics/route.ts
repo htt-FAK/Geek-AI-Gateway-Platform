@@ -5,6 +5,7 @@ import {
   type AnalyticsGranularity,
 } from "@/lib/analytics";
 import { decryptSecret } from "@/lib/crypto";
+import { resolveKeyMode } from "@/lib/keys";
 
 function parseDate(v: string | null): Date | null {
   if (!v) return null;
@@ -35,7 +36,8 @@ export async function GET(req: Request) {
     const token = user.litellmKeyTokenEnc ? decryptSecret(user.litellmKeyTokenEnc) : null;
     const result = await buildUserAnalytics({
       userId: user.id,
-      litellmKeyToken: token,
+      litellmUserId: user.litellmUserId,
+      appEnforced: resolveKeyMode(token) !== "virtual_key",
       from,
       to,
       granularity,

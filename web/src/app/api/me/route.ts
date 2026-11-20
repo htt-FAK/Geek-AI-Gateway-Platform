@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { authErrorResponse, requireUser } from "@/lib/auth";
 import { getBalance } from "@/lib/budget";
 import { decryptSecret } from "@/lib/crypto";
+import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { getGatewayModels } from "@/lib/gateway-models";
 import { isAppEnforcedKey, maskApiKey, resolveKeyMode } from "@/lib/keys";
 import { syncUserBudget } from "@/lib/litellm";
+import { withUserLock } from "@/lib/user-lock";
 
 /**
  * 对外 API 基地址。优先 PUBLIC_GATEWAY_BASE_URL；没配时，只有配置里是
@@ -39,9 +41,18 @@ export async function GET(req: Request) {
     const keyMode = resolveKeyMode(token);
     const models = await getGatewayModels();
 
-    // 自愈对账：把本地余额推平到网关用户级预算（best-effort，不阻塞响应）
+    // 自愈对账：把本地余额推平到网关用户级预算（best-effort，不阻塞响应）。
+    // 必须在锁内重读最新余额再推，且与充值互斥——请求开头的快照会把充值后的网关预算盖回去。
     if (keyMode === "virtual_key" && user.litellmUserId) {
-      void syncUserBudget(user.litellmUserId, user.balanceGrantedCny, user.balanceUnlimited);
+      void withUserLock(user.id, async () => {
+        const fresh = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { litellmUserId: true, balanceGrantedCny: true, balanceUnlimited: true },
+        });
+        if (fresh?.litellmUserId) {
+          await syncUserBudget(fresh.litellmUserId, fresh.balanceGrantedCny, fresh.balanceUnlimited);
+        }
+      });
     }
 
     return NextResponse.json({

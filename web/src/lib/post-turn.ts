@@ -4,6 +4,7 @@ import { getGatewayModels } from "@/lib/gateway-models";
 import { chatCompletions } from "@/lib/litellm";
 import {
   applyMemoryOps,
+  diffRemovedRows,
   isRejectedMemory,
   MEMORY_MODEL,
   memoryHash,
@@ -114,8 +115,17 @@ async function completePlain(input: PostTurnInput & {
   return typeof content === "string" ? content : "";
 }
 
-async function syncMemories(userId: string, sourceConversationId: string, next: MemoryItem[]) {
-  const kept = new Set<string>();
+/**
+ * 只应用本轮结果：add/update/upsert 逐条写，淘汰仅限 removed（本轮 ops/上限裁剪
+ * 明确移除的快照行）。绝不对全表做「不在结果里就 dropped」的差集淘汰——
+ * 那会把另一会话刚写入的记忆误杀。CAS 失败的行直接跳过，保留更新的版本。
+ */
+async function syncMemories(
+  userId: string,
+  sourceConversationId: string,
+  next: MemoryItem[],
+  removed: MemoryItem[],
+) {
   for (const item of next) {
     if (isRejectedMemory(item.content)) continue;
     const clash = await prisma.userMemory.findUnique({
@@ -128,10 +138,9 @@ async function syncMemories(userId: string, sourceConversationId: string, next: 
         where: { id: clash.id },
         data: { status: "active", content: item.content, sourceConversationId },
       });
-      kept.add(clash.id);
       if (item.id) {
         await prisma.userMemory.updateMany({
-          where: { id: item.id, userId },
+          where: { id: item.id, userId, status: "active" },
           data: { status: "dropped" },
         });
       }
@@ -139,7 +148,8 @@ async function syncMemories(userId: string, sourceConversationId: string, next: 
     }
     if (item.id) {
       // CAS：用户在后台整理期间删除/改过这条记忆时，不再覆盖。
-      const updated = await prisma.userMemory.updateMany({
+      // 失败只跳过该条——不触发任何淘汰，保留用户或另一轮刚写下的版本。
+      await prisma.userMemory.updateMany({
         where: {
           id: item.id,
           userId,
@@ -152,10 +162,9 @@ async function syncMemories(userId: string, sourceConversationId: string, next: 
           sourceConversationId,
         },
       });
-      if (updated.count > 0) kept.add(item.id);
       continue;
     }
-    const row = await prisma.userMemory.upsert({
+    await prisma.userMemory.upsert({
       where: { userId_contentHash: { userId, contentHash: item.hash } },
       update: { status: "active", content: item.content, sourceConversationId },
       create: {
@@ -166,20 +175,21 @@ async function syncMemories(userId: string, sourceConversationId: string, next: 
         status: "active",
       },
     });
-    kept.add(row.id);
   }
 
-  if (kept.size === 0) {
+  // 显式淘汰：只标本轮明确移除的行，且带快照 updatedAt 的 CAS 守卫——
+  // 期间被用户删除（status 已非 active）或另一轮改过的行自动跳过。
+  for (const row of removed) {
     await prisma.userMemory.updateMany({
-      where: { userId, status: "active" },
+      where: {
+        id: row.id,
+        userId,
+        status: "active",
+        ...(row.updatedAt ? { updatedAt: new Date(row.updatedAt) } : {}),
+      },
       data: { status: "dropped" },
     });
-    return;
   }
-  await prisma.userMemory.updateMany({
-    where: { userId, status: "active", id: { notIn: [...kept] } },
-    data: { status: "dropped" },
-  });
 }
 
 async function refreshSummary(input: PostTurnInput) {
@@ -276,18 +286,21 @@ async function refreshMemories(input: PostTurnInput) {
     updatedAt: row.updatedAt.getTime(),
   }));
   const next = applyMemoryOps(current, ops, Date.now());
-  await syncMemories(input.userId, input.conversationId, next);
+  // 淘汰只针对快照差集（本轮明确移除的行），不碰快照之外的新记忆。
+  const removed = diffRemovedRows(current, next);
+  await syncMemories(input.userId, input.conversationId, next, removed);
 }
 
 /**
- * 同一会话的整理任务串行执行：连续两轮完成时，第二轮的摘要/记忆会等第一轮跑完，
- * 避免对同一段消息重复调用模型（重复计费）和记忆同步互相覆盖。
+ * 同一用户的整理任务跨会话串行执行：记忆是用户级共享状态，两个会话同时读同一份
+ * 记忆再各自写回会互相淘汰；按用户串行后，后一轮总能读到前一轮的最新结果。
+ * 顺带避免同一段消息重复调用模型（重复计费）。
  * 单实例内存队列；多实例部署需换成持久化队列/分布式锁。
  */
 const postTurnQueues = new Map<string, Promise<void>>();
 
 export function schedulePostTurn(input: PostTurnInput) {
-  const key = `${input.userId}:${input.conversationId}`;
+  const key = input.userId;
   const previous = postTurnQueues.get(key) ?? Promise.resolve();
   const run = previous
     .catch(() => undefined)

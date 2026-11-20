@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
 import { ensureLitellmUser } from "@/lib/litellm";
-import { hashPassword, normalizePhone } from "@/lib/password";
+import { generateInitialPassword, hashPassword, normalizePhone } from "@/lib/password";
 
 const contactSchema = z.object({
   phone: z.string().min(1),
@@ -31,11 +30,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "缺少手机号" }, { status: 400 });
   }
 
-  const defaultHash = await hashPassword(env().defaultUserPassword);
   const created: string[] = [];
   const skipped: string[] = [];
   const renamed: string[] = [];
   const errors: Array<{ phone: string; error: string }> = [];
+  /** 一次性初始密码：每人一把，仅本次响应返回，供管理员分发（首登强制改密）。 */
+  const initialPasswords: Array<{ phone: string; password: string }> = [];
 
   for (const entry of entries) {
     const phone = normalizePhone(entry.phone);
@@ -59,11 +59,12 @@ export async function POST(req: Request) {
       // 新账号默认无 Key：只建网关用户并写入 max_budget=0（同步失败抛错进 errors），
       // 密钥由用户登录后在「密钥管理」页自行创建。网关 DB 不可用时拒绝创建（无预算约束不安全）。
       const issued = await ensureLitellmUser(phone, { grantedCny: 0, unlimited: false });
+      const initialPassword = generateInitialPassword();
       await prisma.user.create({
         data: {
           phone,
           name: name ?? null,
-          passwordHash: defaultHash,
+          passwordHash: await hashPassword(initialPassword),
           mustChangePassword: true,
           litellmUserId: issued.userId,
           litellmKeyId: null,
@@ -71,10 +72,11 @@ export async function POST(req: Request) {
         },
       });
       created.push(phone);
+      initialPasswords.push({ phone, password: initialPassword });
     } catch (e) {
       errors.push({ phone, error: e instanceof Error ? e.message : "unknown" });
     }
   }
 
-  return NextResponse.json({ created, skipped, renamed, errors });
+  return NextResponse.json({ created, skipped, renamed, errors, initialPasswords });
 }

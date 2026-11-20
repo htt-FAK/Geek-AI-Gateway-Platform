@@ -11,16 +11,26 @@ function passwordBlocked(session: { mustChangePassword: boolean }, user: { mustC
   return null;
 }
 
-export async function GET() {
+/**
+ * 会话列表：cursor 翻页（updatedAt desc + id desc 稳定排序）。
+ * 不传 cursor 返回第一屏；nextCursor 非空表示还有更早的会话。
+ */
+export async function GET(req: Request) {
   try {
     const { user, session } = await requireUser();
     const blocked = passwordBlocked(session, user);
     if (blocked) return blocked;
 
+    const url = new URL(req.url);
+    const cursor = url.searchParams.get("cursor");
+    const limitRaw = Number(url.searchParams.get("limit") ?? 50);
+    const limit = Number.isInteger(limitRaw) ? Math.min(Math.max(limitRaw, 1), 100) : 50;
+
     const rows = await prisma.conversation.findMany({
       where: { userId: user.id },
-      orderBy: { updatedAt: "desc" },
-      take: 50,
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       select: {
         id: true,
         title: true,
@@ -31,8 +41,10 @@ export async function GET() {
         updatedAt: true,
       },
     });
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
     return NextResponse.json({
-      conversations: rows.map((row) => ({
+      conversations: page.map((row) => ({
         id: row.id,
         title: row.title,
         model: row.model,
@@ -41,6 +53,7 @@ export async function GET() {
         updatedAt: row.updatedAt.toISOString(),
         hasSummary: row.summary.trim().length > 0,
       })),
+      nextCursor: hasMore ? page[page.length - 1].id : null,
     });
   } catch (error) {
     const auth = authErrorResponse(error);

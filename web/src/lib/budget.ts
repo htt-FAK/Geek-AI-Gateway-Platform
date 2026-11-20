@@ -16,6 +16,8 @@ export type BalanceInfo = {
   spendCny: number;
   /** 不限额时为 null（无上限） */
   balanceCny: number | null;
+  /** 花费口径：网关用户级 spend（覆盖直连）或本地 SpendEvent 回退。 */
+  spendSource: "litellm" | "spend_event";
 };
 
 /**
@@ -36,11 +38,17 @@ export async function getBalance(params: {
   const unlimited = user?.balanceUnlimited ?? false;
 
   let spendCny = 0;
+  let spendSource: BalanceInfo["spendSource"] = "spend_event";
   const isAppEnforced =
     !params.litellmKeyToken || params.litellmKeyToken.startsWith("__app_enforced__:");
   if (!isAppEnforced && params.litellmUserId) {
     const gwSpend = await fetchUserSpend(params.litellmUserId);
-    spendCny = gwSpend ?? (await getAppSpendTotal(params.userId));
+    if (gwSpend !== null) {
+      spendCny = gwSpend;
+      spendSource = "litellm";
+    } else {
+      spendCny = await getAppSpendTotal(params.userId);
+    }
   } else {
     spendCny = await getAppSpendTotal(params.userId);
   }
@@ -50,6 +58,7 @@ export async function getBalance(params: {
     grantedCny,
     spendCny,
     balanceCny: unlimited ? null : Math.max(0, grantedCny - spendCny),
+    spendSource,
   };
 }
 

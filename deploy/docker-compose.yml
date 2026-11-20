@@ -15,6 +15,8 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    # 2C4G 小机防拖垮宿主：超限只 OOM 重启本容器（restart 策略兜底），不吃光宿主内存
+    mem_limit: 512m
 
   litellm:
     # 自建镜像与本机运行时同版本（1.91.1）；官方 v1.83 镜像会让计费补丁失效。
@@ -45,6 +47,8 @@ services:
         condition: service_healthy
     command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
     restart: unless-stopped
+    # litellm 内存随运行时长增长（路由/用户缓存），1.5g 封顶＋OOM 自动重启
+    mem_limit: 1536m
     healthcheck:
       test:
         [
@@ -96,6 +100,7 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+    mem_limit: 768m
 
 volumes:
   litellm_pg:

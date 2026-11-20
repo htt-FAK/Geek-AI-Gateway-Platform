@@ -1,6 +1,12 @@
 /** 单条消息入库前的字数上限，避免一次粘贴撑爆后续上下文。 */
 export const MAX_MESSAGE_CHARS = 16_000;
 
+/** 单次补全 token 上限：调试台与 /api/chat 共用，防止一条请求烧穿余额。 */
+export const MAX_COMPLETION_TOKENS = 128_000;
+
+/** 单次请求正文总字数上限：调试台与 /api/chat 共用。 */
+export const MAX_REQUEST_TEXT_CHARS = 200_000;
+
 export const DEFAULT_CONVERSATION_TITLE = "新对话";
 
 export type AssistantRecordStatus = "complete" | "aborted" | "error";

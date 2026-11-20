@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { aggregateEvents, type AnalyticsEvent } from "@/lib/analytics";
+import { getBalance } from "@/lib/budget";
+import { decryptSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { fetchAllSpendLogs } from "@/lib/litellm";
 import { spendSeriesModel } from "@/lib/spend-kind";
@@ -69,7 +71,15 @@ export async function GET(req: Request) {
 
   // 成员表：按网关 user_id / 本地 userId 分组，join 手机号
   const users = await prisma.user.findMany({
-    select: { id: true, phone: true, name: true, litellmUserId: true, balanceGrantedCny: true, balanceUnlimited: true },
+    select: {
+      id: true,
+      phone: true,
+      name: true,
+      litellmUserId: true,
+      litellmKeyTokenEnc: true,
+      balanceGrantedCny: true,
+      balanceUnlimited: true,
+    },
   });
   const phoneByGwId = new Map(users.filter((u) => u.litellmUserId).map((u) => [u.litellmUserId!, u.phone]));
   const phoneById = new Map(users.map((u) => [u.id, u.phone]));
@@ -84,18 +94,36 @@ export async function GET(req: Request) {
     cur.tokens += ev.totalTokens;
     byUser.set(phone, cur);
   }
-  // 全量流水（算剩余余额用，不受日期范围影响）
-  const lifetime = await prisma.spendEvent.groupBy({ by: ["userId"], _sum: { costCny: true } });
-  const lifetimeByPhone = new Map<string, number>();
-  for (const l of lifetime) {
-    const phone = phoneById.get(l.userId) ?? l.userId;
-    lifetimeByPhone.set(phone, (lifetimeByPhone.get(phone) ?? 0) + (l._sum.costCny ?? 0));
-  }
+  // 剩余余额与 /api/me 同一本账：复用 getBalance（网关用户级 spend 优先，离线回退本地）。
+  // 直连不写本地 SpendEvent，只用本地流水减充值会把剩余算高。
+  const balances = await Promise.all(
+    users.map(async (u) => {
+      let token: string | null = null;
+      try {
+        token = u.litellmKeyTokenEnc ? decryptSecret(u.litellmKeyTokenEnc) : null;
+      } catch {
+        token = null;
+      }
+      const balance = await getBalance({
+        userId: u.id,
+        litellmUserId: u.litellmUserId,
+        litellmKeyToken: token,
+      });
+      const gatewayBacked =
+        Boolean(u.litellmUserId) && Boolean(token) && !token!.startsWith("__app_enforced__:");
+      return { phone: u.phone, balance, gatewayBacked };
+    }),
+  );
+  const balanceByPhone = new Map(balances.map((b) => [b.phone, b.balance]));
+  const remainingSource = balances.some(
+    (b) => b.gatewayBacked && b.balance.spendSource === "spend_event",
+  )
+    ? "spend_event_fallback"
+    : "litellm";
   // 覆盖全部账号（含零用量），左 join 本期用量＋余额
   const members = users
     .map((u) => {
       const s = byUser.get(u.phone) ?? { spendCny: 0, requests: 0, tokens: 0 };
-      const usedTotal = lifetimeByPhone.get(u.phone) ?? 0;
       return {
         phone: u.phone,
         name: u.name,
@@ -104,7 +132,7 @@ export async function GET(req: Request) {
         tokens: s.tokens,
         grantedCny: u.balanceGrantedCny,
         unlimited: u.balanceUnlimited,
-        remainingCny: u.balanceUnlimited ? null : Math.max(0, u.balanceGrantedCny - usedTotal),
+        remainingCny: balanceByPhone.get(u.phone)?.balanceCny ?? null,
       };
     })
     .sort((a, b) => b.spendCny - a.spendCny);
@@ -115,6 +143,8 @@ export async function GET(req: Request) {
     to: to.toISOString(),
     granularity,
     source,
+    /** 剩余余额口径：litellm=网关用户级 spend；spend_event_fallback=有网关账号回退了本地流水。 */
+    remainingSource,
     kpis: {
       totalRequests: agg.kpis.count,
       totalAmountCny: agg.kpis.spendCny,

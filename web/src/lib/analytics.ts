@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/db";
-import { fetchKeySpendLogs, type NormalizedSpendLog } from "@/lib/litellm";
+import { fetchUserSpendLogs, type NormalizedSpendLog } from "@/lib/litellm";
 import { spendSeriesModel } from "@/lib/spend-kind";
 
 export type AnalyticsGranularity = "hour" | "day";
-export type AnalyticsSource = "litellm" | "spend_event" | "mixed_fallback";
+export type AnalyticsSource = "litellm" | "litellm_truncated" | "spend_event" | "mixed_fallback";
 
 export type AnalyticsEvent = {
   at: Date;
@@ -168,27 +168,31 @@ function fromSpendLogs(rows: NormalizedSpendLog[]): AnalyticsEvent[] {
   }));
 }
 
+/**
+ * 个人用量：按网关 user_id 拉日志（覆盖该用户全部 Key 的直连），与余额同一本账。
+ * 只拿主 Key 的 api_key 过滤会漏掉其它 Key 的花费；超过 5000 条标 litellm_truncated。
+ * 代持 / 无 Key 账号走本地 SpendEvent（与 getBalance 的回退口径一致）。
+ */
 export async function buildUserAnalytics(params: {
   userId: string;
-  litellmKeyToken: string | null;
+  litellmUserId: string | null;
+  /** 代持哨兵或无 Key：网关日志不覆盖这类账号的花费，直接用本地口径。 */
+  appEnforced: boolean;
   from: Date;
   to: Date;
   granularity: AnalyticsGranularity;
 }): Promise<AnalyticsResult> {
-  const { userId, litellmKeyToken, from, to, granularity } = params;
-  const usableVk =
-    litellmKeyToken &&
-    !litellmKeyToken.startsWith("__app_enforced__:") &&
-    litellmKeyToken.length > 0;
+  const { userId, litellmUserId, appEnforced, from, to, granularity } = params;
+  const usableGw = !appEnforced && Boolean(litellmUserId);
 
-  if (usableVk) {
+  if (usableGw && litellmUserId) {
     try {
-      const page = await fetchKeySpendLogs(litellmKeyToken, from, to);
+      const page = await fetchUserSpendLogs(litellmUserId, from, to);
       // page === null 是网关查询失败（≠ 没有流量）：回退本地口径并用 mixed_fallback 标注
       if (page && page.logs.length > 0) {
         return {
           ...aggregateEvents(fromSpendLogs(page.logs), from, to, granularity),
-          source: "litellm",
+          source: page.truncated ? "litellm_truncated" : "litellm",
         };
       }
     } catch {
@@ -221,6 +225,6 @@ export async function buildUserAnalytics(params: {
 
   return {
     ...aggregateEvents(events, from, to, granularity),
-    source: usableVk ? "mixed_fallback" : "spend_event",
+    source: usableGw ? "mixed_fallback" : "spend_event",
   };
 }

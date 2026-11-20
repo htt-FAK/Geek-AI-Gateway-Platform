@@ -23,7 +23,6 @@ loadEnv(path.join(__dirname, "..", ".env"));
 
 const BASE = process.env.SMOKE_BASE_URL || "http://127.0.0.1:3000";
 const ADMIN = process.env.ADMIN_TOKEN;
-const DEFAULT_PWD = process.env.DEFAULT_USER_PASSWORD;
 const PHONE = process.env.SMOKE_PHONE || `138${String(Date.now()).slice(-8)}`;
 const NEW_PWD = "SmokePass123!";
 
@@ -50,7 +49,10 @@ async function main() {
     headers: { "Content-Type": "application/json", "x-admin-token": ADMIN },
     body: JSON.stringify({ phones: [PHONE] }),
   });
-  console.log(imp.status, JSON.stringify(imp.json));
+  // 一次性初始密码只在本次响应里，不打印明文
+  const initialPwd = (imp.json.initialPasswords ?? []).find((p) => p.phone === PHONE)?.password;
+  console.log(imp.status, JSON.stringify({ created: imp.json.created, skipped: imp.json.skipped, errors: imp.json.errors }));
+  if (!initialPwd) throw new Error("import did not return initialPassword");
 
   console.log("1b) topup ¥10 (balance system: new accounts start at ¥0)");
   const topup = await req("/api/admin/users/topup", {
@@ -61,11 +63,11 @@ async function main() {
   console.log(topup.status, JSON.stringify(topup.json));
   if (!topup.json.ok) throw new Error("topup failed");
 
-  console.log("2) login default");
+  console.log("2) login with one-time initial password");
   const login = await req("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ phone: PHONE, password: DEFAULT_PWD }),
+    body: JSON.stringify({ phone: PHONE, password: initialPwd }),
   });
   console.log(login.status, JSON.stringify(login.json));
   if (!login.json.requirePasswordChange) throw new Error("expected requirePasswordChange");
@@ -75,10 +77,19 @@ async function main() {
   const ch = await req("/api/auth/change-password", {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookie },
-    body: JSON.stringify({ oldPassword: DEFAULT_PWD, newPassword: NEW_PWD }),
+    body: JSON.stringify({ oldPassword: initialPwd, newPassword: NEW_PWD }),
   });
   console.log(ch.status, JSON.stringify(ch.json));
   if (ch.cookies.length) cookie = cookieHeader(ch.cookies);
+
+  console.log("3b) create first key (new accounts start keyless)");
+  const ck = await req("/api/keys", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({ models: ["deepseek-flash"], description: "smoke" }),
+  });
+  console.log(ck.status, ck.json.keyName ?? ck.json.error);
+  if (!ck.json.key) throw new Error("key creation failed");
 
   console.log("4) chat non-stream");
   const chat = await req("/api/chat", {

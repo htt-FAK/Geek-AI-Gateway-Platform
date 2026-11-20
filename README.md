@@ -261,6 +261,28 @@ docs/     交接 · README 截图
 
 ---
 
+## 计费与限流边界
+
+**余额口径（三处同一本账）**：余额 = `User.balanceGrantedCny` − 网关用户级 `spend`
+（`/user/info`，覆盖控制台与全部 Virtual Key 直连）。个人看板按 `user_id` 拉
+`/spend/logs/v2` 聚合，管理端剩余复用 `getBalance`；网关离线时回退本地 `SpendEvent`
+并在响应标明口径（`mixed_fallback` / `spend_event_fallback`）。日志超 5000 条标
+`litellm_truncated`，前端提示曲线不完整。
+
+**单笔超支是固有口径**：余额门在调用前检查，网关 `max_budget` 也按已入账 spend 比较，
+不做预扣——余额剩几分钱仍可打完一轮。单笔超支上限 ≈ `max_tokens`（上限 128000）×
+模型输出价。并发超支由两层压制：BFF 每用户在途请求 ≤3（`/api/chat` 与调试台共享槽位），
+网关用户级 `rpm_limit`（`GATEWAY_USER_RPM_LIMIT`，默认 60/分，`GATEWAY_USER_TPM_LIMIT`
+可选）覆盖该用户全部 Key 含直连。充值为条件更新（CAS）＋按用户互斥锁，控制台自愈
+回写在锁内重读最新余额，不会盖掉充值后的网关预算。
+
+**单机边界**：登录/对话限流计数与 post-turn 整理队列都在进程内存，应用库为 SQLite
+（单写者）。多 Web 副本或重启会清零计数、队列不共享——多副本部署前需把限流计数迁到
+Redis/Postgres、整理队列换持久化队列，应用库换 Postgres。上游各家共用一把 Key，
+用户级 RPM 只防单人打满，上游档位耗尽仍会全体 429（BFF 已区分翻译）。
+
+---
+
 ## Docs & Security
 
 <div align="center">

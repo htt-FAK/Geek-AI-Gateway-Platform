@@ -29,6 +29,7 @@ type ImportResult = {
   skipped: string[];
   renamed?: string[];
   errors: Array<{ phone: string; error: string }>;
+  initialPasswords?: Array<{ phone: string; password: string }>;
 };
 
 type PendingAction =
@@ -50,12 +51,12 @@ export default function AdminUsersPage() {
       title="成员管理"
       subtitle="账号导入 · 充值与预算 · 禁用与密钥运维"
     >
-      {(token) => <UsersConsole token={token} />}
+      {() => <UsersConsole />}
     </AdminConsole>
   );
 }
 
-function UsersConsole({ token }: { token: string }) {
+function UsersConsole() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
@@ -83,18 +84,19 @@ function UsersConsole({ token }: { token: string }) {
   // 重发卡后的明文密钥（仅此次可见）
   const [reissuedKey, setReissuedKey] = useState<string | null>(null);
 
+  // 重置密码后的一次性初始密码（仅此次可见）
+  const [resetPassword, setResetPassword] = useState<{ phone: string; password: string } | null>(null);
+
   // 任一操作进行中时，锁住行内按钮防重复提交
   const busy = confirmBusy || topupBusy || importBusy;
 
-  const headers = useMemo(
-    () => ({ "Content-Type": "application/json", "x-admin-token": token }),
-    [token],
-  );
+  // 管理接口靠管理员会话 Cookie 鉴权（requireAdmin），不再带 Token 头
+  const headers = useMemo(() => ({ "Content-Type": "application/json" }), []);
 
   const loadUsers = useCallback(async () => {
     setListError("");
     try {
-      const res = await fetch("/api/admin/users", { headers: { "x-admin-token": token } });
+      const res = await fetch("/api/admin/users");
       const data = await res.json();
       if (!res.ok) {
         setListError(data.error ?? "加载失败");
@@ -107,7 +109,7 @@ function UsersConsole({ token }: { token: string }) {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     void loadUsers();
@@ -190,14 +192,15 @@ function UsersConsole({ token }: { token: string }) {
         await api("/api/admin/users/disable", { phone: user.phone, disabled: next });
         show(next ? `已禁用 ${user.phone}` : `已启用 ${user.phone}`);
       } else if (kind === "reset-password") {
-        await api("/api/admin/users/reset-password", { phone: user.phone });
-        show(`已重置密码 ${user.phone}（初始密码，首登需改密）`);
+        const data = await api("/api/admin/users/reset-password", { phone: user.phone });
+        // 一次性初始密码仅本次返回，弹窗展示供复制分发
+        setResetPassword({ phone: user.phone, password: data.initialPassword });
       } else {
         const data = await api("/api/admin/users/reissue-key", { phone: user.phone });
         if (data.key) {
           setReissuedKey(data.key);
         } else {
-          show(`已重发卡 ${user.phone}（应用托管模式）`);
+          show(`重发卡失败 ${user.phone}：未返回密钥`, "err");
         }
       }
       setPending(null);
@@ -399,7 +402,7 @@ function UsersConsole({ token }: { token: string }) {
           <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] max-h-[85vh] w-[min(92vw,480px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 outline-none">
             <Dialog.Title className="text-[15px] font-medium">导入成员</Dialog.Title>
             <Dialog.Description className="mt-1 text-[13px] leading-relaxed text-[var(--text-secondary)]">
-              每行一个手机号（也可用逗号 / 空格分隔）。将创建账号并设初始密码（首次登录强制改密），初始余额
+              每行一个手机号（也可用逗号 / 空格分隔）。将创建账号并生成一次性初始密码（导入结果中复制分发，首次登录强制改密），初始余额
               ¥0；密钥由成员登录后在「密钥」页自行创建。
             </Dialog.Description>
             <form onSubmit={onImport} className="mt-4 space-y-3">
@@ -430,6 +433,21 @@ function UsersConsole({ token }: { token: string }) {
                     <p className="mono break-all text-[12px] text-[var(--text-tertiary)]">
                       新建：{importResult.created.join("、")}
                     </p>
+                  ) : null}
+                  {(importResult.initialPasswords?.length ?? 0) > 0 ? (
+                    <div className="space-y-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[12px] text-[var(--status-warning)]">
+                          一次性初始密码（仅此次显示，请复制分发；成员首登强制改密）
+                        </span>
+                        <CopyInitialPasswords items={importResult.initialPasswords ?? []} />
+                      </div>
+                      {(importResult.initialPasswords ?? []).map((p) => (
+                        <p key={p.phone} className="mono break-all text-[12px]">
+                          {p.phone}：<span className="text-[var(--text-primary)]">{p.password}</span>
+                        </p>
+                      ))}
+                    </div>
                   ) : null}
                   {importResult.errors.map((er) => (
                     <p key={er.phone} className="text-[12px] text-[var(--status-error)]">
@@ -536,13 +554,22 @@ function UsersConsole({ token }: { token: string }) {
         onConfirm={() => void onConfirm()}
       />
 
-      {/* 重发卡：明文密钥仅此次可见 */}
+      {/* 重发卡：明文管理端仅此次可见；用户端密钥页留有本地副本，可再查看 */}
       <KeyRevealDialog
         open={reissuedKey !== null}
         onOpenChange={(o) => !o && setReissuedKey(null)}
         apiKey={reissuedKey}
         title="新密钥已签发"
-        description="旧密钥已吊销。请立即复制并转交给该成员——关闭后管理端与用户端都无法再看明文。"
+        description="该账号全部旧密钥已吊销。请立即复制并转交给该成员——管理端关闭后无法再看；成员可在密钥页随时查看/复制。"
+      />
+
+      {/* 重置密码：一次性初始密码仅此次可见 */}
+      <KeyRevealDialog
+        open={resetPassword !== null}
+        onOpenChange={(o) => !o && setResetPassword(null)}
+        apiKey={resetPassword?.password ?? null}
+        title={`初始密码 · ${resetPassword?.phone ?? ""}`}
+        description="一次性随机初始密码，仅此次显示。请立即复制并转交给该成员——首次登录会被强制改密，关闭后无法再看。"
       />
 
       <Toast toast={toast} />
@@ -610,16 +637,34 @@ function buildConfirmMeta(p: PendingAction): {
     case "reset-password":
       return {
         title: `重置密码 · ${phone}`,
-        description: "密码将重置为系统初始密码，该成员下次登录会被强制改密；已登录会话随密码版本失效。",
+        description: "密码将重置为一次性随机初始密码（确认后弹窗显示，仅此次可见），该成员下次登录会被强制改密；已登录会话随密码版本失效。",
         confirmLabel: "重置密码",
         danger: true,
       };
     case "reissue-key":
       return {
         title: `重发卡 · ${phone}`,
-        description: "旧密钥将被吊销并立即失效，新密钥明文只显示这一次（请及时复制转交）。余额不受影响。",
+        description: "该账号全部旧密钥（含密钥页另建的 Key）将被吊销并立即失效。新密钥明文请及时复制转交：管理端仅此次显示，成员之后可在密钥页查看/复制。余额不受影响。",
         confirmLabel: "重发卡",
         danger: true,
       };
   }
+}
+
+/** 复制全部「手机号 初始密码」行，供管理员分发。 */
+function CopyInitialPasswords({ items }: { items: Array<{ phone: string; password: string }> }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="btn btn-ghost px-2 py-0.5 text-[12px]"
+      onClick={async () => {
+        await navigator.clipboard.writeText(items.map((p) => `${p.phone} ${p.password}`).join("\n"));
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2000);
+      }}
+    >
+      {copied ? "已复制" : "复制全部"}
+    </button>
+  );
 }

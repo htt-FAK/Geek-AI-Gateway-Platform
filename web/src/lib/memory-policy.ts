@@ -102,6 +102,20 @@ function capMemories(items: MemoryItem[]): MemoryItem[] {
 }
 
 /**
+ * 快照差集：本轮 ops / 上限裁剪明确移除的行（在 current 里、不在 next 里）。
+ * 只有这些行可以被标 dropped——绝不能用「不在本轮结果里」对全表做差集淘汰，
+ * 否则另一会话刚写入、不在本次快照里的新记忆会被误杀。
+ * 返回原行（携带读取时 updatedAt），供写入侧做 CAS 守卫。
+ */
+export function diffRemovedRows(
+  current: readonly MemoryItem[],
+  next: readonly MemoryItem[],
+): MemoryItem[] {
+  const keptIds = new Set(next.map((item) => item.id).filter((id) => id !== ""));
+  return current.filter((item) => item.id !== "" && !keptIds.has(item.id));
+}
+
+/**
  * 把模型给出的 add/update/drop 应用到现有记忆上。
  * 新条目 id 为空，调用方据此插入；被拒绝的密钥类事实直接丢掉。
  */

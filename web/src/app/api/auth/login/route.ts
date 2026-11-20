@@ -21,7 +21,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "手机号格式无效" }, { status: 400 });
   }
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  // IP 只信反代写入的值：x-real-ip 是反代设的单值；XFF 取**最后一跳**
+  // （反代追加模式下客户端伪造的前段会被忽略）。取第一段可被伪造头绕过 IP 桶。
+  const realIp = req.headers.get("x-real-ip")?.trim();
+  const forwarded = req.headers.get("x-forwarded-for");
+  const ip =
+    realIp ||
+    (forwarded ? forwarded.split(",").pop()?.trim() : "") ||
+    "unknown";
   if (!rateLimit(`login:phone:${phone}`, 10, 60_000) || !rateLimit(`login:ip:${ip}`, 30, 60_000)) {
     return tooManyRequests();
   }

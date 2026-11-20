@@ -165,6 +165,8 @@ async function main() {
     );
 
     if (vkOk && !SKIP_LLM) {
+      // max_budget=0：新 Key spend=0 也满足 spend>=budget → 首笔即被拒。
+      // 极小正数（如 0.000001）会让首笔漏过（预算按已入账 spend 比较，不预扣）。
       const tiny = await http(GW, "/key/generate", {
         method: "POST",
         headers: { Authorization: `Bearer ${MASTER}`, "Content-Type": "application/json" },
@@ -172,7 +174,7 @@ async function main() {
           user_id: `phone:e2e-budget-${PHONE}`,
           key_alias: `e2e-budget-${PHONE}`,
           models: [MODEL],
-          max_budget: 0.000001,
+          max_budget: 0,
           budget_duration: "24h",
         }),
       });
@@ -203,6 +205,7 @@ async function main() {
   // ---------- B. 管理导入 ----------
   console.log("\n[B] 管理端导入");
   let cookie = "";
+  let initialPwd = "";
   {
     const bad = await http(WEB, "/api/admin/users/import", {
       method: "POST",
@@ -222,6 +225,12 @@ async function main() {
       "admin import 无效号进 errors",
       Array.isArray(imp.json.errors) && imp.json.errors.length >= 1,
       JSON.stringify(imp.json.errors),
+    );
+    initialPwd = (imp.json.initialPasswords ?? []).find((p) => p.phone === PHONE)?.password ?? "";
+    assert(
+      "import 返回一次性初始密码（非共享默认密码）",
+      Boolean(initialPwd) && initialPwd !== DEFAULT_PWD,
+      `initialPasswords=${JSON.stringify(imp.json.initialPasswords)}`,
     );
 
     const again = await http(WEB, "/api/admin/users/import", {
@@ -246,12 +255,19 @@ async function main() {
     });
     assert("错误密码 → 401", wrong.status === 401, `status=${wrong.status}`);
 
-    const login = await http(WEB, "/api/auth/login", {
+    const sharedDefault = await http(WEB, "/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: PHONE, password: DEFAULT_PWD }),
     });
-    assert("默认密码登录成功", login.status === 200 && login.json.ok === true, JSON.stringify(login.json));
+    assert("共享默认密码不可登（已改一次性随机）", sharedDefault.status === 401, `status=${sharedDefault.status}`);
+
+    const login = await http(WEB, "/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: PHONE, password: initialPwd }),
+    });
+    assert("一次性初始密码登录成功", login.status === 200 && login.json.ok === true, JSON.stringify(login.json));
     assert("requirePasswordChange=true", login.json.requirePasswordChange === true, JSON.stringify(login.json));
     cookie = cookieJar(login.setCookie);
 
@@ -269,7 +285,7 @@ async function main() {
     const rejectDefault = await http(WEB, "/api/auth/change-password", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: cookie },
-      body: JSON.stringify({ oldPassword: DEFAULT_PWD, newPassword: DEFAULT_PWD }),
+      body: JSON.stringify({ oldPassword: initialPwd, newPassword: DEFAULT_PWD }),
     });
     assert("禁止新密码=默认密码", rejectDefault.status === 400, `status=${rejectDefault.status}`);
 
@@ -277,7 +293,7 @@ async function main() {
     const ch = await http(WEB, "/api/auth/change-password", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: cookie },
-      body: JSON.stringify({ oldPassword: DEFAULT_PWD, newPassword: NEW_PWD }),
+      body: JSON.stringify({ oldPassword: initialPwd, newPassword: NEW_PWD }),
     });
     assert("改密成功", ch.status === 200 && ch.json.ok === true, JSON.stringify(ch.json));
     cookie = cookieJar(ch.setCookie, cookie);
@@ -292,6 +308,18 @@ async function main() {
     });
     assert("新密码可登录", login2.status === 200 && login2.json.requirePasswordChange === false, JSON.stringify(login2.json));
     cookie = cookieJar(login2.setCookie);
+
+    // 新账号默认无 Key（导入只建网关用户）：模拟用户改密后在密钥页创建首把 Key
+    const createKey = await http(WEB, "/api/keys", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: cookie },
+      body: JSON.stringify({ models: [MODEL], description: "e2e" }),
+    });
+    assert(
+      "密钥页创建首把 Key",
+      createKey.status === 200 && Boolean(createKey.json.key),
+      `status=${createKey.status} ${JSON.stringify(createKey.json)}`,
+    );
   }
 
   // ---------- D. /me + 余额字段 ----------
@@ -340,6 +368,37 @@ async function main() {
       blocked.status === 402 && String(blocked.json.error || "").includes("余额不足"),
       `status=${blocked.status} ${JSON.stringify(blocked.json)}`,
     );
+
+    // /api/chat 与调试台同上限：超长 max_tokens / 空消息 / 超长正文一律 400（校验先于计费）
+    const overTokens = await http(WEB, "/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: cookie },
+      body: JSON.stringify({
+        model: MODEL,
+        stream: false,
+        max_tokens: 128_001,
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    });
+    assert("chat max_tokens>128000 → 400", overTokens.status === 400, `status=${overTokens.status}`);
+
+    const emptyMsgs = await http(WEB, "/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: cookie },
+      body: JSON.stringify({ model: MODEL, stream: false, messages: [] }),
+    });
+    assert("chat 空 messages → 400", emptyMsgs.status === 400, `status=${emptyMsgs.status}`);
+
+    const hugeBody = await http(WEB, "/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: cookie },
+      body: JSON.stringify({
+        model: MODEL,
+        stream: false,
+        messages: [{ role: "user", content: "字".repeat(200_001) }],
+      }),
+    });
+    assert("chat 正文>20万字符 → 400", hugeBody.status === 400, `status=${hugeBody.status}`);
 
     // 管理员充值 ¥10：网关用户级 max_budget 同步成功才能 200
     const topup = await http(WEB, "/api/admin/users/topup", {
@@ -460,31 +519,45 @@ async function main() {
       body: JSON.stringify({ phone: PHONE }),
     });
     assert("重置密码", reset.status === 200 && reset.json.mustChangePassword === true, JSON.stringify(reset.json));
+    const resetPwd = reset.json.initialPassword ?? "";
+    assert(
+      "重置返回一次性随机密码（非共享默认）",
+      Boolean(resetPwd) && resetPwd !== DEFAULT_PWD,
+      `initialPassword=${resetPwd ? "(present)" : "(missing)"}`,
+    );
 
     const stale = await http(WEB, "/api/me", { headers: { Cookie: cookie } });
     assert("重置密码后旧会话 → 401", stale.status === 401, `status=${stale.status}`);
 
-    const loginDefault = await http(WEB, "/api/auth/login", {
+    const loginShared = await http(WEB, "/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: PHONE, password: DEFAULT_PWD }),
     });
+    assert("重置后共享默认密码不可登", loginShared.status === 401, `status=${loginShared.status}`);
+
+    const loginReset = await http(WEB, "/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: PHONE, password: resetPwd }),
+    });
     assert(
-      "重置后默认密码可登且需改密",
-      loginDefault.status === 200 && loginDefault.json.requirePasswordChange === true,
-      JSON.stringify(loginDefault.json),
+      "重置后一次性密码可登且需改密",
+      loginReset.status === 200 && loginReset.json.requirePasswordChange === true,
+      JSON.stringify(loginReset.json),
     );
-    cookie = cookieJar(loginDefault.setCookie);
+    cookie = cookieJar(loginReset.setCookie);
 
     const reissue = await http(WEB, "/api/admin/users/reissue-key", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-admin-token": ADMIN },
       body: JSON.stringify({ phone: PHONE }),
     });
+    // 哨兵一律不落库：DB 在线必须签发 virtual_key；DB 离线只允许 503（绝不返回 app_enforced）
     assert(
-      "重发卡",
-      reissue.status === 200 &&
-        (reissue.json.keyMode === "virtual_key" || reissue.json.keyMode === "app_enforced"),
+      "重发卡（virtual_key 或 DB 离线 503，绝无 app_enforced）",
+      (reissue.status === 200 && reissue.json.keyMode === "virtual_key" && Boolean(reissue.json.key)) ||
+        (!REQUIRE_VK && reissue.status === 503),
       JSON.stringify(reissue.json),
     );
 
@@ -492,7 +565,7 @@ async function main() {
     const ch2 = await http(WEB, "/api/auth/change-password", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: cookie },
-      body: JSON.stringify({ oldPassword: DEFAULT_PWD, newPassword: NEW_PWD }),
+      body: JSON.stringify({ oldPassword: resetPwd, newPassword: NEW_PWD }),
     });
     assert("管理闭环后再次改密", ch2.status === 200, JSON.stringify(ch2.json));
     cookie = cookieJar(ch2.setCookie, cookie);
@@ -509,6 +582,37 @@ async function main() {
     cookie = cookieJar(out.setCookie, cookie);
     const me = await http(WEB, "/api/me", { headers: cookie ? { Cookie: cookie } : {} });
     assert("登出后 /api/me 401", me.status === 401, `status=${me.status} cookie=${cookie || "(empty)"}`);
+  }
+
+  // ---------- I. 登录 IP 限流取 XFF 最后一跳 ----------
+  console.log("\n[I] 登录 IP 限流（XFF 最后一跳）");
+  {
+    // IP 桶取 XFF 最后一段：前段伪造不同、最后一跳相同 → 共用一个桶（30/分）。
+    // 每次换不同手机号避开手机号桶（10/分）；若取第一段则每请求独立桶，永远不限流。
+    const ipTail = "203.0.113.7";
+    let limited = null;
+    for (let i = 0; i < 31; i += 1) {
+      const res = await http(WEB, "/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Forwarded-For": `198.51.100.${i}, ${ipTail}`,
+        },
+        body: JSON.stringify({ phone: `139${10000000 + i}`, password: "x" }),
+      });
+      if (res.status === 429) {
+        limited = i;
+        break;
+      }
+    }
+    assert("XFF 前段伪造不同仍按最后一跳限流", limited !== null && limited <= 30, `limitedAt=${limited}`);
+
+    const other = await http(WEB, "/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Forwarded-For": `198.51.100.99, 203.0.113.99` },
+      body: JSON.stringify({ phone: "13911112222", password: "x" }),
+    });
+    assert("不同最后一跳 IP 不受牵连", other.status === 401, `status=${other.status}`);
   }
 
   // ---------- Summary ----------
