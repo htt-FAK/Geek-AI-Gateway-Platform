@@ -9,7 +9,9 @@ import {
   Toast,
   useToast,
 } from "@/components/admin-console";
+import { TableSkeletonRows } from "@/components/skeleton";
 import { KeyRevealDialog } from "@/components/key-reveal-dialog";
+import { ErrorSlide, fieldInvalidClass, useErrorShake } from "@/components/field-error";
 
 type AdminUser = {
   phone: string;
@@ -62,6 +64,7 @@ function UsersConsole() {
   const [listError, setListError] = useState("");
   const [search, setSearch] = useState("");
   const { toast, show } = useToast();
+  const { shake: topupShake, pulse: pulseTopup } = useErrorShake();
 
   // 导入对话框
   const [importOpen, setImportOpen] = useState(false);
@@ -158,6 +161,7 @@ function UsersConsole() {
     const n = Number(topupAmount);
     if (!Number.isFinite(n) || n <= 0) {
       setTopupError("充值金额需为正数");
+      pulseTopup();
       return;
     }
     setTopupBusy(true);
@@ -173,6 +177,7 @@ function UsersConsole() {
       await loadUsers();
     } catch (err) {
       setTopupError(err instanceof Error ? err.message : "充值失败");
+      pulseTopup();
     } finally {
       setTopupBusy(false);
     }
@@ -316,11 +321,12 @@ function UsersConsole() {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-[var(--text-tertiary)]">
-                    加载中…
-                  </td>
-                </tr>
+                <>
+                  <tr className="sr-only">
+                    <td colSpan={7}>加载中</td>
+                  </tr>
+                  <TableSkeletonRows rows={4} cols={7} />
+                </>
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-[var(--text-tertiary)]">
@@ -398,8 +404,8 @@ function UsersConsole() {
       {/* 导入成员 */}
       <Dialog.Root open={importOpen} onOpenChange={setImportOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] max-h-[85vh] w-[min(92vw,480px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 outline-none">
+          <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+          <Dialog.Content className="motion-dialog z-[50] max-h-[85vh] w-[min(92vw,480px)] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 outline-none">
             <Dialog.Title className="text-[15px] font-medium">导入成员</Dialog.Title>
             <Dialog.Description className="mt-1 text-[13px] leading-relaxed text-[var(--text-secondary)]">
               每行一个手机号（也可用逗号 / 空格分隔）。将创建账号并生成一次性初始密码（导入结果中复制分发，首次登录强制改密），初始余额
@@ -474,8 +480,8 @@ function UsersConsole() {
       {/* 充值 */}
       <Dialog.Root open={topupUser !== null} onOpenChange={(o) => !o && setTopupUser(null)}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,400px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 outline-none">
+          <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+          <Dialog.Content className="motion-dialog z-[50] w-[min(92vw,400px)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 outline-none">
             <Dialog.Title className="text-[15px] font-medium">
               充值 · <span className="mono">{topupUser?.phone}</span>
             </Dialog.Title>
@@ -487,12 +493,15 @@ function UsersConsole() {
               <label className="block space-y-1.5">
                 <span className="text-[13px] text-[var(--text-secondary)]">金额（¥）</span>
                 <input
-                  className="field tabular"
+                  className={`field tabular ${fieldInvalidClass(Boolean(topupError), topupShake)}`}
                   type="number"
                   min="0.01"
                   step="0.01"
                   value={topupAmount}
-                  onChange={(e) => setTopupAmount(e.target.value)}
+                  onChange={(e) => {
+                    setTopupAmount(e.target.value);
+                    setTopupError("");
+                  }}
                   autoFocus
                 />
               </label>
@@ -523,9 +532,9 @@ function UsersConsole() {
                 />
               </label>
               {topupError ? (
-                <p className="text-sm text-[var(--status-error)]" role="alert">
-                  {topupError}
-                </p>
+                <ErrorSlide>
+                  <p className="text-sm text-[var(--status-error)]">{topupError}</p>
+                </ErrorSlide>
               ) : null}
               <div className="flex justify-end gap-2 pt-1">
                 <Dialog.Close asChild>
@@ -561,6 +570,7 @@ function UsersConsole() {
         apiKey={reissuedKey}
         title="新密钥已签发"
         description="该账号全部旧密钥已吊销。请立即复制并转交给该成员——管理端关闭后无法再看；成员可在密钥页随时查看/复制。"
+        onCopied={() => show("已复制密钥")}
       />
 
       {/* 重置密码：一次性初始密码仅此次可见 */}
@@ -570,6 +580,7 @@ function UsersConsole() {
         apiKey={resetPassword?.password ?? null}
         title={`初始密码 · ${resetPassword?.phone ?? ""}`}
         description="一次性随机初始密码，仅此次显示。请立即复制并转交给该成员——首次登录会被强制改密，关闭后无法再看。"
+        onCopied={() => show("已复制初始密码")}
       />
 
       <Toast toast={toast} />

@@ -44,8 +44,8 @@ export function ModelDocsDialog({ model, gatewayUrl, open, onOpenChange }: Props
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] flex max-h-[min(88vh,720px)] w-[min(92vw,640px)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 shadow-xl outline-none">
+        <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+        <Dialog.Content className="motion-dialog z-[50] flex max-h-[min(88vh,720px)] w-[min(92vw,640px)] flex-col rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 shadow-xl outline-none">
           <Dialog.Title className="text-lg font-medium text-[var(--text-primary)]">
             {model ? `${model} · 文档` : "模型文档"}
           </Dialog.Title>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { ErrorSlide, fieldInvalidClass, useErrorShake } from "@/components/field-error";
 
 export type KeyRow = {
   token: string;
@@ -43,6 +44,12 @@ export function KeyFormDialog({
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const { shake, pulse } = useErrorShake();
+
+  function fail(text: string) {
+    setMsg(text);
+    pulse();
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -79,7 +86,7 @@ export function KeyFormDialog({
     try {
       const models = permMode === "all" ? chatModels : selected;
       if (models.length === 0) {
-        setMsg("请至少选择一个模型");
+        fail("请至少选择一个模型");
         return;
       }
       const body: Record<string, unknown> = {
@@ -88,7 +95,7 @@ export function KeyFormDialog({
         expiresInDays: expiryMode === "custom" ? Number(days) : null,
       };
       if (expiryMode === "custom" && (!Number.isFinite(Number(days)) || Number(days) < 1)) {
-        setMsg("有效天数需为正整数");
+        fail("有效天数需为正整数");
         return;
       }
       const url = editing ? `/api/keys/${encodeURIComponent(editing.token)}` : "/api/keys";
@@ -99,7 +106,7 @@ export function KeyFormDialog({
       });
       const data = (await res.json()) as { key?: string; keyName?: string; error?: string };
       if (!res.ok) {
-        setMsg(data.error ?? "保存失败");
+        fail(data.error ?? "保存失败");
         return;
       }
       if (!editing && data.key) {
@@ -116,8 +123,8 @@ export function KeyFormDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] max-h-[min(88vh,720px)] w-[min(92vw,520px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 shadow-[var(--panel-shadow,0_8px_24px_rgba(0,0,0,0.35))]">
+        <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+        <Dialog.Content className="motion-dialog z-[50] max-h-[min(88vh,720px)] w-[min(92vw,520px)] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 shadow-[var(--panel-shadow,0_8px_24px_rgba(0,0,0,0.35))]">
           <Dialog.Title className="text-lg font-medium">
             {editing ? "编辑 API Key" : "创建 API Key"}
           </Dialog.Title>
@@ -129,11 +136,14 @@ export function KeyFormDialog({
             <label className="block">
               <span className="mb-1 block text-sm text-[var(--text-secondary)]">描述</span>
               <input
-                className="field w-full"
+                className={`field w-full ${fieldInvalidClass(Boolean(msg), shake)}`}
                 value={description}
                 maxLength={100}
                 placeholder="例如：生产环境 / 本地调试"
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  setMsg("");
+                }}
               />
             </label>
 
@@ -151,11 +161,14 @@ export function KeyFormDialog({
                 {expiryMode === "custom" ? (
                   <span className="flex items-center gap-1 text-sm">
                     <input
-                      className="field w-20 py-1"
+                      className={`field w-20 py-1 ${fieldInvalidClass(Boolean(msg), shake)}`}
                       type="number"
                       min={1}
                       value={days}
-                      onChange={(e) => setDays(e.target.value)}
+                      onChange={(e) => {
+                        setDays(e.target.value);
+                        setMsg("");
+                      }}
                     />
                     天
                   </span>
@@ -192,7 +205,11 @@ export function KeyFormDialog({
             </p>
           </div>
 
-          {msg ? <p className="mt-3 text-sm text-[var(--status-error)]">{msg}</p> : null}
+          {msg ? (
+            <ErrorSlide>
+              <p className="mt-3 text-sm text-[var(--status-error)]">{msg}</p>
+            </ErrorSlide>
+          ) : null}
 
           <div className="mt-5 flex justify-end gap-2">
             <Dialog.Close asChild>

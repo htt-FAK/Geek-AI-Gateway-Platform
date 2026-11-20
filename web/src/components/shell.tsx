@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { ThemeSettingsButton } from "@/components/theme-settings";
 import { UserMenu } from "@/components/user-menu";
 import { EntryAmbient } from "@/components/entry-ambient";
@@ -23,6 +24,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/dashboard", label: "看板", icon: "dashboard" },
       { href: "/leaderboard", label: "榜单", icon: "leaderboard" },
+      { href: "/leaderboard/members", label: "成员榜", icon: "users" },
     ],
   },
   {
@@ -45,6 +47,20 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
 const NAV_FLAT: (NavItem & { group: string })[] = NAV_GROUPS.flatMap((group) =>
   group.items.map((item) => ({ ...item, group: group.label })),
 );
+
+function matchesNav(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** 多条前缀都能命中时（/leaderboard 与 /leaderboard/members）只留最长的那条。 */
+function activeNavHref(pathname: string): string | null {
+  let best: string | null = null;
+  for (const item of NAV_FLAT) {
+    if (!matchesNav(pathname, item.href)) continue;
+    if (best === null || item.href.length > best.length) best = item.href;
+  }
+  return best;
+}
 
 function NavIcon({ id, size = 20 }: { id: NavIconId; size?: number }) {
   const common = {
@@ -207,22 +223,17 @@ export function AuthShell({ children }: { children: ReactNode }) {
   );
 }
 
-export function AppShell({
-  children,
-  phone,
-}: {
-  children: ReactNode;
-  phone?: string;
-}) {
+export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const docs = process.env.NEXT_PUBLIC_DOCS_BASE_URL;
+  const reduceMotion = useReducedMotion();
   const [collapsed, setCollapsed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [phone, setPhone] = useState<string | undefined>();
 
   // 顶栏「分组 / 当前页」：由路由反查所属导航组（/models/[id] 等子路由按前缀归组）
-  const current = NAV_FLAT.find(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-  );
+  const activeHref = activeNavHref(pathname);
+  const current = NAV_FLAT.find((item) => item.href === activeHref);
 
   useEffect(() => {
     try {
@@ -240,7 +251,10 @@ export function AppShell({
         const res = await fetch("/api/me");
         if (!res.ok) return;
         const me = await res.json();
-        if (alive) setIsAdmin(me.role === "admin");
+        if (alive) {
+          setIsAdmin(me.role === "admin");
+          if (typeof me.phone === "string") setPhone(me.phone);
+        }
       } catch { /* 未登录忽略 */ }
     })();
     return () => { alive = false; };
@@ -308,7 +322,7 @@ export function AppShell({
                   </div>
                 ) : null}
                 {items.map((item) => {
-                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  const active = item.href === activeHref;
                   return (
                     <Link
                       key={item.href}
@@ -318,10 +332,20 @@ export function AppShell({
                         collapsed ? "justify-center px-0" : ""
                       } ${active ? "is-active" : ""}`}
                     >
-                      <span className="app-nav-icon relative flex h-5 w-5 shrink-0 items-center justify-center">
+                      {!collapsed && active ? (
+                        <motion.span
+                          layoutId="sidebar-active"
+                          className="nav-active-indicator pointer-events-none absolute inset-0"
+                          transition={{
+                            duration: reduceMotion ? 0 : 0.18,
+                            ease: [0.2, 0.8, 0.2, 1],
+                          }}
+                        />
+                      ) : null}
+                      <span className="app-nav-icon relative z-[1] flex h-5 w-5 shrink-0 items-center justify-center">
                         <NavIcon id={item.icon} size={20} />
                       </span>
-                      {!collapsed ? <span>{item.label}</span> : null}
+                      {!collapsed ? <span className="relative z-[1]">{item.label}</span> : null}
                     </Link>
                   );
                 })}
@@ -387,7 +411,11 @@ export function AppShell({
             {phone ? <UserMenu phone={phone} /> : null}
           </div>
         </header>
-        <main className="page-fade app-content min-h-0 flex-1">{children}</main>
+        <main className="app-content min-h-0 flex-1">
+          <div key={pathname} className="page-fade">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

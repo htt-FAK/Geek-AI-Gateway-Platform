@@ -49,20 +49,14 @@ const DISPLAY_NAME: Record<string, string> = {
   "minimax-m3.1-flash": "MiniMax M3.1 Flash",
 };
 
-const BRAND_LOGO: Record<string, string> = {
-  deepseek: "/brands/deepseek.ico",
-  mimo: "/brands/mimo.png",
-};
-
-/** 柱状图 x 轴用的厂商 logo（七家均有品牌图标）。 */
 const VENDOR_LOGO: Record<VendorId, string> = {
-  deepseek: "/brands/deepseek.ico",
+  deepseek: "/brands/deepseek.png",
   mimo: "/brands/mimo.png",
-  alibaba: "/brands/qwen.svg",
-  zai: "/brands/glm.svg",
+  alibaba: "/brands/qwen.png",
+  zai: "/brands/glm.png",
   kimi: "/brands/kimi.svg",
-  minimax: "/brands/minimax.svg",
-  stepfun: "/brands/step.svg",
+  minimax: "/brands/minimax.png",
+  stepfun: "/brands/step.png",
 };
 
 /** 每个模型的上榜档位数：多档位时柱状图标签带中文档位。 */
@@ -563,26 +557,14 @@ export default function LeaderboardPage() {
   );
 }
 
-/** 官网 logo 头像（DS/MiMo）或厂商色首字母块 + 展示名 + mono ID。 */
+/** 厂商 logo + 展示名 + mono ID。 */
 function ModelCell({ r }: { r: LeaderboardRow }) {
   const vendor = vendorOf(r.model);
-  const brand = VENDOR[vendor].color;
-  const logo = BRAND_LOGO[vendor];
-  const displayName = DISPLAY_NAME[r.model] ?? r.model;
+  const logo = VENDOR_LOGO[vendor];
   return (
     <span className="flex items-center gap-3">
-      <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)]"
-        style={{ background: `color-mix(in srgb, ${brand} 12%, transparent)` }}
-      >
-        {logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt={VENDOR[vendor].label} className="h-6 w-6 object-contain" />
-        ) : (
-          <span className="text-[15px] font-semibold" style={{ color: brand }}>
-            {displayName.slice(0, 1)}
-          </span>
-        )}
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)]">
+        <img src={logo} alt={VENDOR[vendor].label} className="h-8 w-8 object-contain" />
       </span>
       <span className="min-w-0">
         <span className="block truncate text-[13px] font-medium">{DISPLAY_NAME[r.model] ?? r.model}</span>

@@ -7,6 +7,7 @@ import {
   ModelCallChartPanel,
   type SeriesPoint,
 } from "@/components/charts";
+import { ChartBlockSkeleton, TableSkeletonRows } from "@/components/skeleton";
 import { AdminConsole, Badge } from "@/components/admin-console";
 
 type UsagePayload = {
@@ -177,7 +178,31 @@ function UsageConsole() {
       ) : null}
 
       {loading && !data ? (
-        <div className="panel p-8 text-sm text-[var(--text-tertiary)]">加载中…</div>
+        <>
+          <p className="sr-only">加载中</p>
+          <div className="panel grid grid-cols-2 md:grid-cols-5" aria-hidden>
+            {Array.from({ length: 5 }, (_, i) => (
+              <div key={i} className="px-5 py-4">
+                <span className="skeleton block h-3 w-12" />
+                <span className="skeleton mt-2 block h-5 w-16" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <ChartBlockSkeleton />
+            <ChartBlockSkeleton />
+          </div>
+          <section className="panel overflow-hidden" aria-hidden>
+            <div className="border-b border-[var(--border-subtle)] px-4 py-3">
+              <span className="skeleton block h-4 w-20" />
+            </div>
+            <table className="w-full text-left text-sm">
+              <tbody>
+                <TableSkeletonRows rows={4} cols={7} />
+              </tbody>
+            </table>
+          </section>
+        </>
       ) : data ? (
         <>
           <MetricStrip
@@ -203,6 +228,11 @@ function UsageConsole() {
               onModeChange={setModelToggle}
               totalCount={data.kpis.totalRequests}
             />
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <RankList title="花费排行" rows={[...(data.members ?? [])].sort((a, b) => (b.spendCny ?? 0) - (a.spendCny ?? 0))} metric="spend" />
+            <RankList title="Token 排行" rows={[...(data.members ?? [])].sort((a, b) => (b.tokens ?? 0) - (a.tokens ?? 0))} metric="tokens" />
           </div>
 
           <section className="panel overflow-hidden">
@@ -265,5 +295,49 @@ function UsageConsole() {
         </>
       ) : null}
     </div>
+  );
+}
+
+function RankList({
+  title,
+  rows,
+  metric,
+}: {
+  title: string;
+  rows: UsagePayload["members"];
+  metric: "spend" | "tokens";
+}) {
+  const top = rows.slice(0, 8);
+  const max = top.reduce((m, r) => Math.max(m, metric === "spend" ? r.spendCny ?? 0 : r.tokens ?? 0), 0);
+  return (
+    <section className="panel overflow-hidden">
+      <h2 className="border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium">{title}</h2>
+      <ol>
+        {top.length === 0 ? (
+          <li className="px-4 py-6 text-sm text-[var(--text-tertiary)]">暂无数据</li>
+        ) : (
+          top.map((row, index) => {
+            const value = metric === "spend" ? row.spendCny ?? 0 : row.tokens ?? 0;
+            const width = max > 0 ? Math.max(4, (value / max) * 100) : 0;
+            return (
+              <li key={row.phone ?? index} className="flex items-center gap-3 border-t border-[var(--border-subtle)] px-4 py-2.5">
+                <span className={`w-5 text-[13px] font-semibold tabular ${index < 3 ? "text-[var(--accent-primary)]" : "text-[var(--text-tertiary)]"}`}>
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px]">{row.name || row.phone}</p>
+                  <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-[var(--bg-surface)]">
+                    <div className="h-full rounded-full bg-[var(--accent-solid,var(--accent-primary))]" style={{ width: `${width}%` }} />
+                  </div>
+                </div>
+                <span className="tabular text-[12px] text-[var(--text-secondary)]">
+                  {metric === "spend" ? `¥${(row.spendCny ?? 0).toFixed(2)}` : formatNum(row.tokens ?? 0)}
+                </span>
+              </li>
+            );
+          })
+        )}
+      </ol>
+    </section>
   );
 }

@@ -1,11 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ConsolePage, useMe } from "@/components/console";
 import { isPlaygroundChatModel } from "@/lib/conversation-policy";
-import { getMarketModel } from "@/lib/model-market";
+import { getMarketModel, modelBrand } from "@/lib/model-market";
 import { envPublicGateway } from "@/lib/public-env";
 import {
   defaultThinkingStop,
@@ -54,6 +54,40 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 function isChatModel(model: string): boolean {
   return isPlaygroundChatModel(model);
 }
+
+function emptyGreeting(now = new Date()): { title: string; hint: string } {
+  const day = now.getDay();
+  const hour = now.getHours();
+  if (hour < 5 || hour >= 23) {
+    return hour % 2 === 0
+      ? { title: "夜深了", hint: "还醒着的话，把问题留短一点" }
+      : { title: "夜深了", hint: "灯还亮着，适合把一件事收个尾" };
+  }
+  if (day === 5 && hour >= 12 && hour < 18) {
+    return { title: "周五了", hint: "准备好迎接周末了嘛" };
+  }
+  if (day === 6 || day === 0) {
+    return hour < 12
+      ? { title: "周末早上", hint: "不必急，先问一个具体的问题" }
+      : { title: "周末了", hint: "适合把一个想法慢慢跑通" };
+  }
+  if (hour < 8) return { title: "天亮了", hint: "新的一天，先从一件小事问起" };
+  if (hour < 11) return { title: "早上好", hint: "今天想先处理哪一件" };
+  if (hour < 13) return { title: "中午了", hint: "吃完再问也行，一句就够" };
+  if (hour < 17) return { title: "下午好", hint: "把卡着的那一步交给模型试试" };
+  if (hour < 19) return { title: "傍晚了", hint: "忙完之前，先把问题说清楚" };
+  return hour < 21
+    ? { title: "晚上了", hint: "今天还想再试一句吗" }
+    : { title: "晚上了", hint: "夜色渐深，适合把想法写短一点" };
+}
+
+const STAGE_MARKS: { src: string; label: string; style: CSSProperties }[] = [
+  { src: "/brands/deepseek.png", label: "DeepSeek", style: { top: "10%", left: "7%", width: 92, transform: "rotate(-14deg)" } },
+  { src: "/brands/qwen.png", label: "千问", style: { top: "16%", right: "9%", width: 78, transform: "rotate(10deg)" } },
+  { src: "/brands/kimi.svg", label: "Kimi", style: { bottom: "18%", left: "12%", width: 70, transform: "rotate(16deg)" } },
+  { src: "/brands/glm.png", label: "智谱", style: { bottom: "14%", right: "11%", width: 84, transform: "rotate(-8deg)" } },
+  { src: "/brands/xfyun.png", label: "星火", style: { top: "42%", left: "46%", width: 54, transform: "rotate(6deg)" } },
+];
 
 export default function PlaygroundInner() {
   const { me, refresh } = useMe();
@@ -616,9 +650,11 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
 
   return (
     <ConsolePage phone={me?.phone} maxWidth={false}>
-      <div className="flex h-[calc(100vh-52px-2.5rem)] min-h-[520px] gap-4">
-        {historyOpen ? (
-          <aside className="flex min-h-0 w-56 shrink-0 flex-col overflow-hidden border-r border-[var(--border-subtle)] pr-3">
+      <div className="flex h-[calc(100vh-52px-2.5rem)] min-h-[520px]">
+        <aside
+          className={`playground-history ${historyOpen ? "is-open" : "is-closed"}`}
+          aria-hidden={!historyOpen}
+        >
             <div className="flex items-center justify-between pb-3">
               <span className="text-[13px] font-medium text-[var(--text-primary)]">历史对话</span>
               <button
@@ -636,7 +672,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                 conversations.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-[var(--radius-md)] px-2 py-2 ${item.id === conversationId ? "bg-[var(--nav-active-bg)]" : ""}`}
+                    className={`playground-history-item rounded-[var(--radius-md)] px-2 py-2 ${item.id === conversationId ? "is-active" : ""}`}
                   >
                     {editingId === item.id ? (
                       <input
@@ -663,7 +699,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                         </span>
                       </button>
                     )}
-                    <div className="mt-1 flex gap-2">
+                    <div className="playground-history-actions mt-1 flex gap-2">
                       <button
                         type="button"
                         className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
@@ -697,21 +733,20 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
               ) : null}
             </div>
           </aside>
-        ) : null}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-3">
           <h1 className="text-[15px] font-medium tracking-tight text-[var(--text-primary)]">对话测试</h1>
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              className="playground-tool"
               onClick={() => setHistoryOpen((open) => !open)}
             >
               {historyOpen ? "收起历史" : "历史"}
             </button>
             <button
               type="button"
-              className="text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              className="playground-tool"
               onClick={() => {
                 setMemoryOpen(true);
                 void loadMemories();
@@ -721,14 +756,14 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
             </button>
             <button
               type="button"
-              className="text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              className="playground-tool"
               onClick={() => setCodeOpen(true)}
             >
               查看代码
             </button>
             <button
               type="button"
-              className="text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              className="playground-tool"
               onClick={() => setAdvancedOpen(true)}
             >
               高级
@@ -736,17 +771,41 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-5">
+        <div key={conversationId ?? "draft"} className="playground-thread relative min-h-0 flex-1 overflow-y-auto py-5">
+          {messages.length === 0 ? (
+            <>
+              <div className="playground-stage" aria-hidden>
+                <span className="playground-stage-glow playground-stage-glow-a" />
+                <span className="playground-stage-glow playground-stage-glow-b" />
+                <span className="playground-stage-ring" />
+                {STAGE_MARKS.map((mark) => (
+                  <img
+                    key={mark.label}
+                    src={mark.src}
+                    alt=""
+                    className="playground-stage-mark"
+                    style={mark.style}
+                  />
+                ))}
+              </div>
+              <div className="relative z-[1] flex min-h-full items-center justify-center px-6">
+                <div className="text-center">
+                  <p className="text-[13px] font-medium tracking-[0.22em] text-[var(--text-tertiary)]">
+                    {emptyGreeting().title}
+                  </p>
+                  <h2 className="mt-3 text-[22px] font-medium leading-snug tracking-[-0.03em] text-[var(--text-primary)] sm:text-[26px]">
+                    {emptyGreeting().hint}
+                  </h2>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-5">
           {hasSummary ? (
             <p className="text-[12px] text-[var(--text-tertiary)]">更早内容已压缩</p>
           ) : null}
-          {messages.length === 0 ? (
-            <div className="py-20 text-center">
-              <p className="text-[20px] font-medium tracking-tight text-[var(--text-primary)]">有什么可以帮忙的？</p>
-            </div>
-          ) : (
-            messages.map((m, i) => (
-              <div key={m.id ?? i} className="space-y-2">
+          {messages.map((m, i) => (
+              <div key={m.id ?? i} className="playground-msg space-y-2">
                 <div className="text-[12px] font-medium uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
                   {m.role}
                 </div>
@@ -786,13 +845,18 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                   ) : null}
                 </pre>
               </div>
-            ))
+            ))}
+            </div>
           )}
           <div ref={bottomRef} />
         </div>
 
         <form onSubmit={onSend} className="shrink-0 pt-2">
-          {error ? <p className="mb-2 text-[13px] text-[var(--status-error)]">{error}</p> : null}
+          {error ? (
+            <div className="field-error-pop mb-2" role="alert">
+              <p className="text-[13px] text-[var(--status-error)]">{error}</p>
+            </div>
+          ) : null}
           <div className="playground-composer">
             {images.length ? (
               <div className="flex flex-wrap gap-2 px-3 pt-2">
@@ -844,14 +908,42 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                   新对话
                 </button>
                 {thinkingProfile.kind !== "none" ? (
-                  <div className="thinking-depth" title="思考深度">
+                  <div className="thinking-depth" data-stop={thinkingStop ?? ""} title="思考深度">
                     <span className="thinking-depth-label">
-                      思考深度<span className="thinking-depth-value">{stopLabel}</span>
+                      思考深度
+                      <span key={stopLabel ?? "none"} className="thinking-depth-value">
+                        {stopLabel}
+                      </span>
                     </span>
                     <div
                       className="thinking-depth-slider"
-                      style={{ width: `${Math.max(72, 30 * (thinkingProfile.stops.length - 1) + 18)}px` }}
+                      style={{ width: `${Math.max(88, 36 * (thinkingProfile.stops.length - 1) + 16)}px` }}
                     >
+                      <span className="thinking-depth-rail" aria-hidden>
+                        <span
+                          className="thinking-depth-fill"
+                          style={{
+                            width: `calc(8px + (100% - 16px) * ${stopPct / 100})`,
+                          }}
+                        />
+                      </span>
+                      <span className="thinking-depth-dots" aria-hidden>
+                        {thinkingProfile.stops.map((s, i) => {
+                          const p = thinkingProfile.stops.length > 1 ? i / (thinkingProfile.stops.length - 1) : 0;
+                          return (
+                            <span
+                              key={s.id}
+                              className={`thinking-depth-dot${i === stopIndex ? " is-current" : ""}${i <= stopIndex ? " is-on" : ""}`}
+                              style={{ left: `calc(8px + (100% - 16px) * ${p})` }}
+                            />
+                          );
+                        })}
+                      </span>
+                      <span
+                        className="thinking-depth-knob"
+                        style={{ left: `calc(8px + (100% - 16px) * ${stopPct / 100})` }}
+                        aria-hidden
+                      />
                       <input
                         type="range"
                         className="thinking-depth-range"
@@ -860,42 +952,33 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                         step={1}
                         value={Math.max(0, stopIndex)}
                         aria-label={stopLabel ? `思考深度：${stopLabel}` : "思考深度"}
-                        style={{ ["--fill" as string]: `${stopPct}%` } as React.CSSProperties}
                         onChange={(e) => {
                           const idx = Number(e.target.value);
                           const stop = thinkingProfile.stops[idx];
                           if (stop) setThinkingStop(stop.id);
                         }}
                       />
-                      {/* 刻度点：与滑块圆钮中心对齐（18px 圆钮 → 9px 边距） */}
-                      <span className="thinking-depth-dots" aria-hidden>
-                        {thinkingProfile.stops.map((s, i) => {
-                          const p = thinkingProfile.stops.length > 1 ? i / (thinkingProfile.stops.length - 1) : 0;
-                          return (
-                            <span
-                              key={s.id}
-                              className={`thinking-depth-dot${i <= stopIndex ? " is-on" : ""}`}
-                              style={{ left: `calc(9px + (100% - 18px) * ${p})` }}
-                            />
-                          );
-                        })}
-                      </span>
                     </div>
                   </div>
                 ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <select
-                  className="select-subtle min-w-[10rem]"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                >
+                <span className="inline-flex items-center gap-1.5">
+                  {modelBrand(model).logo ? (
+                    <img src={modelBrand(model).logo ?? ""} alt="" className="h-4 w-4 object-contain" />
+                  ) : null}
+                  <select
+                    className="select-subtle min-w-[10rem]"
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                  >
                   {(chatModels.length ? chatModels : [model]).map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>
                   ))}
                 </select>
+                </span>
                 {loading ? (
                   <button type="button" className="btn py-1.5 text-[13px]" onClick={stop}>
                     停止
@@ -918,8 +1001,8 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
 
       <Dialog.Root open={memoryOpen} onOpenChange={setMemoryOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
+          <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+          <Dialog.Content className="motion-dialog z-[50] w-[min(92vw,440px)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
             <Dialog.Title className="text-[15px] font-medium">长期记忆</Dialog.Title>
             <Dialog.Description className="mt-1 text-[13px] text-[var(--text-secondary)]">
               这些事实会在之后的对话里自动带上。可以删除单条，或全部清空。
@@ -975,8 +1058,8 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
         }}
       >
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
+          <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+          <Dialog.Content className="motion-dialog z-[50] w-[min(92vw,440px)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
             <Dialog.Title className="text-[15px] font-medium">上传文件</Dialog.Title>
             <Dialog.Description className="mt-1 text-[13px] text-[var(--text-secondary)]">
               选择文本类文件，确认后会插入到输入框，随下一次发送一并提交。
@@ -1035,8 +1118,8 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
 
       <Dialog.Root open={advancedOpen} onOpenChange={setAdvancedOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
+          <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+          <Dialog.Content className="motion-dialog z-[50] w-[min(92vw,440px)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
             <Dialog.Title className="text-[15px] font-medium">高级</Dialog.Title>
             <Dialog.Description className="mt-1 text-[13px] text-[var(--text-secondary)]">
               参数在下次发送时生效。思考开启时，部分采样参数可能被上游忽略。
@@ -1104,8 +1187,8 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
 
       <Dialog.Root open={codeOpen} onOpenChange={setCodeOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,640px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6">
+          <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+          <Dialog.Content className="motion-dialog z-[50] w-[min(92vw,640px)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6">
             <Dialog.Title className="text-lg font-medium">调用示例</Dialog.Title>
             <Dialog.Description className="mt-1 text-sm text-[var(--text-secondary)]">
               指向本网关的 OpenAI 兼容请求，可直接粘贴到你的项目里。

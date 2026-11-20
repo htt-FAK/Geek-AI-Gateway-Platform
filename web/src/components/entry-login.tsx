@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthShell } from "@/components/shell";
+import { ErrorSlide, fieldInvalidClass, useErrorShake } from "@/components/field-error";
 
 const REMEMBER_KEY = "aigw.login.remember";
 
@@ -31,6 +32,7 @@ export function EntryLogin() {
   const [error, setError] = useState("");
   const [hint, setHint] = useState("");
   const [loading, setLoading] = useState(false);
+  const { shake, pulse } = useErrorShake();
   const docs = process.env.NEXT_PUBLIC_DOCS_BASE_URL;
 
   useEffect(() => {
@@ -55,6 +57,7 @@ export function EntryLogin() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "登录失败");
+        pulse();
         return;
       }
       try {
@@ -69,6 +72,7 @@ export function EntryLogin() {
       router.replace(data.requirePasswordChange ? "/change-password" : "/playground");
     } catch {
       setError("连不上服务。确认已启动且地址正确。");
+      pulse();
     } finally {
       setLoading(false);
     }
@@ -99,9 +103,12 @@ export function EntryLogin() {
             <label className="block space-y-2">
               <span className="entry-label">手机号</span>
               <input
-                className="entry-field"
+                className={`entry-field ${fieldInvalidClass(Boolean(error), shake)}`}
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  setError("");
+                }}
                 placeholder="11 位手机号"
                 autoComplete="username"
                 required
@@ -110,10 +117,13 @@ export function EntryLogin() {
             <label className="block space-y-2">
               <span className="entry-label">密码</span>
               <input
-                className="entry-field"
+                className={`entry-field ${fieldInvalidClass(Boolean(error), shake)}`}
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError("");
+                }}
                 autoComplete="current-password"
                 required
               />
@@ -133,7 +143,11 @@ export function EntryLogin() {
               </button>
             </div>
 
-            {error ? <p className="text-sm text-[var(--status-error)]">{error}</p> : null}
+            {error ? (
+              <ErrorSlide>
+                <p className="text-sm text-[var(--status-error)]">{error}</p>
+              </ErrorSlide>
+            ) : null}
             {hint ? <p className="text-[12px] leading-relaxed text-[var(--text-secondary)]">{hint}</p> : null}
 
             <button className="btn entry-enter w-full" type="submit" disabled={loading}>

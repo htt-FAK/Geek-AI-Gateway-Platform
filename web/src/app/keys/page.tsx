@@ -6,6 +6,8 @@ import { ConsolePage, useMe } from "@/components/console";
 import { KeyRevealDialog } from "@/components/key-reveal-dialog";
 import { KeyFormDialog, type KeyRow } from "@/components/key-form-dialog";
 import { PageHeader } from "@/components/page-header";
+import { TableSkeletonRows } from "@/components/skeleton";
+import { Toast, useToast } from "@/components/admin-console";
 
 export default function KeysPage() {
   const { me, refresh } = useMe();
@@ -18,8 +20,7 @@ export default function KeysPage() {
   const [editing, setEditing] = useState<KeyRow | null>(null);
   const [revealKey, setRevealKey] = useState<string | null>(null);
   const [revealTitle, setRevealTitle] = useState("API Key");
-  const [copiedName, setCopiedName] = useState<string | null>(null);
-  const [copiedGateway, setCopiedGateway] = useState(false);
+  const { toast, show } = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -75,8 +76,7 @@ export default function KeysPage() {
     const key = await reveal(k);
     if (!key) return;
     await navigator.clipboard.writeText(key);
-    setCopiedName(k.keyName);
-    window.setTimeout(() => setCopiedName(null), 2000);
+    show("已复制密钥");
   }
 
   async function removeKey(k: KeyRow) {
@@ -84,9 +84,10 @@ export default function KeysPage() {
     const res = await fetch(`/api/keys/${encodeURIComponent(k.token)}`, { method: "DELETE" });
     const data = (await res.json()) as { error?: string };
     if (!res.ok) {
-      setMsg(data.error ?? "删除失败");
+      show(data.error ?? "删除失败", "err");
       return;
     }
+    show("已删除密钥");
     await load();
     await refresh();
   }
@@ -126,11 +127,10 @@ export default function KeysPage() {
             className="text-[var(--accent-primary)] hover:underline"
             onClick={() => {
               void navigator.clipboard.writeText(me.gatewayUrl ?? "");
-              setCopiedGateway(true);
-              window.setTimeout(() => setCopiedGateway(false), 2000);
+              show("已复制网关地址");
             }}
           >
-            {copiedGateway ? "已复制" : "复制"}
+            复制
           </button>
         ) : null}
       </div>
@@ -154,7 +154,27 @@ export default function KeysPage() {
             </Link>
           </div>
           {loading ? (
-            <p className="px-5 py-6 text-sm text-[var(--text-tertiary)]">加载中…</p>
+            <div className="overflow-x-auto">
+              <p className="sr-only">加载中</p>
+              <table className="w-full min-w-[860px] text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border-subtle)] text-left text-xs text-[var(--text-tertiary)]">
+                    <th className="px-4 py-2.5 font-normal">描述</th>
+                    <th className="px-4 py-2.5 font-normal">API Key</th>
+                    <th className="px-4 py-2.5 font-normal">归属账号</th>
+                    <th className="px-4 py-2.5 font-normal">创建时间</th>
+                    <th className="px-4 py-2.5 font-normal">有效期</th>
+                    <th className="px-4 py-2.5 font-normal">可访问模型</th>
+                    <th className="px-4 py-2.5 font-normal">已花费</th>
+                    <th className="px-4 py-2.5 font-normal">状态</th>
+                    <th className="px-4 py-2.5 font-normal">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <TableSkeletonRows rows={4} cols={9} />
+                </tbody>
+              </table>
+            </div>
           ) : keys.length === 0 ? (
             <p className="px-5 py-6 text-sm text-[var(--text-tertiary)]">
               还没有密钥，点击右上角「创建 API Key」。
@@ -223,7 +243,7 @@ export default function KeysPage() {
                             title={k.hasLocalCopy ? undefined : "创建时未留存明文，无法复制"}
                             onClick={() => void copyKey(k)}
                           >
-                            {copiedName === k.keyName ? "已复制" : "复制"}
+                            复制
                           </button>
                           <button
                             type="button"
@@ -273,7 +293,9 @@ export default function KeysPage() {
         }}
         apiKey={revealKey}
         title={revealTitle}
+        onCopied={() => show("已复制密钥")}
       />
+      <Toast toast={toast} />
     </ConsolePage>
   );
 }

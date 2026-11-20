@@ -222,7 +222,7 @@ html[data-skin="doubao"] .app-content {
   background: #ffffff;
 }
 
-html[data-skin="doubao"] .app-content > div {
+html[data-skin="doubao"] .page-fade > div {
   padding-top: 1.25rem;
 }
 

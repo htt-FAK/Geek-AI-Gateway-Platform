@@ -107,8 +107,8 @@ export function ThemeSettingsButton() {
 
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-          <Dialog.Content className="fixed right-0 top-0 z-[50] flex h-full w-[min(100vw,420px)] flex-col border-l border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-2xl outline-none">
+          <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+          <Dialog.Content className="motion-drawer fixed right-0 top-0 z-[50] flex h-full w-[min(100vw,420px)] flex-col border-l border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-2xl outline-none">
             <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] px-5 py-4">
               <div>
                 <Dialog.Title className="text-[16px] font-medium text-[var(--text-primary)]">主题设置</Dialog.Title>

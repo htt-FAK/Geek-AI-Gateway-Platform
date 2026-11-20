@@ -2,7 +2,6 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AppShell } from "@/components/shell";
 
 export type MePayload = {
   phone: string;
@@ -30,6 +29,9 @@ export function useMe() {
   async function refresh() {
     const res = await fetch("/api/me");
     if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        await fetch("/api/auth/logout", { method: "POST" });
+      }
       router.replace("/login");
       return null;
     }
@@ -48,7 +50,6 @@ export function useMe() {
 
 export function ConsolePage({
   children,
-  phone,
   maxWidth = true,
 }: {
   children: ReactNode;
@@ -56,10 +57,8 @@ export function ConsolePage({
   maxWidth?: boolean;
 }) {
   return (
-    <AppShell phone={phone}>
-      <div className={`px-5 py-5 md:px-6 ${maxWidth ? "mx-auto max-w-console" : "h-full"}`}>
-        {children}
-      </div>
-    </AppShell>
+    <div className={`px-5 py-5 md:px-6 ${maxWidth ? "mx-auto max-w-console" : "h-full"}`}>
+      {children}
+    </div>
   );
 }

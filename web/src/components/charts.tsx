@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
+import { RollingValue } from "@/components/rolling-value";
+import { MetricValueSkeleton } from "@/components/skeleton";
 import {
   Area,
   AreaChart,
@@ -398,7 +400,6 @@ export function ModelCallChartPanel({
   );
 }
 
-/** 指标条：独立成卡的指标带（标签在上、数字在下），与陈述卡下半部同一密度。 */
 export function MetricStrip({ metrics }: { metrics: Array<{ label: string; value: string }> }) {
   return (
     <div className="panel grid grid-cols-2 md:grid-cols-5 md:divide-x md:divide-[var(--border-subtle)]">
@@ -416,6 +417,7 @@ export function MetricStrip({ metrics }: { metrics: Array<{ label: string; value
 export function BalancePanel({
   balance,
   metrics,
+  metricsLoading = false,
 }: {
   balance: {
     unlimited: boolean;
@@ -424,6 +426,7 @@ export function BalancePanel({
     balanceCny: number | null;
   };
   metrics: Array<{ label: string; value: string }>;
+  metricsLoading?: boolean;
 }) {
   const pct =
     !balance.unlimited && balance.grantedCny > 0
@@ -465,7 +468,13 @@ export function BalancePanel({
         {metrics.map((item) => (
           <div key={item.label} className="px-5 py-4">
             <div className="text-[12px] text-[var(--text-tertiary)]">{item.label}</div>
-            <div className="mt-1.5 tabular text-[15px] font-medium">{item.value}</div>
+            {metricsLoading ? (
+              <MetricValueSkeleton />
+            ) : (
+              <div className="mt-1.5 tabular text-[15px] font-medium">
+                <RollingValue value={item.value} />
+              </div>
+            )}
           </div>
         ))}
       </div>

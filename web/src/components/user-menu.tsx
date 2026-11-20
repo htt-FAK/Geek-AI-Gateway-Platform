@@ -120,8 +120,8 @@ export function UserMenu({ phone }: { phone: string }) {
 
       <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,400px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 outline-none">
+          <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+          <Dialog.Content className="motion-dialog z-[50] w-[min(92vw,400px)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 outline-none">
             <Dialog.Title className="text-[15px] font-medium">头像与名称</Dialog.Title>
             <Dialog.Description className="mt-1 text-[13px] text-[var(--text-secondary)]">
               仅保存在本机浏览器，换设备需重新设置。

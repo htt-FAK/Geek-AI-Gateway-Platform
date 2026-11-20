@@ -10,6 +10,7 @@ import {
 } from "@/components/charts";
 import { ConsolePage, useMe } from "@/components/console";
 import { PageHeader } from "@/components/page-header";
+import { ChartBlockSkeleton } from "@/components/skeleton";
 import { DashboardFilterDialog } from "@/components/dashboard-filter";
 import { DashboardPrefsDialog } from "@/components/dashboard-prefs-dialog";
 import {
@@ -167,9 +168,27 @@ export default function DashboardPage() {
 
       <div className="space-y-5">
         {me ? (
-          <BalancePanel balance={me.balance} metrics={kpiItems} />
+          <BalancePanel
+            balance={me.balance}
+            metrics={kpiItems}
+            metricsLoading={loading && !analytics}
+          />
         ) : (
-          <div className="panel p-8 text-sm text-[var(--text-tertiary)]">加载中…</div>
+          <div className="panel" aria-busy="true">
+            <p className="sr-only">加载中</p>
+            <div className="p-5">
+              <span className="skeleton block h-3 w-16" aria-hidden />
+              <span className="skeleton mt-3 block h-8 w-36" aria-hidden />
+            </div>
+            <div className="grid grid-cols-2 border-t border-[var(--border-subtle)] md:grid-cols-5">
+              {Array.from({ length: 5 }, (_, i) => (
+                <div key={i} className="px-5 py-4" aria-hidden>
+                  <span className="skeleton block h-3 w-12" />
+                  <span className="skeleton mt-2 block h-5 w-16" />
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {error ? (
@@ -195,6 +214,12 @@ export default function DashboardPage() {
           </p>
         ) : null}
 
+        {loading && !analytics ? (
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <ChartBlockSkeleton />
+            <ChartBlockSkeleton />
+          </div>
+        ) : (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <ConsumptionChartPanel
             series={analytics?.spendSeries ?? []}
@@ -209,6 +234,7 @@ export default function DashboardPage() {
             totalCount={kpis?.count ?? 0}
           />
         </div>
+        )}
 
         {!loading && !hasData ? (
           <p className="text-sm text-[var(--text-tertiary)]">

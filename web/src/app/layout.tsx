@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import "./skins.css";
+import { AppFrame } from "@/components/app-frame";
 
 // 字体本地化（latin 子集 woff2 在 src/fonts/，由 scripts/fetch-local-fonts.mjs 下载）。
 // 原 next/font/google 在构建期拉 fonts.googleapis.com，国内网络常被断连导致构建失败。
@@ -101,7 +102,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: appearanceBoot }} />
       </head>
       <body className={fontVars} style={{ WebkitFontSmoothing: "antialiased" }}>
-        {children}
+        <AppFrame>{children}</AppFrame>
       </body>
     </html>
   );

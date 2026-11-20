@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ConsolePage, useMe } from "@/components/console";
 
 /**
@@ -112,7 +113,11 @@ export function AdminConsole({
     <ConsolePage phone={me?.phone}>
       <AdminPageHeader active={active} title={title} subtitle={subtitle} actions={isAdmin ? actions : undefined} />
       {!ready ? (
-        <div className="panel p-8 text-sm text-[var(--text-tertiary)]">加载中…</div>
+        <div className="panel space-y-3 p-5" aria-busy="true">
+          <p className="sr-only">加载中</p>
+          <span className="skeleton block h-4 w-32" aria-hidden />
+          <span className="skeleton block h-24 w-full" aria-hidden />
+        </div>
       ) : isAdmin ? (
         children()
       ) : (
@@ -123,15 +128,19 @@ export function AdminConsole({
 }
 
 /** 轻量 Toast：操作结果反馈，自动消失。 */
-export type ToastMsg = { text: string; kind: "ok" | "err" } | null;
+export type ToastMsg = { id: number; text: string; kind: "ok" | "err" } | null;
+
+const TOAST_MS = 3600;
 
 export function useToast() {
   const [toast, setToast] = useState<ToastMsg>(null);
   const timer = useRef<number | null>(null);
+  const seq = useRef(0);
   const show = useCallback((text: string, kind: "ok" | "err" = "ok") => {
-    setToast({ text, kind });
+    seq.current += 1;
+    setToast({ id: seq.current, text, kind });
     if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setToast(null), 3600);
+    timer.current = window.setTimeout(() => setToast(null), TOAST_MS);
   }, []);
   useEffect(() => () => {
     if (timer.current) window.clearTimeout(timer.current);
@@ -140,16 +149,26 @@ export function useToast() {
 }
 
 export function Toast({ toast }: { toast: ToastMsg }) {
-  if (!toast) return null;
-  const color = toast.kind === "ok" ? "var(--status-success)" : "var(--status-error)";
+  const reduce = useReducedMotion();
+  const color = toast?.kind === "ok" ? "var(--status-success)" : "var(--status-error)";
   return (
-    <div
-      role="status"
-      className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-2.5 text-sm shadow-xl"
-      style={{ borderLeft: `3px solid ${color}` }}
-    >
-      {toast.text}
-    </div>
+    <AnimatePresence>
+      {toast ? (
+        <motion.div
+          key={toast.id}
+          role="status"
+          initial={{ opacity: 0, y: reduce ? 0 : 8, x: "-50%" }}
+          animate={{ opacity: 1, y: 0, x: "-50%" }}
+          exit={{ opacity: 0, y: reduce ? 0 : 8, x: "-50%" }}
+          transition={{ duration: reduce ? 0 : 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+          className="fixed bottom-6 left-1/2 z-[60] max-w-[min(92vw,420px)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-2.5 text-sm shadow-xl"
+          style={{ borderLeft: `3px solid ${color}` }}
+        >
+          {toast.text}
+          <span aria-hidden className="toast-progress" style={{ color }} />
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
@@ -176,8 +195,8 @@ export function ConfirmDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,400px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 outline-none">
+        <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+        <Dialog.Content className="motion-dialog z-[50] w-[min(92vw,400px)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 outline-none">
           <Dialog.Title className="text-[15px] font-medium">{title}</Dialog.Title>
           <Dialog.Description className="mt-2 text-[13px] leading-relaxed text-[var(--text-secondary)]">
             {description}

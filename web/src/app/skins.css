@@ -57,3 +57,99 @@ html[data-skin] h2,
 html[data-skin] .font-display {
   font-family: var(--font-display-ui);
 }
+
+/* 空白对话背景：每套皮肤一套，不共用同一团蓝。 */
+html[data-skin="minimal"] .playground-stage {
+  --stage-glow-a: color-mix(in srgb, var(--accent-primary) 28%, transparent);
+  --stage-glow-b: color-mix(in srgb, var(--text-tertiary) 22%, transparent);
+  --stage-ring: color-mix(in srgb, var(--accent-primary) 36%, transparent);
+  --stage-mark-opacity: 0.22;
+  --stage-blur: 48px;
+}
+
+html[data-skin="trae"] .playground-stage {
+  --stage-glow-a: color-mix(in srgb, #32f08c 46%, transparent);
+  --stage-glow-b: color-mix(in srgb, #8b7cff 42%, transparent);
+  --stage-ring: color-mix(in srgb, var(--accent-primary) 55%, transparent);
+  --stage-ring-radius: 28%;
+  --stage-mark-opacity: 0.42;
+  --stage-blur: 28px;
+}
+
+html[data-skin="golden"] .playground-stage {
+  --stage-glow-a: hsl(40 55% 62% / 0.45);
+  --stage-glow-b: hsl(18 42% 72% / 0.4);
+  --stage-ring: hsl(40 32% 48% / 0.45);
+  --stage-mark-opacity: 0.26;
+  --stage-blur: 52px;
+}
+html[data-skin="golden"] .playground-stage-ring {
+  width: min(86%, 640px);
+  height: 46%;
+  aspect-ratio: auto;
+  animation: none;
+}
+
+html[data-skin="google"] .playground-stage {
+  --stage-glow-a: rgb(66 133 244 / 0.38);
+  --stage-glow-b: rgb(251 188 5 / 0.42);
+  --stage-ring: rgb(52 168 83 / 0.45);
+  --stage-mark-opacity: 0.4;
+  --stage-blur: 32px;
+}
+html[data-skin="google"] .playground-stage-glow-a {
+  background: rgb(234 67 53 / 0.28);
+}
+
+html[data-skin="doubao"] .playground-stage {
+  --stage-glow-a: rgb(0 101 253 / 0.28);
+  --stage-glow-b: rgb(167 139 250 / 0.32);
+  --stage-ring: rgb(0 101 253 / 0.22);
+  --stage-mark-opacity: 0.38;
+  --stage-blur: 56px;
+}
+
+html[data-skin="claude"] .playground-stage {
+  --stage-glow-a: rgb(201 100 66 / 0.32);
+  --stage-glow-b: rgb(232 214 190 / 0.7);
+  --stage-ring: rgb(201 100 66 / 0.35);
+  --stage-ring-radius: 42%;
+  --stage-mark-opacity: 0.24;
+  --stage-blur: 44px;
+}
+html[data-skin="claude"] .playground-stage-ring {
+  animation: none;
+}
+
+html[data-skin="apple"] .playground-stage {
+  --stage-glow-a: rgb(0 122 255 / 0.22);
+  --stage-glow-b: rgb(90 200 250 / 0.28);
+  --stage-ring: rgb(0 122 255 / 0.2);
+  --stage-mark-opacity: 0.2;
+  --stage-blur: 64px;
+}
+html[data-skin="apple"] .playground-stage-ring {
+  backdrop-filter: blur(6px);
+  background: rgb(255 255 255 / 0.28);
+}
+
+html[data-skin="21th"] .playground-stage {
+  --stage-glow-a: rgb(0 102 255 / 0.18);
+  --stage-glow-b: rgb(0 0 0 / 0.08);
+  --stage-ring: #0066ff;
+  --stage-ring-radius: 0;
+  --stage-mark-opacity: 0.55;
+  --stage-blur: 0px;
+}
+html[data-skin="21th"] .playground-stage-glow-a,
+html[data-skin="21th"] .playground-stage-glow-b,
+html[data-skin="21th"] .playground-stage-ring {
+  animation: none;
+}
+html[data-skin="21th"] .playground-stage-ring {
+  width: min(72%, 460px);
+  box-shadow: 8px 8px 0 #000;
+}
+html[data-skin="21th"] .playground-stage-mark {
+  filter: none;
+}

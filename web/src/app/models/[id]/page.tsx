@@ -65,7 +65,7 @@ export default function ModelDetailPage() {
       <div className="mt-3 mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <BrandBadge id={market.id} size="md" />
-          <h1 className="mono mt-1 text-2xl font-semibold tracking-tight">{market.id}</h1>
+          <h1 className="mt-2 text-[28px] font-semibold tracking-[-0.04em]">{market.id}</h1>
           <div className="mt-2 flex flex-wrap gap-1">
             {market.tags.map((t) => (
               <span key={t} className="rounded-[var(--radius-sm)] bg-[var(--accent-muted)] px-1.5 py-0.5 text-[11px] text-[var(--accent-primary)]">

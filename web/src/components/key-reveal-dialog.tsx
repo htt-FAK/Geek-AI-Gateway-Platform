@@ -9,18 +9,20 @@ export function KeyRevealDialog({
   apiKey,
   title,
   description,
+  onCopied,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   apiKey: string | null;
   title: string;
   description?: string;
+  onCopied?: () => void;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[50] w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 shadow-[var(--panel-shadow,0_8px_24px_rgba(0,0,0,0.35))]">
+        <Dialog.Overlay className="motion-overlay fixed inset-0 z-[50] bg-[var(--overlay-scrim)]" />
+        <Dialog.Content className="motion-dialog z-[50] w-[min(92vw,440px)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 shadow-[var(--panel-shadow,0_8px_24px_rgba(0,0,0,0.35))]">
           <Dialog.Title className="text-lg font-medium">{title}</Dialog.Title>
           <Dialog.Description className="mt-2 text-sm text-[var(--status-warning)]">
             {description ??
@@ -30,7 +32,7 @@ export function KeyRevealDialog({
             {apiKey}
           </pre>
           <div className="mt-5 flex justify-end gap-2">
-            <CopyButton apiKey={apiKey} />
+            <CopyButton apiKey={apiKey} onCopied={onCopied} />
             <Dialog.Close asChild>
               <button type="button" className="btn">
                 我已保存
@@ -43,12 +45,16 @@ export function KeyRevealDialog({
   );
 }
 
-function CopyButton({ apiKey }: { apiKey: string | null }) {
+function CopyButton({ apiKey, onCopied }: { apiKey: string | null; onCopied?: () => void }) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
     if (!apiKey) return;
     await navigator.clipboard.writeText(apiKey);
+    if (onCopied) {
+      onCopied();
+      return;
+    }
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2000);
   }

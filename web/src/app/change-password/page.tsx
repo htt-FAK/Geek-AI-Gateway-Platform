@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ErrorSlide, fieldInvalidClass, useErrorShake } from "@/components/field-error";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -10,12 +11,14 @@ export default function ChangePasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { shake, pulse } = useErrorShake();
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     if (newPassword !== confirm) {
       setError("两次输入的新密码不一致");
+      pulse();
       return;
     }
     setLoading(true);
@@ -28,11 +31,13 @@ export default function ChangePasswordPage() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "改密失败");
+        pulse();
         return;
       }
       router.replace("/playground");
     } catch {
       setError("网络错误");
+      pulse();
     } finally {
       setLoading(false);
     }
@@ -48,20 +53,26 @@ export default function ChangePasswordPage() {
         <label className="block space-y-1.5">
           <span className="text-sm muted">当前密码</span>
           <input
-            className="field"
+            className={`field ${fieldInvalidClass(Boolean(error), shake)}`}
             type="password"
             value={oldPassword}
-            onChange={(e) => setOldPassword(e.target.value)}
+            onChange={(e) => {
+              setOldPassword(e.target.value);
+              setError("");
+            }}
             required
           />
         </label>
         <label className="block space-y-1.5">
           <span className="text-sm muted">新密码（至少 8 位）</span>
           <input
-            className="field"
+            className={`field ${fieldInvalidClass(Boolean(error), shake)}`}
             type="password"
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            onChange={(e) => {
+              setNewPassword(e.target.value);
+              setError("");
+            }}
             minLength={8}
             required
           />
@@ -69,15 +80,22 @@ export default function ChangePasswordPage() {
         <label className="block space-y-1.5">
           <span className="text-sm muted">确认新密码</span>
           <input
-            className="field"
+            className={`field ${fieldInvalidClass(Boolean(error), shake)}`}
             type="password"
             value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
+            onChange={(e) => {
+              setConfirm(e.target.value);
+              setError("");
+            }}
             minLength={8}
             required
           />
         </label>
-        {error ? <p className="text-sm text-[var(--status-error)]">{error}</p> : null}
+        {error ? (
+          <ErrorSlide>
+            <p className="text-sm text-[var(--status-error)]">{error}</p>
+          </ErrorSlide>
+        ) : null}
         <button className="btn w-full" type="submit" disabled={loading}>
           {loading ? "提交中…" : "保存并继续"}
         </button>

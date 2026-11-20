@@ -398,6 +398,7 @@ export const MARKET_MODELS: MarketModel[] = [
     id: "minimax-m3.1-flash",
     provider: "bailian",
     endpoint: "chat",
+    recommended: true,
     tagline: "MiniMax M3.1 Flash：1M 上下文，低成本快速响应。",
     tags: ["文本"],
     modalityIn: ["文本"],
@@ -443,6 +444,39 @@ export const MARKET_MODELS: MarketModel[] = [
   },
 ];
 
+/** 广场排序：推荐对话在前，其余对话居中，OCR / 语音 / 向量 / 重排序靠后。 */
+const SHOWCASE_CHAT = [
+  "deepseek-flash",
+  "qwen4-max",
+  "minimax-m3.1-flash",
+  "deepseek-v4-pro",
+  "qwen3.8-flash",
+  "kimi-k3.1-pro",
+  "glm-5.3-flash",
+  "glm-5.3",
+  "mimo-v2.6-pro",
+  "mimo-v2.6-flash",
+  "sensenova-6.8-flash",
+  "sensenova-6.8-flash-lite",
+  "spark-x2.6",
+  "xing4.0-29b",
+  "qwen3.5-4b",
+];
+
+export function isFunctionalModel(m: MarketModel): boolean {
+  return m.endpoint !== "chat" || m.id === "deepseek-ocr";
+}
+
+export function showcaseOrder(m: MarketModel): number {
+  if (!isFunctionalModel(m)) {
+    const i = SHOWCASE_CHAT.indexOf(m.id);
+    return i >= 0 ? i : SHOWCASE_CHAT.length;
+  }
+  const tail = ["deepseek-ocr", "mimo-v2.5-asr", "mimo-v2.5-tts", "mimo-v2.5-tts-voiceclone", "mimo-v2.5-tts-voicedesign", "bge-m3", "bge-large-zh-v1.5", "bge-reranker-v2-m3"];
+  const i = tail.indexOf(m.id);
+  return 100 + (i >= 0 ? i : tail.length);
+}
+
 export function getMarketModel(id: string): MarketModel | undefined {
   return MARKET_MODELS.find((m) => m.id === id);
 }
@@ -480,9 +514,9 @@ export function providerVar(p: MarketProvider): string {
 /** 供应商品牌图标路径（web/public/brands/） */
 export function providerLogo(p: MarketProvider): string {
   return p === "deepseek"
-    ? "/brands/deepseek.ico"
+    ? "/brands/deepseek.png"
     : p === "xfyun"
-      ? "/brands/xfyun.ico"
+      ? "/brands/xfyun.png"
       : p === "siliconflow"
         ? "/brands/siliconflow.png"
         : p === "bailian"
@@ -501,27 +535,27 @@ export type ModelBrand = { key: string; label: string; logo: string | null; colo
 
 export function modelBrand(id: string): ModelBrand {
   if (id.startsWith("deepseek"))
-    return { key: "deepseek", label: "DeepSeek", logo: "/brands/deepseek.ico", color: "var(--brand-deepseek)" };
+    return { key: "deepseek", label: "DeepSeek", logo: "/brands/deepseek.png", color: "#4d6bfe" };
   if (id.startsWith("mimo"))
-    return { key: "mimo", label: "小米 MiMo", logo: "/brands/mimo.png", color: "var(--brand-mimo)" };
+    return { key: "mimo", label: "小米 MiMo", logo: "/brands/mimo.png", color: "#FF6900" };
   if (id.startsWith("spark"))
-    return { key: "xfyun", label: "讯飞星火", logo: "/brands/xfyun.ico", color: "var(--brand-xfyun)" };
+    return { key: "xfyun", label: "讯飞星火", logo: "/brands/xfyun.png", color: "#1e88e5" };
   if (id.startsWith("qwen"))
-    return { key: "qwen", label: "千问 Qwen", logo: "/brands/qwen.svg", color: "#f59e0b" };
+    return { key: "qwen", label: "千问 Qwen", logo: "/brands/qwen.png", color: "#ff6a00" };
   if (id.startsWith("kimi"))
     return { key: "kimi", label: "Kimi · 月之暗面", logo: "/brands/kimi.svg", color: "#a78bfa" };
   if (id.startsWith("glm"))
-    return { key: "glm", label: "智谱 GLM", logo: "/brands/glm.svg", color: "#38bdf8" };
+    return { key: "glm", label: "智谱 GLM", logo: "/brands/glm.png", color: "#1a1a1a" };
   if (id.startsWith("minimax"))
-    return { key: "minimax", label: "MiniMax", logo: "/brands/minimax.svg", color: "#f472b6" };
+    return { key: "minimax", label: "MiniMax", logo: "/brands/minimax.png", color: "#ff4d6d" };
   if (id.startsWith("step"))
-    return { key: "step", label: "阶跃星辰 Step", logo: "/brands/step.svg", color: "#2dd4bf" };
+    return { key: "step", label: "阶跃星辰 Step", logo: "/brands/step.png", color: "#0e1528" };
   if (id.startsWith("sensenova"))
-    return { key: "sensenova", label: "商汤 SenseNova", logo: null, color: "#4d7cff" };
+    return { key: "sensenova", label: "商汤 SenseNova", logo: "/brands/sensenova.png", color: "#ff3b30" };
   if (id.startsWith("xing"))
-    return { key: "siliconflow", label: "TeleAI 星辰", logo: null, color: "var(--brand-siliconflow)" };
+    return { key: "siliconflow", label: "TeleAI 星辰", logo: "/brands/teleai.png", color: "#1d6fe8" };
   if (id.startsWith("bge"))
-    return { key: "siliconflow", label: "BAAI 智源", logo: null, color: "var(--brand-siliconflow)" };
+    return { key: "siliconflow", label: "BAAI 智源", logo: "/brands/baai.svg", color: "#615ced" };
   return { key: "siliconflow", label: "硅基流动", logo: "/brands/siliconflow.png", color: "var(--brand-siliconflow)" };
 }
 
