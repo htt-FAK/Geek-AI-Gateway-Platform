@@ -10,15 +10,41 @@ import { StyleOnboarding } from "@/components/style-onboarding";
 
 type NavIconId = "playground" | "dashboard" | "models" | "leaderboard" | "keys" | "users" | "usage";
 
-const NAV: { href: string; label: string; icon: NavIconId; adminOnly?: boolean }[] = [
-  { href: "/playground", label: "调试台", icon: "playground" },
-  { href: "/dashboard", label: "看板", icon: "dashboard" },
-  { href: "/models", label: "模型", icon: "models" },
-  { href: "/leaderboard", label: "榜单", icon: "leaderboard" },
-  { href: "/keys", label: "密钥", icon: "keys" },
-  { href: "/admin/users", label: "成员管理", icon: "users", adminOnly: true },
-  { href: "/admin/usage", label: "成员用量", icon: "usage", adminOnly: true },
+type NavItem = { href: string; label: string; icon: NavIconId; adminOnly?: boolean };
+
+/** 侧栏四组：使用 / 观测 / 资源 / 管理（管理组仅管理员可见）。 */
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
+  {
+    label: "使用",
+    items: [{ href: "/playground", label: "调试台", icon: "playground" }],
+  },
+  {
+    label: "观测",
+    items: [
+      { href: "/dashboard", label: "看板", icon: "dashboard" },
+      { href: "/leaderboard", label: "榜单", icon: "leaderboard" },
+    ],
+  },
+  {
+    label: "资源",
+    items: [
+      { href: "/models", label: "模型", icon: "models" },
+      { href: "/keys", label: "密钥", icon: "keys" },
+    ],
+  },
+  {
+    label: "管理",
+    items: [
+      { href: "/admin/users", label: "成员管理", icon: "users", adminOnly: true },
+      { href: "/admin/usage", label: "成员用量", icon: "usage", adminOnly: true },
+    ],
+  },
 ];
+
+/** 顶栏「分组 / 当前页」反查用（含子路由前缀匹配）。 */
+const NAV_FLAT: (NavItem & { group: string })[] = NAV_GROUPS.flatMap((group) =>
+  group.items.map((item) => ({ ...item, group: group.label })),
+);
 
 function NavIcon({ id, size = 20 }: { id: NavIconId; size?: number }) {
   const common = {
@@ -193,6 +219,11 @@ export function AppShell({
   const [collapsed, setCollapsed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // 顶栏「分组 / 当前页」：由路由反查所属导航组（/models/[id] 等子路由按前缀归组）
+  const current = NAV_FLAT.find(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+  );
+
   useEffect(() => {
     try {
       setCollapsed(window.localStorage.getItem(SIDEBAR_KEY) === "1");
@@ -256,22 +287,45 @@ export function AppShell({
           </div>
         </div>
         <nav className="app-sidebar-nav flex flex-1 flex-col overflow-y-auto p-2">
-          {NAV.filter((item) => !item.adminOnly || isAdmin).map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          {NAV_GROUPS.map((group, groupIndex) => {
+            const items = group.items.filter((item) => !item.adminOnly || isAdmin);
+            if (items.length === 0) return null;
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={item.label}
-                className={`app-nav-item relative flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
-                  collapsed ? "justify-center px-0" : ""
-                } ${active ? "is-active" : ""}`}
+              <div
+                key={group.label}
+                className={
+                  groupIndex > 0
+                    ? collapsed
+                      ? "mt-1.5 border-t border-[var(--border-subtle)] pt-1.5"
+                      : "mt-2"
+                    : ""
+                }
               >
-                <span className="app-nav-icon relative flex h-5 w-5 shrink-0 items-center justify-center">
-                  <NavIcon id={item.icon} size={20} />
-                </span>
-                {!collapsed ? <span>{item.label}</span> : null}
-              </Link>
+                {/* 组名 11px 次要色；收起时只留图标 */}
+                {!collapsed ? (
+                  <div className="px-3 pb-1 pt-2 text-[11px] leading-none text-[var(--text-tertiary)]">
+                    {group.label}
+                  </div>
+                ) : null}
+                {items.map((item) => {
+                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      title={item.label}
+                      className={`app-nav-item relative flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
+                        collapsed ? "justify-center px-0" : ""
+                      } ${active ? "is-active" : ""}`}
+                    >
+                      <span className="app-nav-icon relative flex h-5 w-5 shrink-0 items-center justify-center">
+                        <NavIcon id={item.icon} size={20} />
+                      </span>
+                      {!collapsed ? <span>{item.label}</span> : null}
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
           <button
@@ -300,8 +354,18 @@ export function AppShell({
 
       <div className={`app-main flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ease-out ${collapsed ? "ml-16" : "ml-60"}`}>
         <header className="app-topbar sticky top-0 z-10 flex h-[52px] shrink-0 items-center justify-between px-5 md:px-6">
-          <div className="text-[13px] font-medium tracking-tight text-[var(--text-secondary)]">
-            高科极客 AI 网关平台
+          <div className="flex min-w-0 items-center gap-1.5 text-[13px] tracking-tight">
+            {current ? (
+              <>
+                <span className="text-[var(--text-tertiary)]">{current.group}</span>
+                <span aria-hidden className="text-[var(--text-tertiary)] opacity-50">
+                  /
+                </span>
+                <span className="truncate font-medium text-[var(--text-primary)]">{current.label}</span>
+              </>
+            ) : (
+              <span className="text-[var(--text-secondary)]">控制台</span>
+            )}
           </div>
           <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
             {docs ? (

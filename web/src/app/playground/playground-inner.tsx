@@ -78,6 +78,8 @@ export default function PlaygroundInner() {
   const [openReasoning, setOpenReasoning] = useState<Record<number, boolean>>({});
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
+  const [convCursor, setConvCursor] = useState<string | null>(null);
+  const [convLoadingMore, setConvLoadingMore] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(true);
   const [hasSummary, setHasSummary] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
@@ -127,7 +129,10 @@ export default function PlaygroundInner() {
     void fetch("/api/conversations")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.conversations) setConversations(data.conversations);
+        if (data?.conversations) {
+          setConversations(data.conversations);
+          setConvCursor(data.nextCursor ?? null);
+        }
       })
       .catch(() => undefined);
   }, []);
@@ -145,6 +150,10 @@ export default function PlaygroundInner() {
     }
     if (thinkingFields.reasoning_effort) {
       thinkingLines.push(`    "reasoning_effort": "${thinkingFields.reasoning_effort}",`);
+    }
+    // 多数上游的思考开关走 extra_body（顶层未知参数会被网关 drop_params 丢弃）
+    if (thinkingFields.extra_body) {
+      thinkingLines.push(`    "extra_body": ${JSON.stringify(thinkingFields.extra_body)},`);
     }
     return `curl ${gatewayBase}/chat/completions \\
   -H "Content-Type: application/json" \\
@@ -186,10 +195,32 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
       const data = await res.json();
       const list = (data.conversations ?? []) as ConversationListItem[];
       applyConversationList(list, id);
+      setConvCursor(data.nextCursor ?? null);
       if (!id) return false;
       return Boolean(list.find((item) => item.id === id)?.hasSummary);
     } catch {
       return false;
+    }
+  }
+
+  /** 侧栏「加载更多」：按 cursor 追加更早的会话（刷新列表时重置回首屏）。 */
+  async function loadMoreConversations() {
+    if (!convCursor || convLoadingMore) return;
+    setConvLoadingMore(true);
+    try {
+      const res = await fetch(`/api/conversations?cursor=${encodeURIComponent(convCursor)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = (data.conversations ?? []) as ConversationListItem[];
+      setConversations((prev) => {
+        const seen = new Set(prev.map((c) => c.id));
+        return [...prev, ...list.filter((c) => !seen.has(c.id))];
+      });
+      setConvCursor(data.nextCursor ?? null);
+    } catch {
+      // 网络错误保持现状，可再点
+    } finally {
+      setConvLoadingMore(false);
     }
   }
 
@@ -463,7 +494,9 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
         const json = await res.json();
         if (viewGen.current !== gen) return;
         const content = json.choices?.[0]?.message?.content ?? "";
-        const reasoningContent = json.choices?.[0]?.message?.reasoning_content ?? "";
+        // 商汤日日新等上游用 reasoning 字段输出思考内容（非 reasoning_content）
+        const reasoningContent =
+          json.choices?.[0]?.message?.reasoning_content ?? json.choices?.[0]?.message?.reasoning ?? "";
         setMessages((m) => [
           ...m,
           {
@@ -514,12 +547,13 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
           try {
             const json = JSON.parse(payload) as {
               choices?: Array<{
-                delta?: { content?: string | null; reasoning_content?: string | null };
+                delta?: { content?: string | null; reasoning_content?: string | null; reasoning?: string | null };
               }>;
               usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
             };
             const delta = json.choices?.[0]?.delta;
-            const reasoningDelta = delta?.reasoning_content ?? "";
+            // 商汤日日新等上游用 reasoning 字段输出思考内容（非 reasoning_content）
+            const reasoningDelta = delta?.reasoning_content ?? delta?.reasoning ?? "";
             const contentDelta = delta?.content ?? "";
             if (reasoningDelta) reasoning += reasoningDelta;
             if (contentDelta) assistant += contentDelta;
@@ -574,6 +608,11 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
     thinkingProfile.kind !== "none" && thinkingStop
       ? thinkingProfile.stops.find((s) => s.id === thinkingStop)?.label
       : null;
+  /** 滑块填充百分比（0–100），由当前档位索引换算。 */
+  const stopPct =
+    thinkingProfile.kind !== "none" && thinkingProfile.stops.length > 1 && stopIndex >= 0
+      ? (stopIndex / (thinkingProfile.stops.length - 1)) * 100
+      : 0;
 
   return (
     <ConsolePage phone={me?.phone} maxWidth={false}>
@@ -582,7 +621,11 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
           <aside className="flex min-h-0 w-56 shrink-0 flex-col overflow-hidden border-r border-[var(--border-subtle)] pr-3">
             <div className="flex items-center justify-between pb-3">
               <span className="text-[13px] font-medium text-[var(--text-primary)]">历史对话</span>
-              <button type="button" className="btn btn-ghost py-1 text-[12px]" onClick={newChat}>
+              <button
+                type="button"
+                className="text-[12px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                onClick={newChat}
+              >
                 新对话
               </button>
             </div>
@@ -593,7 +636,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                 conversations.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-[var(--radius-md)] px-2 py-2 ${item.id === conversationId ? "bg-[var(--bg-elevated)]" : ""}`}
+                    className={`rounded-[var(--radius-md)] px-2 py-2 ${item.id === conversationId ? "bg-[var(--nav-active-bg)]" : ""}`}
                   >
                     {editingId === item.id ? (
                       <input
@@ -642,19 +685,33 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                   </div>
                 ))
               )}
+              {convCursor ? (
+                <button
+                  type="button"
+                  className="block w-full px-2 py-2 text-center text-[12px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-50"
+                  onClick={() => void loadMoreConversations()}
+                  disabled={convLoadingMore}
+                >
+                  {convLoadingMore ? "加载中…" : "加载更多"}
+                </button>
+              ) : null}
             </div>
           </aside>
         ) : null}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-3">
           <h1 className="text-[15px] font-medium tracking-tight text-[var(--text-primary)]">对话测试</h1>
-          <div className="flex items-center gap-2">
-            <button type="button" className="btn btn-ghost py-1.5 text-[13px]" onClick={() => setHistoryOpen((open) => !open)}>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              onClick={() => setHistoryOpen((open) => !open)}
+            >
               {historyOpen ? "收起历史" : "历史"}
             </button>
             <button
               type="button"
-              className="btn btn-ghost py-1.5 text-[13px]"
+              className="text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
               onClick={() => {
                 setMemoryOpen(true);
                 void loadMemories();
@@ -662,10 +719,18 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
             >
               记忆
             </button>
-            <button type="button" className="btn btn-ghost py-1.5 text-[13px]" onClick={() => setCodeOpen(true)}>
+            <button
+              type="button"
+              className="text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              onClick={() => setCodeOpen(true)}
+            >
               查看代码
             </button>
-            <button type="button" className="btn btn-ghost py-1.5 text-[13px]" onClick={() => setAdvancedOpen(true)}>
+            <button
+              type="button"
+              className="text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              onClick={() => setAdvancedOpen(true)}
+            >
               高级
             </button>
           </div>
@@ -677,8 +742,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
           ) : null}
           {messages.length === 0 ? (
             <div className="py-20 text-center">
-              <p className="text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">有什么可以帮忙的？</p>
-              <p className="mt-2 text-[13px] text-[var(--text-tertiary)]">在下方输入问题开始对话；需要人设时打开「高级」。</p>
+              <p className="text-[20px] font-medium tracking-tight text-[var(--text-primary)]">有什么可以帮忙的？</p>
             </div>
           ) : (
             messages.map((m, i) => (
@@ -768,7 +832,7 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  className="btn btn-ghost py-1.5 text-[13px]"
+                  className="btn btn-subtle py-1.5 text-[13px]"
                   onClick={() => {
                     setUploadError("");
                     setUploadOpen(true);
@@ -776,31 +840,53 @@ ${thinkingLines.length ? `${thinkingLines.join("\n")}\n` : ""}    "stream": ${st
                 >
                   上传
                 </button>
-                <button type="button" className="btn btn-ghost py-1.5 text-[13px]" onClick={newChat}>
+                <button type="button" className="btn btn-subtle py-1.5 text-[13px]" onClick={newChat}>
                   新对话
                 </button>
                 {thinkingProfile.kind !== "none" ? (
                   <div className="thinking-depth" title="思考深度">
-                    <span className="thinking-depth-label">思考深度 · {stopLabel}</span>
-                    <input
-                      type="range"
-                      className="thinking-depth-range"
-                      min={0}
-                      max={thinkingProfile.stops.length - 1}
-                      step={1}
-                      value={Math.max(0, stopIndex)}
-                      onChange={(e) => {
-                        const idx = Number(e.target.value);
-                        const stop = thinkingProfile.stops[idx];
-                        if (stop) setThinkingStop(stop.id);
-                      }}
-                    />
+                    <span className="thinking-depth-label">
+                      思考深度<span className="thinking-depth-value">{stopLabel}</span>
+                    </span>
+                    <div
+                      className="thinking-depth-slider"
+                      style={{ width: `${Math.max(72, 30 * (thinkingProfile.stops.length - 1) + 18)}px` }}
+                    >
+                      <input
+                        type="range"
+                        className="thinking-depth-range"
+                        min={0}
+                        max={thinkingProfile.stops.length - 1}
+                        step={1}
+                        value={Math.max(0, stopIndex)}
+                        aria-label={stopLabel ? `思考深度：${stopLabel}` : "思考深度"}
+                        style={{ ["--fill" as string]: `${stopPct}%` } as React.CSSProperties}
+                        onChange={(e) => {
+                          const idx = Number(e.target.value);
+                          const stop = thinkingProfile.stops[idx];
+                          if (stop) setThinkingStop(stop.id);
+                        }}
+                      />
+                      {/* 刻度点：与滑块圆钮中心对齐（18px 圆钮 → 9px 边距） */}
+                      <span className="thinking-depth-dots" aria-hidden>
+                        {thinkingProfile.stops.map((s, i) => {
+                          const p = thinkingProfile.stops.length > 1 ? i / (thinkingProfile.stops.length - 1) : 0;
+                          return (
+                            <span
+                              key={s.id}
+                              className={`thinking-depth-dot${i <= stopIndex ? " is-on" : ""}`}
+                              style={{ left: `calc(9px + (100% - 18px) * ${p})` }}
+                            />
+                          );
+                        })}
+                      </span>
+                    </div>
                   </div>
                 ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <select
-                  className="field !w-auto min-w-[10rem] py-1.5 text-[13px]"
+                  className="select-subtle min-w-[10rem]"
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
                 >

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ConsolePage, useMe } from "@/components/console";
 import { KeyRevealDialog } from "@/components/key-reveal-dialog";
 import { KeyFormDialog, type KeyRow } from "@/components/key-form-dialog";
+import { PageHeader } from "@/components/page-header";
 
 export default function KeysPage() {
   const { me, refresh } = useMe();
@@ -18,6 +19,7 @@ export default function KeysPage() {
   const [revealKey, setRevealKey] = useState<string | null>(null);
   const [revealTitle, setRevealTitle] = useState("API Key");
   const [copiedName, setCopiedName] = useState<string | null>(null);
+  const [copiedGateway, setCopiedGateway] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -101,17 +103,36 @@ export default function KeysPage() {
 
   return (
     <ConsolePage phone={me?.phone}>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">API Key</h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            给人或给程序发一张进网关的通行证 · 网关地址{" "}
-            <span className="mono">{me?.gatewayUrl ?? "…"}</span>
-          </p>
-        </div>
-        <button type="button" className="btn" disabled={dbDown} onClick={openCreate}>
-          创建 API Key
-        </button>
+      <PageHeader
+        group="资源"
+        title="API Key"
+        description="给人或给程序发一张进网关的通行证"
+        actions={
+          <button type="button" className="btn" disabled={dbDown} onClick={openCreate}>
+            创建 API Key
+          </button>
+        }
+      />
+
+      {/* 网关地址单独一行，可复制 */}
+      <div className="mb-5 flex flex-wrap items-center gap-2 text-[13px]">
+        <span className="text-[var(--text-tertiary)]">网关地址</span>
+        <code className="mono max-w-full truncate rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-1 text-[12px]">
+          {me?.gatewayUrl ?? "…"}
+        </code>
+        {me?.gatewayUrl ? (
+          <button
+            type="button"
+            className="text-[var(--accent-primary)] hover:underline"
+            onClick={() => {
+              void navigator.clipboard.writeText(me.gatewayUrl ?? "");
+              setCopiedGateway(true);
+              window.setTimeout(() => setCopiedGateway(false), 2000);
+            }}
+          >
+            {copiedGateway ? "已复制" : "复制"}
+          </button>
+        ) : null}
       </div>
 
       {dbDown ? (
@@ -157,7 +178,7 @@ export default function KeysPage() {
                 <tbody>
                   {keys.map((k) => (
                     <tr key={k.keyName} className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--bg-hover)]">
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3.5">
                         <span className="flex items-center gap-1.5">
                           {k.keyAlias || <span className="text-[var(--text-tertiary)]">—</span>}
                           {k.isPrimary ? (
@@ -167,24 +188,24 @@ export default function KeysPage() {
                           ) : null}
                         </span>
                       </td>
-                      <td className="mono px-4 py-3 text-[13px]">{k.keyName}</td>
-                      <td className="px-4 py-3">{me?.phone ?? "…"}</td>
-                      <td className="px-4 py-3 text-[var(--text-secondary)]">
+                      <td className="mono px-4 py-3.5 text-[13px]">{k.keyName}</td>
+                      <td className="px-4 py-3.5">{me?.phone ?? "…"}</td>
+                      <td className="px-4 py-3.5 text-[var(--text-secondary)]">
                         {k.createdAt ? new Date(k.createdAt).toLocaleDateString("zh-CN") : "—"}
                       </td>
-                      <td className="px-4 py-3 text-[var(--text-secondary)]">
+                      <td className="px-4 py-3.5 text-[var(--text-secondary)]">
                         {k.expires ? new Date(k.expires).toLocaleDateString("zh-CN") : "永久"}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3.5">
                         <ModelTags models={k.models} all={chatModels} />
                       </td>
-                      <td className="tabular px-4 py-3 text-[var(--text-secondary)]">
+                      <td className="tabular px-4 py-3.5 text-[var(--text-secondary)]">
                         ¥{k.spend.toFixed(4)}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3.5">
                         <StatusBadge k={k} />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3.5">
                         <span className="flex items-center gap-2 text-[13px]">
                           <button
                             type="button"

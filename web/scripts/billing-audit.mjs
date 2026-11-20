@@ -1,7 +1,8 @@
 /**
  * 商业级计费审计套件。运行：node scripts/billing-audit.mjs
  * 覆盖：峰时规则单测 / 11 模型流式与非流式记账精度 / 密钥归属 / 失败路径不记账 /
- *       缓存计价 / 网关-本地对账 / 密钥级预算硬闸 / 余额门 402 / 限流 429。
+ *       缓存计价 / 网关-本地对账 / 密钥级预算硬闸 / 余额门 402 / 限流 429 /
+ *       并发充值 CAS / 管理会话通道（密码版本 + 强制改密）。
  * 会创建临时测试账号与探针密钥，结束后清理。真实调用约 10 次（费用 < ¥0.05）。
  */
 import "dotenv/config";
@@ -14,7 +15,39 @@ import { applyDeepSeekPeak, isPeakShanghai } from "../src/lib/peak-pricing.ts";
 const BASE = "http://localhost:3000";
 const GW = process.env.GATEWAY_BASE_URL || "http://127.0.0.1:4000";
 const MASTER = process.env.LITELLM_MASTER_KEY;
-const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: process.env.DATABASE_URL }) });
+const prismaRaw = new PrismaClient({ adapter: new PrismaLibSql({ url: process.env.DATABASE_URL }) });
+
+// SQLite 单写者：审计直连与 Web 写入偶发 BUSY/锁超时（与 web retryWrite 同口径），统一重试。
+// P1008（Operation has timed out）的底层 cause 也是 SocketTimeout/SQLITE_BUSY，一并匹配。
+async function dbRetry(fn) {
+  for (let i = 0; ; i += 1) {
+    try {
+      return await fn();
+    } catch (e) {
+      const msg = [
+        e?.message,
+        e?.code,
+        e?.cause?.message,
+        e?.cause?.originalMessage,
+        e?.cause?.cause?.originalMessage,
+      ].join(" ");
+      if (i >= 8 || !/SQLITE_BUSY|database is locked|SocketTimeout|P2034|P1008|write conflict|timed out/i.test(msg)) throw e;
+      await new Promise((r) => setTimeout(r, 200 * (i + 1)));
+    }
+  }
+}
+function retryProxy(obj) {
+  return new Proxy(obj, {
+    get(t, prop) {
+      if (prop === "then") return undefined;
+      const v = t[prop];
+      if (typeof v === "function") return (...a) => dbRetry(() => v.apply(t, a));
+      if (v && typeof v === "object") return retryProxy(v);
+      return v;
+    },
+  });
+}
+const prisma = retryProxy(prismaRaw);
 
 const PRICES = {
   "deepseek-flash": [1, 4],
@@ -28,7 +61,9 @@ const PRICES = {
   "glm-5.3-flash": [0.8, 2.8],
   "glm-5.3": [8, 28],
   "minimax-m3.1-flash": [1, 4],
-  "step-5-preview": [7, 20],
+  // 商汤日日新（2026-11-20 接入，词元计划限时免费 ¥0）
+  "sensenova-6.8-flash": [0, 0],
+  "sensenova-6.8-flash-lite": [0, 0],
 };
 // 缓存命中输入价（¥/M，与 gateway/config.yaml 的 cache_read_input_token_cost 一致）
 const CACHE_PRICES = {
@@ -42,7 +77,7 @@ const CACHE_PRICES = {
   "glm-5.3-flash": 0.08,
   "glm-5.3": 2,
   "minimax-m3.1-flash": 1, // 官方折扣价未公布，暂按输入价
-  // step-5-preview 无缓存价 → 下方 ?? pi 兜底
+  // 无缓存价的模型 → 下方 ?? pi 兜底
 };
 
 // 从调用结果取上游 usage（流式解析 SSE 末块）——用于缓存折扣口径
@@ -348,14 +383,83 @@ console.log("=== 9. 流式中止 ===");
   check("中止后服务仍正常", probe.status === 200, `中止请求 status=${r.status}`);
 }
 
-// ---------- 收尾：演示账号恢复初始态（默认密码 + 首登强制改密） ----------
-// 保证验收口径「演示账号首登强制改密」始终成立，且审计可重复运行
+// ---------- 10. 并发充值 CAS（读改写不再互相覆盖） ----------
+console.log("=== 10. 并发充值 ===");
+const TOPUP_PHONE = "13900002222";
+{
+  await prisma.user.deleteMany({ where: { phone: TOPUP_PHONE } });
+  await prisma.user.create({
+    data: {
+      phone: TOPUP_PHONE,
+      passwordHash: await bcrypt.hash("AuditTest123!", 10),
+      mustChangePassword: false,
+      balanceGrantedCny: 0,
+      balanceUnlimited: false,
+      litellmUserId: null, // 无网关用户：只测本地 CAS，不烧网关
+    },
+  });
+  const topup = (amountCny) =>
+    fetch(`${BASE}/api/admin/users/topup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-token": process.env.ADMIN_TOKEN },
+      body: JSON.stringify({ phone: TOPUP_PHONE, amountCny, note: "audit-cas" }),
+    }).then(async (r) => ({ status: r.status, json: await r.json().catch(() => null) }));
+  // 两笔并发 ¥10：旧读改写会丢一笔，CAS+锁必须恰好 +20
+  const [a, b] = await Promise.all([topup(10), topup(10)]);
+  const u1 = await prisma.user.findUnique({ where: { phone: TOPUP_PHONE } });
+  check("并发两笔充值均 200", a.status === 200 && b.status === 200, `HTTP ${a.status}/${b.status}`);
+  check("并发充值不丢金额（+20）", u1.balanceGrantedCny === 20, `granted=${u1.balanceGrantedCny}`);
+  // 再来三笔并发 ¥5 → 恰好 +15
+  const trio = await Promise.all([topup(5), topup(5), topup(5)]);
+  const u2 = await prisma.user.findUnique({ where: { phone: TOPUP_PHONE } });
+  check("三笔并发充值均 200", trio.every((t) => t.status === 200), trio.map((t) => t.status).join("/"));
+  check("三笔并发充值不丢金额（+15）", u2.balanceGrantedCny === 35, `granted=${u2.balanceGrantedCny}`);
+  const rows = await prisma.balanceTopUp.count({ where: { userId: u2.id } });
+  check("充值流水 5 笔齐全", rows === 5, `rows=${rows}`);
+  await prisma.user.deleteMany({ where: { phone: TOPUP_PHONE } });
+}
+
+// ---------- 11. 管理会话通道：密码版本 + 强制改密（重置后旧 Cookie 失效） ----------
+console.log("=== 11. 管理会话通道 ===");
+{
+  const adminGet = (cookie) =>
+    fetch(`${BASE}/api/admin/users`, { headers: { Cookie: cookie } }).then((r) => r.status);
+  const originalRole = demo.role;
+  await prisma.user.update({ where: { id: demo.id }, data: { role: "admin" } });
+  check("管理员会话免 Token 访问管理 API", (await adminGet(demoCookie)) === 200);
+
+  // 强制改密未完成 → 403（与普通接口同口径）
+  await prisma.user.update({ where: { id: demo.id }, data: { mustChangePassword: true } });
+  check("管理员待改密 → 403", (await adminGet(demoCookie)) === 403);
+  await prisma.user.update({ where: { id: demo.id }, data: { mustChangePassword: false } });
+  check("改密完成后恢复放行", (await adminGet(demoCookie)) === 200);
+
+  // 密码版本递增（等价于重置密码）→ 旧 Cookie 立即 401
+  await prisma.user.update({ where: { id: demo.id }, data: { passwordVersion: { increment: 1 } } });
+  check("密码版本递增后旧管理会话 → 401", (await adminGet(demoCookie)) === 401);
+
+  // 非管理员角色 → 401（浏览器只剩角色通道）
+  const relogin = await fetch(`${BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone: "13800138000", password: `${DEFAULT_PWD}#Audit1` }),
+  });
+  const freshCookie = sessionCookie(relogin);
+  await prisma.user.update({ where: { id: demo.id }, data: { role: "user" } });
+  check("非管理员会话 → 401", (await adminGet(freshCookie)) === 401);
+  await prisma.user.update({ where: { id: demo.id }, data: { role: originalRole } });
+}
+
+// ---------- 收尾：演示账号恢复初始态（默认密码 + 首登强制改密 + 运行前角色） ----------
+// 保证验收口径「演示账号首登强制改密」始终成立，且审计可重复运行；
+// role 恢复为运行开始时的值（第 11 节临时改 admin），中途崩溃也不泄漏角色。
 await prisma.user.update({
   where: { phone: "13800138000" },
   data: {
     passwordHash: await bcrypt.hash(DEFAULT_PWD, 10),
     mustChangePassword: true,
     passwordVersion: { increment: 1 },
+    role: demo.role,
   },
 });
 

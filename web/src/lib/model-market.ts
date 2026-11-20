@@ -5,7 +5,7 @@
  * 改价时请同步 gateway/config.yaml 与 gateway/model_catalog.json。
  */
 
-export type MarketProvider = "deepseek" | "mimo" | "xfyun" | "siliconflow" | "bailian";
+export type MarketProvider = "deepseek" | "mimo" | "xfyun" | "siliconflow" | "bailian" | "sensenova";
 export type MarketEndpoint = "chat" | "asr" | "tts" | "embedding" | "rerank";
 
 export type MarketCapabilities = {
@@ -64,7 +64,7 @@ const QWEN_HOME = "https://qwen.ai/";
 const KIMI_HOME = "https://www.kimi.com/";
 const ZHIPU_HOME = "https://www.zhipu.ai/";
 const MINIMAX_HOME = "https://www.minimax.io/";
-const STEPFUN_HOME = "https://www.stepfun.com/";
+const SENSENOVA_DOCS = "https://token.sensenova.cn/";
 
 export const MARKET_MODELS: MarketModel[] = [
   {
@@ -410,19 +410,36 @@ export const MARKET_MODELS: MarketModel[] = [
     versionNote: "模型代码 MiniMax/MiniMax-M3.1-Flash。官方仅标「缓存享有折扣」未公布单价，网关暂按输入价计缓存命中，公布后同步。",
   },
   {
-    id: "step-5-preview",
-    provider: "bailian",
+    id: "sensenova-6.8-flash",
+    provider: "sensenova",
     endpoint: "chat",
-    tagline: "阶跃星辰 Step-5 Preview：1M 上下文多模态旗舰预览版。",
-    tags: ["文本", "思考"],
-    modalityIn: ["文本"],
+    tagline: "商汤日日新 6.8 Flash：办公智能与长程任务，思考常开、支持六档思考力度。",
+    tags: ["文本", "图像", "思考", "限时免费"],
+    modalityIn: ["文本", "图像"],
     modalityOut: ["文本"],
-    pricing: { kind: "tokens", inputPerM: 7, outputPerM: 20, cacheHitPerM: 0 },
-    context: "1M",
-    maxOutput: "以官方模型页为准",
-    capabilities: { ...NO_CAPS, thinking: true },
-    officialUrl: STEPFUN_HOME,
-    versionNote: "模型代码 stepfun/step-5-preview。官方未提供缓存价（无上下文缓存折扣）。",
+    pricing: { kind: "note", note: "限时免费" },
+    context: "256K",
+    maxOutput: "64K",
+    capabilities: { ...NO_CAPS, thinking: true, toolCall: true, structuredOutput: true, vision: true },
+    officialUrl: SENSENOVA_DOCS,
+    versionNote:
+      "商汤日日新 6.8 Flash（2026-11-02 正式版）。思考默认开启且不可关闭，reasoning_effort 支持 minimal/low/medium/high/xhigh/max 六档，思考内容在 reasoning 字段。经 token.sensenova.cn 词元计划接入，限时免费；官方 token 价目公布后同步。",
+  },
+  {
+    id: "sensenova-6.8-flash-lite",
+    provider: "sensenova",
+    endpoint: "chat",
+    tagline: "商汤日日新 6.8 Flash Lite：轻量预览版，主打长程任务稳定与 Sub-agent 协作。",
+    tags: ["文本", "图像", "思考", "限时免费"],
+    modalityIn: ["文本", "图像"],
+    modalityOut: ["文本"],
+    pricing: { kind: "note", note: "限时免费" },
+    context: "256K",
+    maxOutput: "64K",
+    capabilities: { ...NO_CAPS, thinking: true, toolCall: true, structuredOutput: true, vision: true },
+    officialUrl: SENSENOVA_DOCS,
+    versionNote:
+      "商汤日日新 6.8 Flash Lite（轻量预览版）。思考默认开启且不可关闭，reasoning_effort 六档；思考内容在 reasoning 字段。经 token.sensenova.cn 词元计划接入，限时免费；官方 token 价目公布后同步。",
   },
 ];
 
@@ -441,7 +458,9 @@ export function providerLabel(p: MarketProvider): string {
         ? "硅基流动"
         : p === "bailian"
           ? "阿里云百炼"
-          : "小米 MiMo";
+          : p === "sensenova"
+            ? "商汤 SenseNova"
+            : "小米 MiMo";
 }
 
 export function providerVar(p: MarketProvider): string {
@@ -453,7 +472,9 @@ export function providerVar(p: MarketProvider): string {
         ? "var(--brand-siliconflow)"
         : p === "bailian"
           ? "var(--brand-bailian)"
-          : "var(--brand-mimo)";
+          : p === "sensenova"
+            ? "#4d7cff"
+            : "var(--brand-mimo)";
 }
 
 /** 供应商品牌图标路径（web/public/brands/） */
@@ -466,7 +487,9 @@ export function providerLogo(p: MarketProvider): string {
         ? "/brands/siliconflow.png"
         : p === "bailian"
           ? "/brands/bailian.svg"
-          : "/brands/mimo.png";
+          : p === "sensenova"
+            ? "" // 无官方图标资产，品牌徽标用首字母色块
+            : "/brands/mimo.png";
 }
 
 /**
@@ -493,6 +516,8 @@ export function modelBrand(id: string): ModelBrand {
     return { key: "minimax", label: "MiniMax", logo: "/brands/minimax.svg", color: "#f472b6" };
   if (id.startsWith("step"))
     return { key: "step", label: "阶跃星辰 Step", logo: "/brands/step.svg", color: "#2dd4bf" };
+  if (id.startsWith("sensenova"))
+    return { key: "sensenova", label: "商汤 SenseNova", logo: null, color: "#4d7cff" };
   if (id.startsWith("xing"))
     return { key: "siliconflow", label: "TeleAI 星辰", logo: null, color: "var(--brand-siliconflow)" };
   if (id.startsWith("bge"))

@@ -5,11 +5,11 @@ import Link from "next/link";
 import {
   BalancePanel,
   ConsumptionChartPanel,
-  KpiRow,
   ModelCallChartPanel,
   type SeriesPoint,
 } from "@/components/charts";
 import { ConsolePage, useMe } from "@/components/console";
+import { PageHeader } from "@/components/page-header";
 import { DashboardFilterDialog } from "@/components/dashboard-filter";
 import { DashboardPrefsDialog } from "@/components/dashboard-prefs-dialog";
 import {
@@ -110,40 +110,28 @@ export default function DashboardPage() {
   const kpiItems = useMemo(() => {
     if (loading && !analytics) {
       return [
-        { label: "总数", value: "…", hint: "统计计数" },
-        { label: "总额度", value: "…", hint: "统计金额" },
-        { label: "总 TOKEN 数", value: "…", hint: "统计 Token 数" },
-        { label: "平均 RPM", value: "…", hint: "每分钟请求数" },
-        { label: "平均 TPM", value: "…", hint: "每分钟 Token 数" },
+        { label: "总数", value: "…" },
+        { label: "总额度", value: "…" },
+        { label: "总 TOKEN 数", value: "…" },
+        { label: "平均 RPM", value: "…" },
+        { label: "平均 TPM", value: "…" },
       ];
     }
     if (error && !analytics) {
       return [
-        { label: "总数", value: "—", hint: "统计计数" },
-        { label: "总额度", value: "—", hint: "统计金额" },
-        { label: "总 TOKEN 数", value: "—", hint: "统计 Token 数" },
-        { label: "平均 RPM", value: "—", hint: "每分钟请求数" },
-        { label: "平均 TPM", value: "—", hint: "每分钟 Token 数" },
+        { label: "总数", value: "—" },
+        { label: "总额度", value: "—" },
+        { label: "总 TOKEN 数", value: "—" },
+        { label: "平均 RPM", value: "—" },
+        { label: "平均 TPM", value: "—" },
       ];
     }
     return [
-      { label: "总数", value: formatNum(kpis?.count ?? 0), hint: "统计计数" },
-      {
-        label: "总额度",
-        value: `¥${formatNum(kpis?.spendCny ?? 0, 4)}`,
-        hint: "统计金额",
-      },
-      { label: "总 TOKEN 数", value: formatNum(kpis?.tokens ?? 0), hint: "统计 Token 数" },
-      {
-        label: "平均 RPM",
-        value: formatNum(kpis?.rpm ?? 0, 4),
-        hint: "每分钟请求数",
-      },
-      {
-        label: "平均 TPM",
-        value: formatNum(kpis?.tpm ?? 0, 4),
-        hint: "每分钟 Token 数",
-      },
+      { label: "总数", value: formatNum(kpis?.count ?? 0) },
+      { label: "总额度", value: `¥${formatNum(kpis?.spendCny ?? 0, 4)}` },
+      { label: "总 TOKEN 数", value: formatNum(kpis?.tokens ?? 0) },
+      { label: "平均 RPM", value: formatNum(kpis?.rpm ?? 0, 4) },
+      { label: "平均 TPM", value: formatNum(kpis?.tpm ?? 0, 4) },
     ];
   }, [analytics, error, loading, kpis]);
 
@@ -161,32 +149,28 @@ export default function DashboardPage() {
 
   return (
     <ConsolePage phone={me?.phone}>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">看板</h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">Token 调用分析 · 网关跑得怎样，一眼看完</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn btn-ghost text-sm" onClick={() => setPrefsOpen(true)}>
-            偏好设置
-          </button>
-          <button type="button" className="btn btn-ghost text-sm" onClick={() => setFilterOpen(true)}>
-            筛选
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        group="观测"
+        title="看板"
+        description="Token 调用分析 · 网关跑得怎样，一眼看完"
+        actions={
+          <>
+            <button type="button" className="btn btn-ghost text-sm" onClick={() => setPrefsOpen(true)}>
+              偏好设置
+            </button>
+            <button type="button" className="btn btn-ghost text-sm" onClick={() => setFilterOpen(true)}>
+              筛选
+            </button>
+          </>
+        }
+      />
 
       <div className="space-y-5">
-        <div>
-          <h2 className="mb-3 text-sm font-medium text-[var(--text-secondary)]">账户余额</h2>
-          {me ? (
-            <BalancePanel balance={me.balance} />
-          ) : (
-            <div className="panel p-8 text-sm text-[var(--text-tertiary)]">加载中…</div>
-          )}
-        </div>
-
-        <KpiRow items={kpiItems} />
+        {me ? (
+          <BalancePanel balance={me.balance} metrics={kpiItems} />
+        ) : (
+          <div className="panel p-8 text-sm text-[var(--text-tertiary)]">加载中…</div>
+        )}
 
         {error ? (
           <p className="text-sm text-[var(--status-error)]">{error}</p>
@@ -197,10 +181,17 @@ export default function DashboardPage() {
             数据来源：
             {analytics.source === "litellm"
               ? "网关日志"
-              : analytics.source === "spend_event"
-                ? "应用记账"
-                : "应用记账（网关日志不可用）"}
+              : analytics.source === "litellm_truncated"
+                ? "网关日志（仅最近 5000 条，数字可能偏小）"
+                : analytics.source === "spend_event"
+                  ? "应用记账"
+                  : "应用记账（网关日志不可用）"}
             {loading ? " · 刷新中…" : ""}
+          </p>
+        ) : null}
+        {analytics?.source === "litellm_truncated" ? (
+          <p className="text-xs text-[var(--status-warning)]">
+            日志量过大，仅统计最近 5000 条（source=litellm_truncated），曲线不完整。
           </p>
         ) : null}
 

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { BrandBadge } from "@/components/brand-badge";
 import { ConsolePage, useMe } from "@/components/console";
 import { ModelDocsDialog } from "@/components/model-docs-dialog";
+import { PageHeader } from "@/components/page-header";
 import { envPublicGateway } from "@/lib/public-env";
 import {
   MARKET_MODELS,
@@ -61,32 +62,43 @@ export default function ModelsPage() {
 
   return (
     <ConsolePage phone={me?.phone}>
-      <div className="mb-5">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">模型广场</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-          当前网关已接入 {mounted.length} 个上游能力 · 价格单位：人民币 / 百万 token
-        </p>
+      <PageHeader
+        group="资源"
+        title="模型广场"
+        description={`当前网关已接入 ${mounted.length} 个上游能力 · 价格单位：人民币 / 百万 token`}
+      />
+
+      {/* 用途筛选：分段控件 */}
+      <div className="mb-3">
+        <div className="inline-flex flex-wrap gap-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-0.5">
+          {CATEGORY_TABS.map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`rounded-md px-3 py-1.5 text-[13px] transition-colors ${
+                category === key
+                  ? "bg-[var(--accent-muted)] text-[var(--accent-primary)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+              onClick={() => setCategory(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        {CATEGORY_TABS.map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            className={`btn px-3 py-1.5 text-[13px] ${category === key ? "" : "btn-ghost"}`}
-            onClick={() => setCategory(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
+      {/* 品牌筛选：细线芯片，选中才填淡靛蓝 */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {BRAND_FILTERS.map(([key, label]) => (
           <button
             key={key}
             type="button"
-            className={`btn px-3 py-1.5 text-[13px] ${filter === key ? "" : "btn-ghost"}`}
+            className={`rounded-full px-2.5 py-1 text-[13px] transition-colors ${
+              filter === key
+                ? "bg-[var(--accent-muted)] text-[var(--accent-primary)]"
+                : "border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
+            }`}
             onClick={() => setFilter(key)}
           >
             {label}
@@ -97,16 +109,13 @@ export default function ModelsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((m) => (
           <article key={m.id} className="panel group relative flex flex-col p-5 transition-colors hover:border-[var(--border-active)]">
+            {/* 11px 文字标签代替渐变胶囊 */}
             <div className="absolute right-4 top-4 flex flex-col items-end gap-1">
               {m.recommended ? (
-                <span className="rounded-full bg-gradient-to-r from-[var(--brand-deepseek)] to-[#8296ff] px-2.5 py-0.5 text-[11px] font-medium leading-5 text-white shadow-sm">
-                  推荐
-                </span>
+                <span className="text-[11px] font-medium leading-4 text-[var(--accent-primary)]">推荐</span>
               ) : null}
               {isFreeModel(m) ? (
-                <span className="rounded-full bg-gradient-to-r from-[#15803d] to-[#22c55e] px-2.5 py-0.5 text-[11px] font-semibold leading-5 text-white shadow-sm">
-                  {freeLabel(m)}
-                </span>
+                <span className="text-[11px] font-medium leading-4 text-[var(--status-success)]">{freeLabel(m)}</span>
               ) : null}
             </div>
             <BrandBadge id={m.id} />
@@ -125,7 +134,9 @@ export default function ModelsPage() {
             </div>
             <p className="mt-3 line-clamp-2 flex-1 text-sm text-[var(--text-secondary)]">{m.tagline}</p>
             <div className="mt-4 space-y-1 border-t border-[var(--border-subtle)] pt-3 text-[13px]">
-              <p className={`tabular ${isFreeModel(m) ? "font-semibold text-[#16a34a]" : ""}`}>{priceLine(m)}</p>
+              <p className={`tabular font-medium ${isFreeModel(m) ? "text-[var(--status-success)]" : ""}`}>
+                {priceLine(m)}
+              </p>
               {m.peakPricing ? (
                 <p className="text-[var(--status-warning)]">
                   峰时：工作日 09–12、14–18 ×2 · 节假日错峰
@@ -142,14 +153,17 @@ export default function ModelsPage() {
                   体验
                 </Link>
               ) : null}
-              <Link href={`/models/${encodeURIComponent(m.id)}`} className="btn btn-secondary px-3 py-1.5 text-[13px]">
+              <Link
+                href={`/models/${encodeURIComponent(m.id)}`}
+                className="text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              >
                 详情
               </Link>
               {/* 嵌入 / 重排序模型不弹文档对话框，调用示例见详情页 */}
               {m.endpoint !== "embedding" && m.endpoint !== "rerank" ? (
                 <button
                   type="button"
-                  className="btn btn-ghost px-3 py-1.5 text-[13px]"
+                  className="text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
                   onClick={() => setDocsModel(m.id)}
                 >
                   文档

@@ -104,6 +104,8 @@ export function foldSseText(state: SseFold, chunk: string): void {
       if (source) {
         if (typeof source.content === "string") state.content += source.content;
         if (typeof source.reasoning_content === "string") state.reasoning += source.reasoning_content;
+        // 商汤日日新等上游用 reasoning 字段输出思考内容（非 reasoning_content）
+        else if (typeof source.reasoning === "string") state.reasoning += source.reasoning;
       }
     }
     if (rec.usage && typeof rec.usage === "object") {

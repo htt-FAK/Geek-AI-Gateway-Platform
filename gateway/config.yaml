@@ -296,18 +296,48 @@ model_list:
       cache_hit_cost_per_million_cny: 1.0
       output_cost_per_million_cny: 4.0
 
-  - model_name: step-5-preview
+  # step-5-preview 已于 2026-11-20 下架：上游百炼报 400「The product is not activated」
+  # （账号侧该产品未激活/试用到期），重新激活后可恢复此条目。
+  # - model_name: step-5-preview
+  #   litellm_params:
+  #     model: openai/stepfun/step-5-preview
+  #     api_base: os.environ/DASHSCOPE_API_BASE
+  #     api_key: os.environ/DASHSCOPE_API_KEY
+  #   model_info:
+  #     currency: CNY
+  #     mode: chat
+  #     input_cost_per_token: 0.000007
+  #     output_cost_per_token: 0.00002
+  #     input_cost_per_million_cny: 7.0
+  #     output_cost_per_million_cny: 20.0
+
+  # ---------- 商汤日日新 SenseNova（token.sensenova.cn，OpenAI 兼容，2026-11-20 接入） ----------
+  # 思考默认开启且不可关闭（thinking.type 仅支持 enabled）；reasoning_effort 六档由请求透传。
+  # 思考内容在响应 message.reasoning / delta.reasoning（非 reasoning_content）。
+  # 消费者词元计划当前免费（/v1/models pricing 全 0），官方 token 价目公布后同步改价。
+  - model_name: sensenova-6.8-flash
     litellm_params:
-      model: openai/stepfun/step-5-preview
-      api_base: os.environ/DASHSCOPE_API_BASE
-      api_key: os.environ/DASHSCOPE_API_KEY
+      model: openai/sensenova-6.8-flash
+      api_base: https://token.sensenova.cn/v1
+      api_key: os.environ/SENSENOVA_API_KEY
     model_info:
       currency: CNY
       mode: chat
-      input_cost_per_token: 0.000007
-      output_cost_per_token: 0.00002
-      input_cost_per_million_cny: 7.0
-      output_cost_per_million_cny: 20.0
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      pricing_note: limited_time_free
+
+  - model_name: sensenova-6.8-flash-lite
+    litellm_params:
+      model: openai/sensenova-6.8-flash-lite
+      api_base: https://token.sensenova.cn/v1
+      api_key: os.environ/SENSENOVA_API_KEY
+    model_info:
+      currency: CNY
+      mode: chat
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      pricing_note: limited_time_free
 
 litellm_settings:
   drop_params: true

@@ -29,7 +29,7 @@ const QWEN_HOME = "https://qwen.ai/";
 const KIMI_HOME = "https://www.kimi.com/";
 const ZHIPU_HOME = "https://www.zhipu.ai/";
 const MINIMAX_HOME = "https://www.minimax.io/";
-const STEPFUN_HOME = "https://www.stepfun.com/";
+const SENSENOVA_DOCS = "https://token.sensenova.cn/";
 
 const DOCS: Record<string, Omit<ModelDoc, "id" | "notes"> & { notes?: string[] }> = {
   "deepseek-flash": {
@@ -287,16 +287,30 @@ const DOCS: Record<string, Omit<ModelDoc, "id" | "notes"> & { notes?: string[] }
       "官方仅标「上下文缓存享有折扣」未公布单价：网关暂按输入价计缓存命中，官方公布后同步。",
     ],
   },
-  "step-5-preview": {
-    summary: "阶跃星辰 Step-5 Preview：1M 上下文旗舰预览版。",
-    modality: "文本 · 思考",
+  "sensenova-6.8-flash": {
+    summary: "商汤日日新 6.8 Flash：办公智能与长程任务，256K 上下文、图文输入、思考常开。",
+    modality: "文本 · 图像 · 思考",
     endpoint: "chat",
-    officialUrl: STEPFUN_HOME,
-    officialLabel: "阶跃星辰官网",
+    officialUrl: SENSENOVA_DOCS,
+    officialLabel: "商汤日日新 API 文档",
     notes: [
-      "模型代码 stepfun/step-5-preview。",
-      "官方价：输入 ¥7/M、输出 ¥20/M；官方未提供缓存折扣价。",
-      "预览版能力以官方模型页为准。",
+      "模型代码 sensenova-6.8-flash（OpenAI 兼容 /v1/chat/completions）。",
+      "思考默认开启且不可关闭（thinking.type 仅支持 enabled）；reasoning_effort 支持 minimal/low/medium/high/xhigh/max，默认 high。",
+      "思考内容在响应 reasoning 字段（流式 delta.reasoning）。",
+      "经 token.sensenova.cn 词元计划接入，限时免费；官方 token 价目公布后同步。",
+    ],
+  },
+  "sensenova-6.8-flash-lite": {
+    summary: "商汤日日新 6.8 Flash Lite：轻量预览版，长程任务稳定与 Sub-agent 协作，256K 上下文。",
+    modality: "文本 · 图像 · 思考",
+    endpoint: "chat",
+    officialUrl: SENSENOVA_DOCS,
+    officialLabel: "商汤日日新 API 文档",
+    notes: [
+      "模型代码 sensenova-6.8-flash-lite（OpenAI 兼容 /v1/chat/completions）。",
+      "思考默认开启且不可关闭；reasoning_effort 六档（minimal/low/medium/high/xhigh/max），默认 high。",
+      "思考内容在响应 reasoning 字段（流式 delta.reasoning）。",
+      "经 token.sensenova.cn 词元计划接入，限时免费；官方 token 价目公布后同步。",
     ],
   },
 };

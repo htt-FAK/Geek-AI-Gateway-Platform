@@ -19,6 +19,7 @@ import {
   YAxis,
 } from "recharts";
 import { ConsolePage, useMe } from "@/components/console";
+import { PageHeader } from "@/components/page-header";
 import {
   LEADERBOARD_FETCHED_AT,
   LEADERBOARD_ROWS,
@@ -46,13 +47,34 @@ const DISPLAY_NAME: Record<string, string> = {
   "glm-5.3": "GLM-5.3",
   "glm-5.3-flash": "GLM-5.3 Flash",
   "minimax-m3.1-flash": "MiniMax M3.1 Flash",
-  "step-5-preview": "Step 5 Preview",
 };
 
 const BRAND_LOGO: Record<string, string> = {
   deepseek: "/brands/deepseek.ico",
   mimo: "/brands/mimo.png",
 };
+
+/** 柱状图 x 轴用的厂商 logo（七家均有品牌图标）。 */
+const VENDOR_LOGO: Record<VendorId, string> = {
+  deepseek: "/brands/deepseek.ico",
+  mimo: "/brands/mimo.png",
+  alibaba: "/brands/qwen.svg",
+  zai: "/brands/glm.svg",
+  kimi: "/brands/kimi.svg",
+  minimax: "/brands/minimax.svg",
+  stepfun: "/brands/step.svg",
+};
+
+/** 每个模型的上榜档位数：多档位时柱状图标签带中文档位。 */
+const MODEL_VARIANTS: Record<string, number> = LEADERBOARD_ROWS.reduce(
+  (acc, r) => ({ ...acc, [r.model]: (acc[r.model] ?? 0) + 1 }),
+  {} as Record<string, number>,
+);
+
+function axisLabel(r: LeaderboardRow): string {
+  const base = DISPLAY_NAME[r.model] ?? r.model;
+  return (MODEL_VARIANTS[r.model] ?? 1) > 1 ? `${base}（${r.variantLabel}）` : base;
+}
 
 /** 厂商配色（对齐 AA 截图图例；蓝/橙系做区分度偏移，避免同色难辨）。 */
 const VENDOR: Record<VendorId, { label: string; color: string }> = {
@@ -83,10 +105,10 @@ const LABEL_RIGHT: LabelPlacement = { dx: 9, dy: 4, anchor: "start" };
 const LABEL_POS: Record<string, LabelPlacement> = {
   // $0.47–$0.6 高密度簇：左/上/右/下四向错开
   "DS Flash·标准": { dx: -9, dy: 4, anchor: "end" },
-  "MiniMax·默认": { dx: 0, dy: -11, anchor: "middle" },
-  "Qwen3.8 Flash·默认": { dx: 9, dy: 4, anchor: "start" },
-  "GLM Flash·默认": { dx: 7, dy: 16, anchor: "start" },
-  "MiMo Pro·开启": { dx: 2, dy: -11, anchor: "middle" },
+  MiniMax: { dx: 8, dy: -4, anchor: "start" },
+  "Qwen3.8 Flash": { dx: 9, dy: 8, anchor: "start" },
+  "GLM Flash": { dx: 7, dy: 20, anchor: "start" },
+  "MiMo Pro": { dx: 2, dy: -11, anchor: "middle" },
   // $1.6 / $1.8 同高度：左侧标签向右排，GLM 反向
   "GLM-5.3·低": { dx: -9, dy: 4, anchor: "end" },
   // 最右点：标签放左侧，避免越出绘图区
@@ -150,18 +172,22 @@ export default function LeaderboardPage() {
     () =>
       LEADERBOARD_ROWS.filter((r) => r.intelligence !== null)
         .sort((a, b) => (b.intelligence ?? 0) - (a.intelligence ?? 0))
-        .map((r) => ({ name: shortName(r), value: r.intelligence })),
+        .map((r) => ({
+          name: shortName(r),
+          label: axisLabel(r),
+          value: r.intelligence as number,
+          vendor: vendorOf(r.model),
+        })),
     [],
   );
 
   return (
     <ConsolePage phone={me?.phone}>
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">模型榜单</h1>
-        <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
-          {modelCount} 个聊天模型 × 思考档位 · 数据来自 AA 评测（Intelligence Index，版本与网关一致）· 采集于 {LEADERBOARD_FETCHED_AT}
-        </p>
-      </div>
+      <PageHeader
+        group="观测"
+        title="模型榜单"
+        description={`${modelCount} 个聊天模型 × 思考档位 · 数据来自 AA 评测（Intelligence Index，版本与网关一致）· 采集于 ${LEADERBOARD_FETCHED_AT}`}
+      />
 
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {highlights.map((h) => (
@@ -243,11 +269,11 @@ export default function LeaderboardPage() {
                 type="number"
                 scale="log"
                 domain={[0.1, 5.3]}
-                ticks={[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5]}
+                ticks={[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1, 2, 3, 4, 5]}
                 tickFormatter={(v: number) => `$${v}`}
                 axisLine={{ stroke: "var(--chart-axis)" }}
                 tickLine={{ stroke: "var(--chart-axis)" }}
-                tick={{ fill: "var(--text-secondary)", fontSize: 12 }}
+                tick={{ fill: "var(--text-secondary)", fontSize: 11 }}
                 label={{ value: "单任务成本（美元，对数刻度）", position: "insideBottom", offset: -22, fill: "var(--text-secondary)", fontSize: 13 }}
               />
               <YAxis
@@ -257,12 +283,12 @@ export default function LeaderboardPage() {
                 ticks={[5, 10, 15, 20, 25, 30, 35, 40, 45, 50]}
                 axisLine={{ stroke: "var(--chart-axis)" }}
                 tickLine={{ stroke: "var(--chart-axis)" }}
-                tick={{ fill: "var(--text-secondary)", fontSize: 12 }}
+                tick={{ fill: "var(--text-secondary)", fontSize: 11 }}
               >
                 <Label
                   content={(props: { viewBox?: unknown }) => {
                     const vb = (props.viewBox ?? {}) as { x?: number; y?: number; height?: number };
-                    const cx = Number(vb.x ?? 0) - 62;
+                    const cx = Number(vb.x ?? 0) + 14;
                     const cy = Number(vb.y ?? 0) + Number(vb.height ?? 0) / 2;
                     return (
                       <text
@@ -327,6 +353,10 @@ export default function LeaderboardPage() {
                         y={Number(props.y ?? 0) + place.dy}
                         textAnchor={place.anchor}
                         fill="var(--text-primary)"
+                        stroke="var(--bg-elevated)"
+                        strokeWidth={3}
+                        strokeLinejoin="round"
+                        paintOrder="stroke"
                         fontSize={12}
                         style={{ pointerEvents: "none" }}
                       >
@@ -412,24 +442,110 @@ export default function LeaderboardPage() {
         </div>
       </section>
 
-      <section className="panel mt-5 p-6">
-        <h2 className="text-sm font-medium">智能指数对比</h2>
-        <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">AA Intelligence Index · 分数越高越聪明</p>
-        <div className="mt-5 h-[460px]">
+      <section className="panel relative mt-5 p-6">
+        <span className="font-display pointer-events-none absolute right-6 top-5 text-sm text-[var(--text-tertiary)] opacity-70">
+          Artificial Analysis
+        </span>
+        <h2 className="font-display text-lg font-semibold tracking-tight">Artificial Analysis Intelligence Index</h2>
+        <p className="mt-1 text-[13px] text-[var(--text-secondary)]">
+          智能指数 v5.0.1 · 分数越高越聪明 · 按档位从高到低（共 {barData.length} 个）
+        </p>
+        <div className="mt-6 h-[500px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={barData} layout="vertical" margin={{ left: 12, right: 36, top: 8, bottom: 8 }} barCategoryGap="28%">
-              <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: "var(--text-tertiary)", fontSize: 12 }} />
-              <YAxis
-                type="category"
+            <BarChart data={barData} margin={{ top: 22, right: 10, bottom: 0, left: 10 }} barCategoryGap="22%">
+              <CartesianGrid vertical={false} stroke="color-mix(in srgb, var(--text-primary) 12%, transparent)" strokeDasharray="2 4" />
+              <XAxis
                 dataKey="name"
-                width={150}
+                interval={0}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "var(--text-secondary)", fontSize: 12 }}
+                height={168}
+                tick={(props: { x?: number | string; y?: number | string; payload?: { index?: number } }) => {
+                  const p = barData[Number(props.payload?.index ?? 0)];
+                  const x = Number(props.x ?? 0);
+                  const y = Number(props.y ?? 0);
+                  if (!p) return <g />;
+                  return (
+                    <g transform={`translate(${x},${y})`}>
+                      <image
+                        href={VENDOR_LOGO[p.vendor]}
+                        x={-10}
+                        y={6}
+                        width={20}
+                        height={20}
+                        preserveAspectRatio="xMidYMid meet"
+                      />
+                      <text
+                        x={0}
+                        y={52}
+                        transform="rotate(-50 0 52)"
+                        textAnchor="end"
+                        fill="var(--text-secondary)"
+                        fontSize={11.5}
+                      >
+                        {p.label}
+                      </text>
+                    </g>
+                  );
+                }}
               />
-              <Tooltip cursor={{ fill: "var(--bg-hover)" }} contentStyle={tooltipStyle} />
-              <Bar dataKey="value" name="智能指数" fill="var(--accent-primary)" radius={[4, 4, 4, 4]} barSize={16} />
+              <YAxis
+                type="number"
+                domain={[0, 50]}
+                ticks={[10, 20, 30, 40, 50]}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 0, fill: "transparent" }}
+                width={8}
+              />
+              <Tooltip
+                cursor={{ fill: "var(--bg-hover)" }}
+                contentStyle={tooltipStyle}
+                content={({ payload }) => {
+                  const p = payload?.[0]?.payload as (typeof barData)[number] | undefined;
+                  if (!p) return null;
+                  return (
+                    <div>
+                      <p className="font-medium">{p.label}</p>
+                      <p className="mt-1 text-[var(--text-secondary)]">智能指数：{p.value}</p>
+                    </div>
+                  );
+                }}
+              />
+              <Bar dataKey="value" name="智能指数" isAnimationActive={false} radius={[3, 3, 0, 0]}>
+                {barData.map((p, i) => (
+                  <Cell key={i} fill={VENDOR[p.vendor].color} />
+                ))}
+                <LabelList
+                  dataKey="value"
+                  content={(props: {
+                    x?: number | string;
+                    y?: number | string;
+                    width?: number | string;
+                    height?: number | string;
+                    value?: number | string;
+                  }) => {
+                    const cx = Number(props.x ?? 0) + Number(props.width ?? 0) / 2;
+                    const top = Number(props.y ?? 0);
+                    const h = Number(props.height ?? 0);
+                    // 高柱数值统一在距基线 88px 处（AA 原图效果）；矮柱自动上移到柱内 16px。
+                    const offset = Math.min(88, Math.max(16, h - 16));
+                    return (
+                      <text
+                        x={cx}
+                        y={top + h - offset}
+                        textAnchor="middle"
+                        fill="#fff"
+                        fontSize={13}
+                        fontWeight={600}
+                        style={{ fontVariantNumeric: "tabular-nums", pointerEvents: "none" }}
+                      >
+                        {props.value}
+                      </text>
+                    );
+                  }}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>

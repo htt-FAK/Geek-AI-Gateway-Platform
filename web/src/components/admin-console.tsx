@@ -1,33 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ConsolePage, useMe } from "@/components/console";
 
 /**
- * 管理台共享骨架：与全站一致的 AppShell（侧边栏 / 顶栏 / 退出），
- * 管理员会话自动放行；非管理员账号可用 Admin Token 临时进入（向后兼容脚本场景）。
+ * 管理台共享骨架：与全站一致的 AppShell（侧边栏 / 顶栏 / 退出）。
+ * 浏览器只认 role=admin 的登录会话（requireAdmin 校验密码版本与强制改密）；
+ * Admin Token 仅供服务端脚本使用，页面不再输入/存储 Token（sessionStorage 可被 XSS 读取）。
+ * 设管理员＝数据库把 User.role 改为 admin，无 UI 入口。
  */
-
-const TOKEN_KEY = "admin_token";
-
-export function readStoredAdminToken(): string {
-  try {
-    return sessionStorage.getItem(TOKEN_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-export function storeAdminToken(token: string) {
-  try {
-    if (token) sessionStorage.setItem(TOKEN_KEY, token);
-    else sessionStorage.removeItem(TOKEN_KEY);
-  } catch {
-    // ignore
-  }
-}
 
 /** 管理页会话：未登录跳 /login；返回 me（含 role）与加载态。 */
 export function useAdminSession() {
@@ -39,82 +22,27 @@ export function useAdminSession() {
   return { me, ready, isAdmin: me?.role === "admin" };
 }
 
-/** 非管理员的 Token 门：验证通过后才渲染管理内容。 */
-export function AdminTokenGate({
-  phone,
-  onVerified,
-}: {
-  phone: string;
-  onVerified: (token: string) => void;
-}) {
-  const [value, setValue] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!value.trim()) return;
-    setBusy(true);
-    setError("");
-    try {
-      const res = await fetch("/api/admin/users", {
-        headers: { "x-admin-token": value.trim() },
-      });
-      if (!res.ok) {
-        setError(res.status === 401 ? "Token 无效，请核对后重试" : "验证失败，请稍后重试");
-        return;
-      }
-      storeAdminToken(value.trim());
-      onVerified(value.trim());
-    } catch {
-      setError("网络错误，请重试");
-    } finally {
-      setBusy(false);
-    }
-  }
-
+/** 非管理员：无权限面板（不再有 Token 临时通道）。 */
+function AdminDenied({ phone }: { phone: string }) {
   return (
     <div className="panel mx-auto mt-10 max-w-md space-y-4 p-6">
       <div>
         <h2 className="text-lg font-medium">需要管理员权限</h2>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
           当前账号 <span className="mono">{phone}</span> 不是管理员。
-          可输入 Admin Token 临时进入，或退出后改用管理员账号登录。
+          请退出后改用管理员账号登录（管理员角色由数据库设置）。
         </p>
       </div>
-      <form onSubmit={submit} className="space-y-3">
-        <label className="block space-y-1.5">
-          <span className="text-sm text-[var(--text-secondary)]">Admin Token</span>
-          <input
-            className="field"
-            type="password"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="x-admin-token"
-            autoFocus
-          />
-        </label>
-        {error ? (
-          <p className="text-sm text-[var(--status-error)]" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className="flex items-center gap-2">
-          <button className="btn" type="submit" disabled={busy || !value.trim()}>
-            {busy ? "验证中…" : "验证并进入"}
-          </button>
-          <button
-            className="btn btn-ghost"
-            type="button"
-            onClick={async () => {
-              await fetch("/api/auth/logout", { method: "POST" });
-              window.location.href = "/login";
-            }}
-          >
-            退出并切换账号
-          </button>
-        </div>
-      </form>
+      <button
+        className="btn btn-ghost"
+        type="button"
+        onClick={async () => {
+          await fetch("/api/auth/logout", { method: "POST" });
+          window.location.href = "/login";
+        }}
+      >
+        退出并切换账号
+      </button>
     </div>
   );
 }
@@ -137,9 +65,10 @@ export function AdminPageHeader({
   ];
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="font-display text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">{subtitle}</p>
+      <div className="min-w-0">
+        <p className="text-[12px] leading-none text-[var(--text-tertiary)]">管理</p>
+        <h1 className="mt-2 text-xl font-semibold tracking-tight">{title}</h1>
+        <p className="mt-1.5 text-[13px] text-[var(--text-secondary)]">{subtitle}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {actions}
@@ -163,7 +92,7 @@ export function AdminPageHeader({
   );
 }
 
-/** 管理台页面骨架：会话门 + Token 门 + 统一容器。authorized 渲染函数拿到有效 token（会话模式为 ""）。 */
+/** 管理台页面骨架：管理员会话门 + 统一容器。请求靠会话 Cookie 鉴权，不带 Token 头。 */
 export function AdminConsole({
   active,
   title,
@@ -175,52 +104,19 @@ export function AdminConsole({
   title: string;
   subtitle: string;
   actions?: ReactNode;
-  children: (token: string) => ReactNode;
+  children: () => ReactNode;
 }) {
   const { me, ready, isAdmin } = useAdminSession();
-  const [token, setToken] = useState("");
-  const [tokenReady, setTokenReady] = useState(false);
-
-  // 非管理员：尝试沿用 sessionStorage 里的 Token（静默验证一次）
-  useEffect(() => {
-    if (!ready || isAdmin) return;
-    const stored = readStoredAdminToken();
-    if (!stored) {
-      setTokenReady(true);
-      return;
-    }
-    let alive = true;
-    (async () => {
-      try {
-        const res = await fetch("/api/admin/users", { headers: { "x-admin-token": stored } });
-        if (!alive) return;
-        if (res.ok) setToken(stored);
-        else storeAdminToken("");
-      } catch {
-        if (alive) storeAdminToken("");
-      } finally {
-        if (alive) setTokenReady(true);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [ready, isAdmin]);
-
-  const authorized = isAdmin || (tokenReady && Boolean(token));
-  const effectiveToken = isAdmin ? "" : token;
 
   return (
     <ConsolePage phone={me?.phone}>
-      <AdminPageHeader active={active} title={title} subtitle={subtitle} actions={authorized ? actions : undefined} />
+      <AdminPageHeader active={active} title={title} subtitle={subtitle} actions={isAdmin ? actions : undefined} />
       {!ready ? (
         <div className="panel p-8 text-sm text-[var(--text-tertiary)]">加载中…</div>
-      ) : authorized ? (
-        children(effectiveToken)
-      ) : tokenReady ? (
-        <AdminTokenGate phone={me?.phone ?? ""} onVerified={(t) => setToken(t)} />
+      ) : isAdmin ? (
+        children()
       ) : (
-        <div className="panel p-8 text-sm text-[var(--text-tertiary)]">正在验证身份…</div>
+        <AdminDenied phone={me?.phone ?? ""} />
       )}
     </ConsolePage>
   );

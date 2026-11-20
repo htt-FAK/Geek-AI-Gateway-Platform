@@ -98,7 +98,7 @@ export function DashboardFilterDialog({
                   onClick={() => applyQuick(d)}
                   className={`rounded-full px-3 py-1 text-xs transition-colors ${
                     localQuick === d
-                      ? "bg-[var(--accent-primary)] text-[var(--text-inverse)]"
+                      ? "bg-[var(--accent-solid)] text-[var(--text-inverse)]"
                       : "border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   }`}
                 >

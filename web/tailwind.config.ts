@@ -24,8 +24,9 @@ export default {
         danger: "var(--status-error)",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "Noto Sans SC", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["var(--font-display)", "var(--font-sans)", "Noto Sans SC", "sans-serif"],
+        /* --font-ui 按当前皮肤解析（Geist + 中文无衬线回落）；--font-sans 从未定义过 */
+        sans: ["var(--font-ui)", "Noto Sans SC", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-ui)", "Noto Sans SC", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       maxWidth: {

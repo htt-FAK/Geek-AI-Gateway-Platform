@@ -293,23 +293,6 @@ export const LEADERBOARD_ROWS: LeaderboardRow[] = [
     sourceLabel: "AA 评测（截图估读）",
     note: "缓存折扣价官方未公布，暂按输入价。指数 29 / 成本 $0.5 为 2026-11-19 AA 散点截图估读。",
   },
-  {
-    model: "step-5-preview",
-    variantId: "default",
-    variantLabel: "默认",
-    intelligence: 28.5,
-    speedTokS: null,
-    ttftS: null,
-    costPerTaskUsd: 2.3,
-    costPerTaskCny: 15.36,
-    inputPerM: 7,
-    outputPerM: 20,
-    context: "1M",
-    maxOutput: "以官方模型页为准",
-    source: AA_LEADERBOARD,
-    sourceLabel: "AA 评测（截图估读）",
-    note: "预览版。指数 28.5 / 成本 $2.3 为 2026-11-19 AA 散点截图估读。",
-  },
 ];
 
 export type MetricKey = "intelligence" | "cost" | "speed" | "latency" | "price";
@@ -334,11 +317,18 @@ const SHORT_BASE: Record<string, string> = {
   "glm-5.3": "GLM-5.3",
   "glm-5.3-flash": "GLM Flash",
   "minimax-m3.1-flash": "MiniMax",
-  "step-5-preview": "Step 5",
 };
 
+/** 每个模型的上榜档位数（1 = 单档位，标签省略档位后缀）。 */
+const VARIANT_COUNT: Record<string, number> = LEADERBOARD_ROWS.reduce(
+  (acc, r) => ({ ...acc, [r.model]: (acc[r.model] ?? 0) + 1 }),
+  {} as Record<string, number>,
+);
+
 export function shortName(r: LeaderboardRow): string {
-  return `${SHORT_BASE[r.model] ?? r.model}·${r.variantLabel}`;
+  const base = SHORT_BASE[r.model] ?? r.model;
+  // 单档位模型不显示「·默认/·开启」等后缀（对齐 AA 原图只写模型名），多档位保留以示区分。
+  return (VARIANT_COUNT[r.model] ?? 1) > 1 ? `${base}·${r.variantLabel}` : base;
 }
 
 export type VendorId = "deepseek" | "mimo" | "alibaba" | "zai" | "kimi" | "minimax" | "stepfun";

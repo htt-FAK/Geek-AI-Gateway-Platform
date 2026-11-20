@@ -10,7 +10,8 @@
     "mimo": "https://mimo.mi.com/models/en-US/mimo-v2.6-pro",
     "xfyun": "https://maas.xfyun.cn/",
     "siliconflow": "https://docs.siliconflow.cn/",
-    "bailian": "https://help.aliyun.com/zh/model-studio/billing-for-model-studio"
+    "bailian": "https://help.aliyun.com/zh/model-studio/billing-for-model-studio",
+    "sensenova": "https://token.sensenova.cn/"
   },
   "deepseek_peak_pricing": {
     "timezone": "Asia/Shanghai",
@@ -215,12 +216,19 @@
       }
     },
     {
-      "id": "step-5-preview",
-      "provider": "bailian",
-      "modality": "text",
+      "id": "sensenova-6.8-flash",
+      "provider": "sensenova",
+      "modality": "text+vision",
       "pricing_cny": {
-        "input_miss_per_million": 7.0,
-        "output_per_million": 20.0
+        "note": "limited_time_free"
+      }
+    },
+    {
+      "id": "sensenova-6.8-flash-lite",
+      "provider": "sensenova",
+      "modality": "text+vision",
+      "pricing_cny": {
+        "note": "limited_time_free"
       }
     }
   ]

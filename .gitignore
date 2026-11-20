@@ -10,6 +10,7 @@ deploy/.env
 # deps / build
 node_modules/
 .next/
+web/.next-dev/
 out/
 dist/
 build/
@@ -29,6 +30,8 @@ web/tsconfig.tsbuildinfo
 .DS_Store
 Thumbs.db
 *.log
+# 运行时日志与诊断脚本（PM2 输出、探测脚本等，不入库）
+/logs/
 .omo/
 .codegraph/
 .codex/

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ConsumptionChartPanel,
-  KpiRow,
+  MetricStrip,
   ModelCallChartPanel,
   type SeriesPoint,
 } from "@/components/charts";
@@ -11,6 +11,7 @@ import { AdminConsole, Badge } from "@/components/admin-console";
 
 type UsagePayload = {
   source: "litellm" | "litellm_truncated" | "spend_event";
+  remainingSource?: "litellm" | "spend_event_fallback";
   from: string;
   to: string;
   granularity: string;
@@ -54,12 +55,12 @@ export default function AdminUsagePage() {
       title="成员用量"
       subtitle="全员视角 · 费用、调用与余额一览"
     >
-      {(token) => <UsageConsole token={token} />}
+      {() => <UsageConsole />}
     </AdminConsole>
   );
 }
 
-function UsageConsole({ token }: { token: string }) {
+function UsageConsole() {
   const [data, setData] = useState<UsagePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -82,9 +83,7 @@ function UsageConsole({ token }: { token: string }) {
         to: to.toISOString(),
         granularity,
       });
-      const res = await fetch(`/api/admin/usage?${qs.toString()}`, {
-        headers: { "x-admin-token": token },
-      });
+      const res = await fetch(`/api/admin/usage?${qs.toString()}`);
       const json = await res.json();
       if (!res.ok) {
         setError(json.error ?? "加载失败");
@@ -98,7 +97,7 @@ function UsageConsole({ token }: { token: string }) {
     } finally {
       setLoading(false);
     }
-  }, [token, quickDays]);
+  }, [quickDays]);
 
   useEffect(() => {
     void load();
@@ -171,30 +170,23 @@ function UsageConsole({ token }: { token: string }) {
           日志量过大，仅统计最近 5000 条（source=litellm_truncated），数字可能偏小。
         </p>
       ) : null}
+      {data?.remainingSource === "spend_event_fallback" ? (
+        <p className="text-xs text-[var(--status-warning)]">
+          网关不可达，部分成员的剩余余额按本地记账回退计算，可能不含 Virtual Key 直连花费。
+        </p>
+      ) : null}
 
       {loading && !data ? (
         <div className="panel p-8 text-sm text-[var(--text-tertiary)]">加载中…</div>
       ) : data ? (
         <>
-          <KpiRow
-            items={[
-              { label: "总请求", value: formatNum(data.kpis.totalRequests), hint: `${RANGE_LABEL[quickDays]}请求数` },
-              {
-                label: "总费用",
-                value: `¥${formatNum(data.kpis.totalAmountCny, 4)}`,
-                hint: `${RANGE_LABEL[quickDays]}消费金额`,
-              },
-              {
-                label: "总 Token",
-                value: formatNum(data.kpis.totalTokens),
-                hint: `${RANGE_LABEL[quickDays]}Token 数`,
-              },
-              { label: "平均 RPM", value: formatNum(data.kpis.avgRpm, 2), hint: "每分钟请求数" },
-              {
-                label: "平均 TPM",
-                value: formatNum(Math.round(data.kpis.avgTpm)),
-                hint: "每分钟 Token 数",
-              },
+          <MetricStrip
+            metrics={[
+              { label: "总请求", value: formatNum(data.kpis.totalRequests) },
+              { label: "总费用", value: `¥${formatNum(data.kpis.totalAmountCny, 4)}` },
+              { label: "总 Token", value: formatNum(data.kpis.totalTokens) },
+              { label: "平均 RPM", value: formatNum(data.kpis.avgRpm, 2) },
+              { label: "平均 TPM", value: formatNum(Math.round(data.kpis.avgTpm)) },
             ]}
           />
 

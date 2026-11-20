@@ -398,9 +398,24 @@ export function ModelCallChartPanel({
   );
 }
 
-/** 账户余额面板：余额 = 累计充值 − 累计花费（网关直连花费也计入）。 */
+/** 指标条：独立成卡的指标带（标签在上、数字在下），与陈述卡下半部同一密度。 */
+export function MetricStrip({ metrics }: { metrics: Array<{ label: string; value: string }> }) {
+  return (
+    <div className="panel grid grid-cols-2 md:grid-cols-5 md:divide-x md:divide-[var(--border-subtle)]">
+      {metrics.map((item) => (
+        <div key={item.label} className="px-5 py-4">
+          <div className="text-[12px] text-[var(--text-tertiary)]">{item.label}</div>
+          <div className="mt-1.5 tabular text-[15px] font-medium">{item.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** 账户总览陈述卡：余额数字最大 + 细轨进度 + 「不限额」细线标签；五个指标并进同一张卡（标签在上、数字在下）。 */
 export function BalancePanel({
   balance,
+  metrics,
 }: {
   balance: {
     unlimited: boolean;
@@ -408,69 +423,52 @@ export function BalancePanel({
     spendCny: number;
     balanceCny: number | null;
   };
+  metrics: Array<{ label: string; value: string }>;
 }) {
   const pct =
     !balance.unlimited && balance.grantedCny > 0
       ? Math.min(100, (balance.spendCny / balance.grantedCny) * 100)
       : 0;
   return (
-    <div className="panel grid grid-cols-1 divide-y divide-[var(--border-subtle)] md:grid-cols-3 md:divide-x md:divide-y-0">
+    <div className="panel">
       <div className="p-5">
-        <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-          账户余额
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] text-[var(--text-tertiary)]">账户余额</span>
           {balance.unlimited ? (
-            <span className="rounded-[var(--radius-sm)] bg-[var(--accent-muted)] px-1.5 py-0.5 text-[11px] text-[var(--accent-primary)]">
+            <span className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-1.5 py-0.5 text-[11px] text-[var(--text-secondary)]">
               不限额
             </span>
           ) : null}
         </div>
-        <div className="mt-2 tabular text-2xl font-semibold text-[var(--accent-primary)]">
+        <div className="mt-2 tabular text-[28px] font-semibold leading-tight tracking-tight">
           {balance.unlimited ? "∞" : `¥${(balance.balanceCny ?? 0).toFixed(2)}`}
         </div>
         {!balance.unlimited ? (
           <>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--bg-surface)]">
+            <div className="mt-3 h-1 overflow-hidden rounded-full bg-[var(--bg-surface)]">
               <div
-                className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-200"
+                className="h-full rounded-full bg-[var(--accent-solid)] transition-[width] duration-200"
                 style={{ width: `${pct}%` }}
               />
             </div>
             <div className="mt-2 tabular text-xs text-[var(--text-tertiary)]">
-              已用 {pct.toFixed(1)}% · 余额耗尽将暂停调用
+              已用 {pct.toFixed(1)}% · 累计充值 ¥{balance.grantedCny.toFixed(2)} · 余额耗尽将暂停调用
             </div>
           </>
         ) : (
-          <div className="mt-3 text-xs text-[var(--text-tertiary)]">测试账号 · 不受余额限制</div>
+          <div className="mt-3 tabular text-xs text-[var(--text-tertiary)]">
+            测试账号 · 不受余额限制 · 累计充值 ¥{balance.grantedCny.toFixed(2)}
+          </div>
         )}
       </div>
-      <div className="p-5">
-        <div className="text-sm text-[var(--text-secondary)]">累计充值</div>
-        <div className="mt-2 tabular text-lg font-semibold">¥{balance.grantedCny.toFixed(2)}</div>
-        <div className="mt-2 text-xs text-[var(--text-tertiary)]">管理员充值入口：用户管理</div>
+      <div className="grid grid-cols-2 border-t border-[var(--border-subtle)] md:grid-cols-5 md:divide-x md:divide-[var(--border-subtle)]">
+        {metrics.map((item) => (
+          <div key={item.label} className="px-5 py-4">
+            <div className="text-[12px] text-[var(--text-tertiary)]">{item.label}</div>
+            <div className="mt-1.5 tabular text-[15px] font-medium">{item.value}</div>
+          </div>
+        ))}
       </div>
-      <div className="p-5">
-        <div className="text-sm text-[var(--text-secondary)]">累计花费</div>
-        <div className="mt-2 tabular text-lg font-semibold">¥{balance.spendCny.toFixed(4)}</div>
-        <div className="mt-2 text-xs text-[var(--text-tertiary)]">含控制台与 API 直连</div>
-      </div>
-    </div>
-  );
-}
-
-export function KpiRow({
-  items,
-}: {
-  items: Array<{ label: string; value: string; hint: string }>;
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-      {items.map((item) => (
-        <div key={item.label} className="panel p-4">
-          <div className="text-xs text-[var(--text-tertiary)]">{item.label}</div>
-          <div className="mt-2 tabular text-2xl font-semibold tracking-tight">{item.value}</div>
-          <div className="mt-1 text-xs text-[var(--text-secondary)]">{item.hint}</div>
-        </div>
-      ))}
     </div>
   );
 }
